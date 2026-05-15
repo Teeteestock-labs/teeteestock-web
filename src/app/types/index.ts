@@ -1,13 +1,29 @@
 // src/types/index.ts
 
 // CP組合的定義
-export interface Teeteepair {
+export interface teeteePair {
     id: string;
     name: string;
     members: string[];
-    currentPrice: number;   // 當前市場價格
-    netValue: number;       // 本週結算後的淨值
+    price: number;   // 當前市場價格
+    netValue: number;       // 當前淨值
+    lastWeeklyNV: number;   // 上週結算時的淨值，用於計算週漲跌
     change24h: number;      // 24小時漲跌
+    ceoTitle: string;       // 預留稱號欄位
+    history: ChartDataPoint[]; // 價格歷史
+    pendingInteractions: {
+        sharedLive: number;     // 共同直播次數
+        collab: number;         // 多人聯動次數
+        xMention: number;       // X提及次數
+    };
+}
+
+export interface ChartDataPoint {
+    time: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
 }
 
 // 用戶持股紀錄

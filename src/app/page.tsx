@@ -343,9 +343,16 @@ export default function Home() {
                     const profit = (pair.price - h.avgCost) * h.shares;
                     const roi = ((pair.price - h.avgCost) / h.avgCost) * 100;
                     return (
-                      <div key={h.pairId} className="p-3 flex justify-between items-center">
+                      <div 
+                        key={h.pairId} 
+                        onClick={() => {
+                          setSelectedPairId(h.pairId);
+                          setMode('trade');
+                        }}
+                        className="p-3 flex justify-between items-center hover:bg-[#2B3139] transition-colors cursor-pointer group"
+                      >
                         <div>
-                          <p className="font-bold text-sm">{pair.name}</p>
+                          <p className="font-bold text-sm group-hover:text-[#FF69B4] transition-colors">{pair.name}</p>
                           <p className="text-[10px] text-[#848e9c]">{h.shares.toLocaleString()} 股</p>
                         </div>
                         <div className="text-right">
