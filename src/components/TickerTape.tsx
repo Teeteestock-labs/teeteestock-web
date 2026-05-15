@@ -8,8 +8,12 @@ export default function TickerTape() {
   ];
 
   return (
-    <div className="bg-[#181a20] border-b border-[#2b2f36] py-1 overflow-hidden whitespace-nowrap">
-      <div className="animate-marquee inline-block text-[10px] text-[#ff69b4] font-medium">
+    <div 
+      role="region" 
+      aria-label="公告跑馬燈"
+      className="bg-[var(--card-bg)] border-b border-[var(--border-color)] py-1 overflow-hidden whitespace-nowrap"
+    >
+      <div className="animate-marquee inline-block text-xs text-[var(--teetee-pink)] font-medium pl-[100%]">
         {announcements.join(" | ")}
       </div>
     </div>
