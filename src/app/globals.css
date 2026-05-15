@@ -8,8 +8,14 @@
 
   /* Teetestock 特色標誌色 */
   --teetee-pink: #ff69b4;
-  -up-red: #ff3b3b;
-  -down-green: #00ffa3;
+  --up-red: #ff3b3b;      /* 台灣股市：紅漲 */
+  --down-green: #00ffa3;  /* 台灣股市：綠跌 */
+
+  /* 交易所配色 */
+  --tw-red: #ff3b3b;
+  --tw-green: #00ffa3;
+  --tw-yellow: #f59e0b;
+  --tw-gray: #848e9c;
 
   /* 表格與卡片用色 */
   --card-bg: #181a20;
@@ -37,3 +43,10 @@ body {
   }
 }
 
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
