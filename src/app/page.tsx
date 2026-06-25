@@ -1,369 +1,532 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTee } from "@/context/TeeContext";
 import SettlementTimer from "@/components/SettlementTimer";
 import TickerTape from "@/components/TickerTape";
 import BottomNav from "@/components/BottomNav";
-import CandlestickChart from "@/components/CandlestickChart";
+import GlobalStats from "@/components/GlobalStats";
+import { alignToTick } from "@/utils/validatePrice";
+import { teeteePair } from "@/app/types";
 
-type Mode = 'list' | 'trade' | 'asset';
+const PAIR_ID_MAP: Record<string, string> = {
+  'micomet': 'MCMT',
+  'okakoro': 'OKKR',
+  'pekomarin': 'PKMR',
+  'noefure': 'NEFL',
+  'soraz': 'SRAZ',
+  'fubumio': 'FBMO',
+  'shishiwata': 'SSWT',
+  'subaruna': 'SBRN',
+  'aziro': 'AZIR'
+};
 
-export default function Home() {
-  const [mode, setMode] = useState<Mode>('list');
-  const [selectedPairId, setSelectedPairId] = useState<string | null>(null);
-  const { balance, holdings, marketData, simulateMarketMove, buyPair, sellPair } = useTee();
-  
-  // 交易相關狀態
-  const [amount, setAmount] = useState<number>(0);
-  const [isBuy, setIsBuy] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'orderbook' | 'history' | 'dynamic'>('orderbook');
+type Mode = 'list' | 'asset';
+type ViewMode = 'compact' | 'grid' | 'sparkline';
 
-  const selectedPair = marketData.find(p => p.id === selectedPairId);
-  const holdingInfo = holdings.find(h => h.pairId === selectedPairId);
-  const myHolding = holdingInfo?.shares || 0;
+// ── Ticker Item Component ──
+interface TickerItemProps {
+  pair: teeteePair;
+  viewMode: ViewMode;
+}
 
-  const handleTrade = () => {
-    if (!selectedPair || amount <= 0) return;
-    if (isBuy) {
-      if (buyPair(selectedPair.id, amount, selectedPair.price)) {
-        setAmount(0);
-        alert(`成功買入 ${amount} 股 ${selectedPair.name}`);
-      } else {
-        alert("餘額不足");
-      }
-    } else {
-      if (sellPair(selectedPair.id, amount, selectedPair.price)) {
-        setAmount(0);
-        alert(`成功賣出 ${amount} 股 ${selectedPair.name}`);
-      } else {
-        alert("庫存不足");
-      }
-    }
+// 輔助函數：繪製今日 K 棒
+const renderMiniKBar = (open: number, close: number, high: number, low: number) => {
+  const isUp = close > open;
+  const isDown = close < open;
+  const color = isUp ? '#ef4444' : isDown ? '#22c55e' : '#ffffff'; // 紅漲綠跌平盤白
+
+  const max = Math.max(high, open, close);
+  const min = Math.min(low, open, close);
+  const range = max - min || 1.0;
+
+  // 畫布高度為 26px，上下留 2px padding
+  const padding = 2;
+  const h = 26;
+  const chartH = h - padding * 2;
+  const getY = (val: number) => {
+    return padding + (chartH - ((val - min) / range) * chartH);
   };
 
-  // 股票總市值
+  const yHigh = getY(high);
+  const yLow = getY(low);
+  const yOpen = getY(open);
+  const yClose = getY(close);
+
+  const rectY = Math.min(yOpen, yClose);
+  const rectHeight = Math.max(Math.abs(yOpen - yClose), 1.5);
+
+  return (
+    <svg width="8" height="26" className="overflow-visible select-none inline-block">
+      {/* 影線 */}
+      <line
+        x1="4"
+        y1={yHigh}
+        x2="4"
+        y2={yLow}
+        stroke={color}
+        strokeWidth="1.2"
+      />
+      {/* 實體棒 */}
+      <rect
+        x="1.5"
+        y={rectY}
+        width="5"
+        height={rectHeight}
+        fill={color}
+        stroke={color}
+        strokeWidth="0.5"
+      />
+    </svg>
+  );
+};
+
+function TickerItem({ pair, viewMode }: TickerItemProps) {
+  const [flashClass, setFlashClass] = useState("");
+  const prevPriceRef = useRef(pair.price);
+
+  useEffect(() => {
+    if (pair.price > prevPriceRef.current) {
+      setFlashClass("animate-flash-red");
+      const timer = setTimeout(() => setFlashClass(""), 500);
+      return () => clearTimeout(timer);
+    } else if (pair.price < prevPriceRef.current) {
+      setFlashClass("animate-flash-green");
+      const timer = setTimeout(() => setFlashClass(""), 500);
+      return () => clearTimeout(timer);
+    }
+    prevPriceRef.current = pair.price;
+  }, [pair.price]);
+
+  const yesterdayPrice = pair.yesterdayPrice ?? pair.price;
+  const diff = pair.price - yesterdayPrice;
+  const changePercent = yesterdayPrice > 0 ? (diff / yesterdayPrice) * 100 : 0;
+
+  const isTodayUp = diff > 0;
+  const isTodayDown = diff < 0;
+
+  // Ceiling and Floor limits (+/-20%)
+  const ceiling = alignToTick(yesterdayPrice * 1.20);
+  const floor = alignToTick(yesterdayPrice * 0.80);
+  const isLimitUp = pair.price >= ceiling;
+  const isLimitDown = pair.price <= floor;
+
+  const stockId = PAIR_ID_MAP[pair.id.toLowerCase()] || pair.id.toUpperCase();
+
+  // Calculate today's Open, Close, High, Low for K-bar
+  const openVal = yesterdayPrice;
+  const closeVal = pair.price;
+  const historyPoints = pair.history || [];
+  const validKBarPoints = historyPoints.filter(pt => pt !== null);
+  const highs = validKBarPoints.map(pt => pt.high);
+  const lows = validKBarPoints.map(pt => pt.low);
+  const highVal = highs.length > 0 ? Math.max(...highs, openVal, closeVal) : Math.max(openVal, closeVal);
+  const lowVal = lows.length > 0 ? Math.min(...lows, openVal, closeVal) : Math.min(openVal, closeVal);
+
+  // Dynamic order book ratio
+  const { getOrderBook } = useTee();
+  const { bids, asks } = getOrderBook(pair.id);
+  const totalBidVol = bids.reduce((sum, b) => sum + b.amount, 0);
+  const totalAskVol = asks.reduce((sum, a) => sum + a.amount, 0);
+  const totalVol = totalBidVol + totalAskVol;
+  const ratio = totalVol > 0 ? (totalBidVol / totalVol) * 100 : 50;
+
+  // Sparkline chart coordinate calculations
+  const width = 160;
+  const height = 55;
+  const baselineY = 27.5;
+
+  const validHistoryPoints = historyPoints.filter(pt => pt !== null && pt.close !== null);
+  const scale = 22 / (Math.max(...validHistoryPoints.map(pt => Math.abs(pt.close - yesterdayPrice)), 1.0));
+
+  const coords = historyPoints.map((pt, idx) => {
+    if (pt === null || pt.close === null) return null;
+    const x = (idx / 59) * width;
+    const y = baselineY - (pt.close - yesterdayPrice) * scale;
+    return { x, y, close: pt.close };
+  }).filter((c): c is { x: number; y: number; close: number } => c !== null);
+
+  let areaPoints = "";
+  if (coords.length > 0) {
+    const firstX = coords[0].x.toFixed(1);
+    const lastX = coords[coords.length - 1].x.toFixed(1);
+    areaPoints = `${firstX},${baselineY} ` + coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ") + ` ${lastX},${baselineY}`;
+  }
+
+  const pathAreaFill = isLimitUp || isLimitDown ? "rgba(255, 255, 255, 0.15)" : isTodayUp ? "rgba(239, 68, 68, 0.08)" : isTodayDown ? "rgba(34, 197, 94, 0.08)" : "rgba(255, 255, 255, 0.05)";
+
+  if (viewMode === 'compact') {
+    const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
+    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-transparent';
+    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/20' : isTodayDown ? 'border-green-500/20' : 'border-gray-900';
+    const labelColor = isLimitUp || isLimitDown ? 'text-white/70' : 'text-gray-500';
+
+    return (
+      <Link
+        href={`/market/${pair.id}`}
+        className={`flex items-center justify-between px-4 py-2 border rounded-lg ${borderClass} ${bgClass} ${flashClass} hover:bg-gray-900/30 transition-all font-mono select-none`}
+      >
+        <div className="flex-1 flex items-center gap-2">
+          {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+          <div>
+            <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
+            <span className={`text-[9px] block ${labelColor}`}>{pair.name}</span>
+          </div>
+        </div>
+        <div className="w-24 text-right pr-2">
+          <span className={`text-xs font-bold ${textClass}`}>{pair.price.toFixed(2)}</span>
+          <div className="w-16 h-1 bg-gray-800 rounded-full overflow-hidden ml-auto mt-1 flex">
+            <div className="bg-red-500 h-full" style={{ width: `${ratio}%` }} />
+            <div className="bg-green-500 h-full" style={{ width: `${100 - ratio}%` }} />
+          </div>
+        </div>
+        <div className="w-20 text-right pr-2">
+          <span className={`text-xs font-bold ${textClass}`}>
+            {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+          </span>
+        </div>
+        <div className="w-20 text-right">
+          <span className={`text-xs font-bold ${textClass}`}>
+            {diff > 0 ? '+' : ''}{changePercent.toFixed(2)}%
+          </span>
+        </div>
+      </Link>
+    );
+  }
+
+  if (viewMode === 'grid') {
+    const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
+    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-gray-900/30 hover:bg-gray-900/50';
+    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-gray-800';
+
+    return (
+      <Link
+        href={`/market/${pair.id}`}
+        className={`p-3 rounded-xl border flex flex-col justify-between h-24 transition-all duration-150 ${borderClass} ${bgClass} ${flashClass} font-mono`}
+      >
+        <div className="flex justify-between items-center">
+          <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
+          {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+        </div>
+        <div className="text-center my-1">
+          <span className={`text-lg font-black tracking-tight ${textClass}`}>{pair.price.toFixed(2)}</span>
+        </div>
+        <div className={`flex items-center justify-center gap-1 text-[10px] font-bold ${textClass}`}>
+          <span>{diff > 0 ? '🔺' : diff < 0 ? '🔻' : ''}</span>
+          <span>{Math.abs(diff).toFixed(2)}</span>
+          <span>({changePercent.toFixed(2)}%)</span>
+        </div>
+      </Link>
+    );
+  }
+
+  // viewMode === 'sparkline'
+  const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
+  const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-transparent';
+  const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/20' : isTodayDown ? 'border-green-500/20' : 'border-gray-900';
+  const chartBg = isLimitUp || isLimitDown ? 'bg-white/10' : 'bg-gray-950/20';
+  const xLabelColor = isLimitUp || isLimitDown ? 'text-white/50' : 'text-slate-500';
+
+  return (
+    <Link
+      href={`/market/${pair.id}`}
+      className={`flex justify-between p-2 rounded-xl border ${borderClass} ${bgClass} ${flashClass} hover:bg-gray-900/30 transition-all font-mono`}
+    >
+      <div className="flex-1 flex flex-col justify-between pr-2">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
+            {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+          </div>
+          <span className={`text-xs font-black ${textClass}`}>{pair.price.toFixed(2)}</span>
+        </div>
+        <div className={`flex items-center gap-1 text-[10px] font-bold ${textClass}`}>
+          <span>{diff > 0 ? '▲' : diff < 0 ? '▼' : ''}</span>
+          <span>{Math.abs(diff).toFixed(2)}</span>
+          <span className="ml-1">{changePercent.toFixed(2)}%</span>
+        </div>
+      </div>
+
+      <div className={`w-1/2 rounded p-1 flex flex-col justify-between select-none ${chartBg}`}>
+        <div className="relative w-full h-[55px]">
+          <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+            {/* Grid lines */}
+            {[1, 2, 3, 4, 5].map((idx) => {
+              const gridX = (idx / 6) * width;
+              return (
+                <line
+                  key={idx}
+                  x1={gridX}
+                  y1={0}
+                  x2={gridX}
+                  y2={height}
+                  stroke="rgba(255,255,255,0.03)"
+                  strokeWidth="0.5"
+                />
+              );
+            })}
+            
+            <line
+              x1={0}
+              y1={baselineY}
+              x2={width}
+              y2={baselineY}
+              stroke="#475569"
+              strokeWidth="0.5"
+              strokeDasharray="2,2"
+            />
+
+            {coords.length > 0 && (
+              <>
+                <polygon
+                  points={areaPoints}
+                  fill={pathAreaFill}
+                />
+                {coords.map((c, idx) => {
+                  if (idx === 0) return null;
+                  const prev = coords[idx - 1];
+                  const price = c.close;
+                  
+                  const isUp = price > yesterdayPrice;
+                  const isDown = price < yesterdayPrice;
+                  const stroke = isUp ? "#ef4444" : isDown ? "#22c55e" : "#ffffff";
+                  
+                  return (
+                    <line
+                      key={idx}
+                      x1={prev.x}
+                      y1={prev.y}
+                      x2={c.x}
+                      y2={c.y}
+                      stroke={stroke}
+                      strokeWidth="0.8"
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
+              </>
+            )}
+          </svg>
+        </div>
+        <div className={`flex justify-between px-0.5 text-[8px] font-mono select-none leading-none pt-0.5 border-t border-slate-800/40 ${xLabelColor}`}>
+          <span>18</span>
+          <span>19</span>
+          <span>20</span>
+          <span>21</span>
+          <span>22</span>
+          <span>23</span>
+          <span>24</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<Mode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('compact');
+
+  const {
+    balance,
+    holdings,
+    marketData,
+    marketStatus,
+    simulateMarketMove,
+    executeWeeklySettlement
+  } = useTee();
+
+  useEffect(() => {
+    const saved = localStorage.getItem('teeteestock-lobby-view-mode');
+    if (saved === 'compact' || saved === 'grid' || saved === 'sparkline') {
+      setViewMode(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    const queryMode = searchParams.get('mode');
+    if (queryMode === 'list' || queryMode === 'asset') {
+      setMode(queryMode);
+    } else {
+      setMode('list');
+    }
+  }, [searchParams]);
+
+  const handleViewModeChange = (newViewMode: ViewMode) => {
+    setViewMode(newViewMode);
+    localStorage.setItem('teeteestock-lobby-view-mode', newViewMode);
+  };
+
   const totalStockValue = holdings.reduce((sum, h) => {
     const pair = marketData.find(p => p.id === h.pairId);
     return sum + (h.shares * (pair?.price || 0));
   }, 0);
 
-  // 計算總資產
   const netWorth = balance + totalStockValue;
 
   return (
-    <main className="min-h-screen bg-[#0b0e11] text-[#eaecef] flex flex-col pb-20 font-sans">
+    <main className="min-h-screen bg-slate-950 text-white flex flex-col pb-20 font-mono">
       <TickerTape />
-      
-      {/* 頂部指數條 */}
-      <div className="bg-[#181a20] border-b border-[#2b2f36] p-3 flex justify-between items-center sticky top-0 z-10">
-        <div className="flex flex-col">
-          <span className="text-[10px] text-[#848e9c] uppercase font-bold">TEE 指數</span>
-          <span className="text-sm font-black text-[#ff3b3b]">18,234.56 ▲ 123.45</span>
+
+      <GlobalStats />
+
+      {marketStatus === 'CLOSED' && (
+        <div className="bg-red-600 text-white text-center py-2 text-sm font-bold animate-pulse font-mono">
+          ⚠️ 市場休市中 (除息與結算進行中) ⚠️
         </div>
-        <div className="text-right">
-          <span className="text-[10px] text-[#848e9c] uppercase font-bold block">可用餘額</span>
-          <span className="text-sm font-mono font-bold text-[#00ffa3]">{balance.toLocaleString()} $TEE</span>
-        </div>
-      </div>
+      )}
 
       <div className="flex-1 overflow-y-auto">
         {mode === 'list' && (
-          <div className="p-2">
-            {/* 控制與計時器 */}
-            <div className="flex justify-between items-center mb-4 px-2">
-              <SettlementTimer />
-              <button 
-                onClick={simulateMarketMove}
-                className="text-[10px] bg-[#2B2F36] hover:bg-[#FF69B4] hover:text-white px-4 py-2 rounded transition-all flex items-center gap-2 border border-[#3E454D]"
+          <div className="p-3 space-y-4">
+            {/* Controls & Simulator */}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-gray-900/30 p-3 rounded-xl border border-gray-900">
+              <div className="flex items-center gap-2">
+                <SettlementTimer />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={simulateMarketMove}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold flex items-center gap-1 transition-all"
+                >
+                  ⚡ 市場撮合
+                </button>
+                <button
+                  onClick={executeWeeklySettlement}
+                  className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 active:bg-gray-900 text-white text-xs font-bold transition-all border border-gray-700"
+                >
+                  測試: 觸發 5% 除息結算
+                </button>
+              </div>
+            </div>
+
+            {/* 三模切換器 (Interface Selector) */}
+            <div className="bg-gray-950 p-1 rounded-xl border border-gray-900 flex select-none">
+              <button
+                onClick={() => handleViewModeChange('compact')}
+                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${viewMode === 'compact' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
               >
-                <span>⚡</span> 市場撮合
+                📊 緊湊列表
+              </button>
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${viewMode === 'grid' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                ⏹️ 大字方塊
+              </button>
+              <button
+                onClick={() => handleViewModeChange('sparkline')}
+                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${viewMode === 'sparkline' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                📈 分時走勢
               </button>
             </div>
 
-            {/* 報價列表 */}
-            <div className="bg-[#181A20] rounded border border-[#2B2F36] overflow-hidden shadow-2xl">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#1E2329] text-[#848E9C] text-[10px] uppercase tracking-tight border-b border-[#2B2F36]">
-                    <th className="px-3 py-3 font-semibold">交易對</th>
-                    <th className="px-3 py-3 font-semibold text-right">成交價</th>
-                    <th className="px-3 py-3 font-semibold text-right">幅度</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#21262C]">
-                  {marketData.map((pair) => {
-                    const isUp = pair.change24h >= 0;
-                    const changeColor = isUp ? 'text-[#FF3B3B]' : 'text-[#00FFA3]';
-                    const bgChangeColor = isUp ? 'bg-[#FF3B3B]/10' : 'bg-[#00FFA3]/10';
-
-                    return (
-                      <tr
-                        key={pair.id}
-                        onClick={() => {
-                          setSelectedPairId(pair.id);
-                          setMode('trade');
-                        }}
-                        className="hover:bg-[#2B3139] transition-colors cursor-pointer group"
-                      >
-                        <td className="px-3 py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-linear-to-tr from-[#FF69B4] to-[#7000FF]" />
-                            <div>
-                              <div className="font-bold text-xs text-[#EAECEF] group-hover:text-[#FF69B4] transition-colors">{pair.name}</div>
-                              <div className="text-[8px] text-[#848E9C] tracking-tighter">{pair.members.join('/')}</div>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className={`px-3 py-4 text-right font-mono text-xs font-bold ${changeColor}`}>
-                          {pair.price.toLocaleString()}
-                        </td>
-
-                        <td className={`px-3 py-4 text-right font-mono text-[10px] font-semibold ${changeColor}`}>
-                          <span className={`px-1 py-0.5 rounded ${bgChangeColor}`}>
-                            {isUp ? '▲' : '▼'} {Math.abs(pair.change24h).toFixed(2)}%
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-        
-        {mode === 'trade' && (
-          <div className="flex flex-col h-full bg-[#0B0E11]">
-            {!selectedPair ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-10 text-[#848e9c]">
-                <p>請從報價列表選擇交易對</p>
-                <button 
-                  onClick={() => setMode('list')}
-                  className="mt-4 px-6 py-2 bg-[#2B2F36] text-white rounded-full text-sm"
-                >
-                  前往報價列表
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col flex-1 overflow-hidden">
-                {/* 交易對標題欄 */}
-                <div className="p-3 bg-[#181A20] border-b border-[#2B2F36] flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setMode('list')} className="text-[#848E9C] pr-2 text-xl">«</button>
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-sm">{selectedPair.name}</span>
-                        <span className="text-[10px] text-[#848E9C] bg-[#2B2F36] px-1 rounded uppercase">{selectedPair.id}</span>
-                      </div>
-                      <div className={`text-xs font-mono font-bold ${selectedPair.change24h >= 0 ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
-                        {selectedPair.price.toLocaleString()} <span className="text-[10px] ml-1">{selectedPair.change24h >= 0 ? '▲' : '▼'} {Math.abs(selectedPair.change24h).toFixed(2)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[9px] text-[#848E9C] uppercase">淨值 (NV)</div>
-                    <div className="text-[10px] font-bold text-[#FF69B4]">{selectedPair.netValue.toLocaleString()}</div>
-                  </div>
+            {/* Render selected view mode */}
+            {viewMode === 'compact' && (
+              <div className="border border-slate-800 rounded-xl overflow-hidden bg-[#0a111a] shadow-xl">
+                {/* Table Header */}
+                <div className="flex items-center justify-between px-4 py-2.5 bg-[#121b26] text-gray-400 text-xs font-bold border-b border-slate-800 select-none">
+                  <div className="flex-1 pl-3">商品</div>
+                  <div className="w-24 text-right pr-2">成交</div>
+                  <div className="w-20 text-right pr-2">漲跌</div>
+                  <div className="w-20 text-right">幅度</div>
                 </div>
-
-                {/* 圖表區 (縮減高度以留空間給標籤頁) */}
-                <div className="h-48 shrink-0">
-                  <CandlestickChart data={selectedPair.history} />
-                </div>
-
-                {/* 標籤頁切換 */}
-                <div className="flex border-b border-[#2B2F36] bg-[#181A20]">
-                  {[
-                    { id: 'orderbook', label: '五檔' },
-                    { id: 'history', label: '成交' },
-                    { id: 'dynamic', label: '動態' }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex-1 py-2 text-xs font-bold transition-colors ${activeTab === tab.id ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C]'}`}
-                    >
-                      {tab.label}
-                    </button>
+                <div className="p-1.5 space-y-1">
+                  {marketData.map((pair) => (
+                    <TickerItem key={pair.id} pair={pair} viewMode="compact" />
                   ))}
                 </div>
+              </div>
+            )}
 
-                {/* 標籤內容區 */}
-                <div className="flex-1 overflow-y-auto bg-[#181A20] p-2">
-                  {activeTab === 'orderbook' && (
-                    <div className="space-y-1">
-                      {/* 模擬五檔數據 */}
-                      <div className="grid grid-cols-2 gap-4 text-[11px] font-mono">
-                        <div className="space-y-1">
-                          {[5,4,3,2,1].map(i => (
-                            <div key={i} className="flex justify-between items-center group">
-                              <span className="text-[#00FFA3]">{Math.round(selectedPair.price * (1 + i*0.001))}</span>
-                              <span className="text-gray-500">{Math.floor(Math.random() * 500)}</span>
-                              <div className="absolute left-0 h-4 bg-[#00FFA3]/5 -z-10 transition-all" style={{ width: `${Math.random() * 40}%` }} />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="space-y-1">
-                          {[1,2,3,4,5].map(i => (
-                            <div key={i} className="flex justify-between items-center">
-                              <span className="text-gray-500">{Math.floor(Math.random() * 500)}</span>
-                              <span className="text-[#FF3B3B]">{Math.round(selectedPair.price * (1 - i*0.001))}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="py-2 text-center border-y border-[#2B2F36] my-2">
-                        <span className={`text-sm font-bold font-mono ${selectedPair.change24h >= 0 ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
-                          {selectedPair.price.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {marketData.map((pair) => (
+                  <TickerItem key={pair.id} pair={pair} viewMode="grid" />
+                ))}
+              </div>
+            )}
 
-                  {activeTab === 'history' && (
-                    <div className="text-[10px] font-mono">
-                      <div className="flex justify-between text-[#848E9C] border-b border-[#2B2F36] pb-1 mb-1">
-                        <span>時間</span>
-                        <span>價格</span>
-                        <span>數量</span>
-                      </div>
-                      {[...selectedPair.history].reverse().slice(0, 10).map((h, i) => (
-                        <div key={i} className="flex justify-between py-1 border-b border-[#2B2F36]/30">
-                          <span className="text-gray-500">{h.time}</span>
-                          <span className={h.close >= h.open ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}>{h.close.toLocaleString()}</span>
-                          <span className="text-white">{Math.floor(Math.random() * 100) + 1}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {activeTab === 'dynamic' && (
-                    <div className="space-y-3">
-                      <div className="bg-[#2B3139] p-3 rounded border border-[#3E454D]">
-                        <h4 className="text-[10px] font-bold text-[#FF69B4] mb-2 uppercase">目前影響因子</h4>
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                          <div>
-                            <div className="text-[8px] text-[#848E9C]">直播</div>
-                            <div className="text-xs text-white font-mono">{selectedPair.pendingInteractions.sharedLive}</div>
-                          </div>
-                          <div>
-                            <div className="text-[8px] text-[#848E9C]">聯動</div>
-                            <div className="text-xs text-white font-mono">{selectedPair.pendingInteractions.collab}</div>
-                          </div>
-                          <div>
-                            <div className="text-[8px] text-[#848E9C]">X 提及</div>
-                            <div className="text-xs text-white font-mono">{selectedPair.pendingInteractions.xMention}</div>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-[#848E9C] leading-relaxed italic">
-                        * 動態反映了 VTuber 之間的互動對組合價值的影響，高頻率互動會顯著提升淨值表現。
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* 交易控制面板 (吸附在底部導覽上方) */}
-                <div className="bg-[#1E2329] border-t border-[#2B2F36] p-3 space-y-3">
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setIsBuy(true)}
-                      className={`flex-1 py-1.5 rounded text-[11px] font-bold border transition-all ${isBuy ? 'bg-[#FF3B3B]/10 border-[#FF3B3B] text-[#FF3B3B]' : 'bg-transparent border-[#2B2F36] text-[#848E9C]'}`}
-                    >
-                      買進
-                    </button>
-                    <button 
-                      onClick={() => setIsBuy(false)}
-                      className={`flex-1 py-1.5 rounded text-[11px] font-bold border transition-all ${!isBuy ? 'bg-[#00FFA3]/10 border-[#00FFA3] text-[#00FFA3]' : 'bg-transparent border-[#2B2F36] text-[#848E9C]'}`}
-                    >
-                      賣出
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 bg-[#0B0E11] border border-[#2B2F36] rounded px-3 py-1.5 flex flex-col">
-                      <span className="text-[8px] text-[#848E9C] uppercase font-bold">數量</span>
-                      <input 
-                        type="number"
-                        value={amount || ""}
-                        onChange={(e) => setAmount(Number(e.target.value))}
-                        className="bg-transparent text-white font-mono text-sm outline-none"
-                        placeholder="0"
-                      />
-                    </div>
-                    <button 
-                      onClick={handleTrade}
-                      className={`px-8 py-3 rounded font-black text-sm shadow-lg active:scale-95 transition-all ${isBuy ? 'bg-[#FF3B3B] text-white' : 'bg-[#00FFA3] text-black'}`}
-                    >
-                      {isBuy ? '買進' : '賣出'}
-                    </button>
-                  </div>
-
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[#848E9C]">{isBuy ? '可用' : '持有'}</span>
-                    <span className="text-white font-mono">{isBuy ? `${balance.toLocaleString()} $TEE` : `${myHolding.toLocaleString()} 股`}</span>
-                  </div>
-                </div>
+            {viewMode === 'sparkline' && (
+              <div className="space-y-1">
+                {marketData.map((pair) => (
+                  <TickerItem key={pair.id} pair={pair} viewMode="sparkline" />
+                ))}
               </div>
             )}
           </div>
         )}
 
         {mode === 'asset' && (
-          <div className="p-4">
-            <div className="bg-[#181a20] p-4 rounded border border-[#2b2f36] mb-4">
-              <h2 className="text-[#ff69b4] font-bold mb-4">資產概覽</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[#848e9c] text-[10px] uppercase">總資產估值</p>
-                  <p className="text-lg font-mono font-bold">{netWorth.toLocaleString()} $TEE</p>
-                </div>
-                <div>
-                  <p className="text-[#848e9c] text-[10px] uppercase">可用餘額</p>
-                  <p className="text-lg font-mono font-bold text-[#00ffa3]">{balance.toLocaleString()} $TEE</p>
-                </div>
+          <div className="p-4 space-y-4">
+            <div className="bg-[#181a20]/40 p-4 rounded-xl border border-[#2b2f36] flex justify-between items-center bg-gray-950/20">
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">總資產估值</p>
+                <p className="text-xl font-black text-white mt-1">{netWorth.toLocaleString()} $TEE</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">可用餘額</p>
+                <p className="text-xl font-black text-green-500 mt-1">{balance.toLocaleString()} $TEE</p>
               </div>
             </div>
 
-            <div className="bg-[#181a20] rounded border border-[#2b2f36] overflow-hidden">
-              <div className="p-3 bg-[#1e2329] border-b border-[#2b2f36]">
-                <h3 className="text-xs font-bold text-[#eaecef]">持有部位</h3>
+            <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden">
+              <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">持有部位</h3>
               </div>
               {holdings.length === 0 ? (
-                <div className="p-8 text-center text-[#848e9c] text-sm">目前無持股</div>
+                <div className="p-8 text-center text-gray-500 text-xs font-bold">目前無持股</div>
               ) : (
-                <div className="divide-y divide-[#21262C]">
-                  {holdings.map(h => {
-                    const pair = marketData.find(p => p.id === h.pairId);
-                    if (!pair) return null;
-                    const value = h.shares * pair.price;
-                    const profit = (pair.price - h.avgCost) * h.shares;
-                    const roi = ((pair.price - h.avgCost) / h.avgCost) * 100;
-                    return (
-                      <div 
-                        key={h.pairId} 
-                        onClick={() => {
-                          setSelectedPairId(h.pairId);
-                          setMode('trade');
-                        }}
-                        className="p-3 flex justify-between items-center hover:bg-[#2B3139] transition-colors cursor-pointer group"
-                      >
-                        <div>
-                          <p className="font-bold text-sm group-hover:text-[#FF69B4] transition-colors">{pair.name}</p>
-                          <p className="text-[10px] text-[#848e9c]">{h.shares.toLocaleString()} 股</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-mono text-sm">${value.toLocaleString()}</p>
-                          <p className={`text-[10px] font-mono ${profit >= 0 ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
-                            {profit >= 0 ? '+' : ''}{roi.toFixed(2)}%
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-950 text-gray-500 text-[10px] font-bold border-b border-[#2b2f36] uppercase tracking-wider select-none">
+                        <th className="px-3 py-2">商品</th>
+                        <th className="px-3 py-2 text-right">股數 / 均價</th>
+                        <th className="px-3 py-2 text-right">現價 / 市值</th>
+                        <th className="px-3 py-2 text-right">未實現損益 / ROI</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#21262C]">
+                      {holdings.map((h) => {
+                        const pair = marketData.find(p => p.id === h.pairId);
+                        if (!pair) return null;
+                        const value = h.shares * pair.price;
+                        const profit = (pair.price - h.avgCost) * h.shares;
+                        const roi = h.avgCost > 0 ? ((pair.price - h.avgCost) / h.avgCost) * 100 : 0;
+                        const profitColor = profit > 0 ? "text-red-500" : profit < 0 ? "text-green-500" : "text-gray-400";
+                        const stockId = PAIR_ID_MAP[pair.id.toLowerCase()] || pair.id.toUpperCase();
+                        return (
+                          <tr key={h.pairId} className="hover:bg-gray-900/40 transition-colors">
+                            <td className="px-3 py-3">
+                              <div className="font-bold text-xs text-white uppercase tracking-wider">{stockId}</div>
+                              <div className="text-[9px] text-gray-500 truncate max-w-[80px]">{pair.name}</div>
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <div className="text-xs font-bold text-white">{h.shares.toLocaleString()}</div>
+                              <div className="text-[10px] text-gray-500">{h.avgCost.toFixed(1)}</div>
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <div className="text-xs font-bold text-white">{pair.price.toLocaleString()}</div>
+                              <div className="text-[10px] text-gray-500">{value.toLocaleString()}</div>
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <div className={`text-xs font-bold ${profitColor}`}>
+                                {profit > 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </div>
+                              <div className={`text-[10px] ${profitColor}`}>
+                                {profit > 0 ? '+' : ''}{roi.toFixed(2)}%
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -371,7 +534,20 @@ export default function Home() {
         )}
       </div>
 
-      <BottomNav currentMode={mode} setMode={setMode} />
+      <BottomNav />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center font-mono">
+        <div className="w-8 h-8 rounded-full border-4 border-t-pink-500 border-r-transparent border-b-transparent border-l-transparent animate-spin mb-4" />
+        <p className="text-xs text-gray-500">載入交易大廳中...</p>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

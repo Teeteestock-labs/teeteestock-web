@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ── Models ──
+
+model CpPairs {
+  id            String         @id // 組合識別碼 (如 "miComet")
+  name          String         // 顯示名稱
+  netValue      Float          @default(100.0) // 當前淨值
+  currentPrice  Float          @default(100.0) // 最後成交價
+  openingPrice  Float          @default(100.0) // 本週開盤參考價
+  total_shares  BigInt         @default(1000000) // 總股本
+  status        String         @default("NORMAL") // 市場狀態 (NORMAL, WARNING, DELISTED)
+  warningWeeks  Int            @default(0) // 結算輔助：警戒週數
+  adminAdjust       Float          @default(0.0) // 管理員隱形微調暫存值
+  adminAdjustReason String         @default("") // 管理員隱形微調理由
+  lastSettledAt     DateTime?      // 結算輔助：上一次結算時間
+  updatedAt     DateTime       @updatedAt
+
+  // 關聯關係
+  events        TeeteeEvents[]
+  orders        OrderBook[]
+  trades        Trades[]
+  klineHistory  KLineHistory[]
+  portfolios    UserPortfolios[]
+}
+
+model TeeteeEvents {
+  id         String       @id @default(uuid())
+  pairId     String
+  url        String       @unique
+  type       String       // EventType (STREAM, VIDEO)
+  title      String
+  timestamp  String?
+  reporter   String
+  status     String       @default("PENDING") // ReviewStatus (PENDING, APPROVED, REJECTED)
+  isSettled  Boolean      @default(false) // 結算輔助：防重複加成
+  createdAt  DateTime     @default(now())
+  reason     String       @default("")
+
+  pair       CpPairs      @relation(fields: [pairId], references: [id])
+
+  @@index([status, pairId])
+}
+
+model ArchivedEvents {
+  id         String   @id @default(uuid())
+  pairId     String
+  url        String   @unique
+  type       String   // EventType (STREAM, STREAM_3D, VIDEO)
+  title      String
+  timestamp  String?
+  reporter   String
+  createdAt  DateTime @default(now())
+  reason     String   @default("")
+}
+
+model OrderBook {
+  id        String    @id @default(uuid())
+  userId    String
+  pairId    String
+  side      String    // OrderSide (BUY, SELL)
+  price     Float
+  volume    Int
+  createdAt DateTime  @default(now())
+
+  pair      CpPairs   @relation(fields: [pairId], references: [id])
+}
+
+model Trades {
+  id        Int      @id @default(autoincrement())
+  pairId    String
+  buyerId   String
+  sellerId  String
+  price     Float
+  volume    Int
+  taxPaid   Float
+  createdAt DateTime @default(now())
+
+  pair      CpPairs  @relation(fields: [pairId], references: [id])
+
+  @@index([pairId, createdAt])
+}
+
+model KLineHistory {
+  id        Int      @id @default(autoincrement())
+  pairId    String
+  timestamp DateTime
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    BigInt
+
+  pair      CpPairs  @relation(fields: [pairId], references: [id])
+}
+
+model UserPortfolios {
+  id             String     @id @default(uuid())
+  userId         String
+  pairId         String
+  shares_owned   BigInt
+  average_cost   Float
+  initial_choice String     // UserChoice (CASH_ONLY, STOCK_CHOSEN)
+
+  pair           CpPairs    @relation(fields: [pairId], references: [id])
+
+  @@unique([userId, pairId])
+}
+
+// ── 輔助表 ──
+
+model UserAccount {
+  userId    String   @id
+  balance   Float    @default(10000.0)
+  updatedAt DateTime @updatedAt
+}
+
+model SettlementLog {
+  id               String   @id @default(uuid())
+  pairId           String
+  previousNV       Float
+  newNV            Float
+  collabBonusSum   Float
+  dividendPerShare Float
+  previousPrice    Float
+  newPrice         Float
+  statusBefore     String
+  statusAfter      String
+  wasDelisted      Boolean  @default(false)
+  adminAdjustReason String  @default("")
+  createdAt        DateTime @default(now())
+}
+
+model SystemConfig {
+  id             Int     @id @default(1)
+  is_market_open Boolean @default(false)
+  tax_rate       Float   @default(0.003)
+  warning_line   Float   @default(10.0)
+  delisting_line Float   @default(5.0)
+}
+

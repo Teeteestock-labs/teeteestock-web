@@ -1,21 +1,41 @@
 // src/types/index.ts
 
+export interface Trade {
+    time: string;
+    price: number;
+    amount: number;
+    isUp: boolean;
+}
+
 // CP組合的定義
 export interface teeteePair {
     id: string;
     name: string;
     members: string[];
     price: number;   // 當前市場價格
-    netValue: number;       // 當前淨值
-    lastWeeklyNV: number;   // 上週結算時的淨值，用於計算週漲跌
     change24h: number;      // 24小時漲跌
     ceoTitle: string;       // 預留稱號欄位
     history: ChartDataPoint[]; // 價格歷史
+    recentTrades: Trade[]; // 最新成交明細
+    yesterdayPrice: number; // 昨天收盤價 (或是起始參考價)
+    openingPrice?: number;   // 本週開盤參考價
+    todayVolume: number;    // 今天總交易量
+    teeteeNews?: TeeteeNewsItem[]; // 本週貼貼資訊
+    status: 'NORMAL' | 'WARNING' | 'DELISTED'; // 組合狀態
+    warningWeeks: number;   // 已連續警戒週數
     pendingInteractions: {
-        sharedLive: number;     // 共同直播次數
-        collab: number;         // 多人聯動次數
-        xMention: number;       // X提及次數
+        liveCollab: number;     // 日常直播/遊戲連動
+        largeEvent: number;     // 線下/大型企劃/3D連動
+        newSong: number;        // 共同新曲/MV/重大作品
     };
+}
+
+export interface TeeteeNewsItem {
+    id?: string;
+    type: string; // 例如: 'x_mention' 或 'collab_live'
+    content: string;
+    link: string;
+    time?: string;
 }
 
 export interface ChartDataPoint {
@@ -24,6 +44,7 @@ export interface ChartDataPoint {
     high: number;
     low: number;
     close: number;
+    volume: number;
 }
 
 // 用戶持股紀錄
@@ -56,4 +77,16 @@ export interface UserProfile{
         pairId: string;
         title: string;
     }[];
+}
+
+// 委託單 (Limit Order)
+export interface Order {
+    id: string;
+    pairId: string;
+    type: 'buy' | 'sell';
+    price: number;
+    amount: number;
+    isUser: boolean;
+    botId?: string;
+    timestamp: number;
 }
