@@ -1,0 +1,24 @@
+{
+  "tasks": [
+    {
+      "pairId": "miComet",
+      "author": "sakuramiko35",
+      "targetKeywords": ["すいちゃん", "星街すいせい", "miComet", "ビジネスフレンド", "みこめっと", "☄️"]
+    },
+    {
+      "pairId": "miComet",
+      "author": "suisei_hosimati",
+      "targetKeywords": ["みこち", "さくらみこ", "miComet", "ビジネスフレンド", "みこめっと", "🌸"]
+    },
+    {
+      "pairId": "OkaKoro",
+      "author": "nekomataokayu",
+      "targetKeywords": ["ころね", "ころさん", "おかころ", "OkaKoro", "🥐"]
+    },
+    {
+      "pairId": "OkaKoro",
+      "author": "inugamikorone",
+      "targetKeywords": ["おかゆ", "おかころ", "OkaKoro", "🍙"]
+    }
+  ]
+}

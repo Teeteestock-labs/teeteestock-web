@@ -1,0 +1,79 @@
+Created At: 2026-06-25T11:12:27Z
+Completed At: 2026-06-25T11:12:28Z
+File Path: `file:///home/ccl/Code/teeteestock-web/src/app/page.tsx`
+Total Lines: 760
+Total Bytes: 29873
+Showing lines 600 to 760
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+600:                 📈 分時走勢
+601:               </button>
+602:             </div>
+603: 
+604:             {/* Render selected view mode */}
+605:             {viewMode === 'compact' && (
+606:               <div className="border border-slate-800 rounded-xl overflow-hidden bg-[#0a111a] shadow-xl">
+607:                 {/* Table Header */}
+608:                 <div className="flex items-center justify-between px-4 py-2.5 bg-[#121b26] text-gray-400 text-xs font-bold border-b border-slate-800 select-none">
+609:                   <div className="flex-1 pl-3">商品</div>
+610:                   <div className="w-24 text-right pr-2">成交</div>
+611:                   <div className="w-20 text-right pr-2">漲跌</div>
+612:                   <div className="w-20 text-right">幅度</div>
+613:                 </div>
+614:                 <div className="p-1.5 space-y-1">
+615:                   {marketData.map((pair) => (
+616:                     <TickerItem key={pair.id} pair={pair} viewMode="compact" />
+617:                   ))}
+618:                 </div>
+619:               </div>
+620:             )}
+621: 
+622:             {viewMode === 'grid' && (
+623:               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+624:                 {marketData.map((pair) => (
+625:                   <TickerItem key={pair.id} pair={pair} viewMode="grid" />
+626:                 ))}
+627:               </div>
+628:             )}
+629: 
+630:             {viewMode === 'sparkline' && (
+631:               <div className="space-y-1">
+632:                 {marketData.map((pair) => (
+633:             
+<truncated 5470 bytes>
+t-xs text-white uppercase tracking-wider">{stockId}</div>
+726:                               <div className="text-[9px] text-gray-500 truncate max-w-[80px]">{pair.name}</div>
+727:                             </td>
+728:                             <td className="px-3 py-3 text-right">
+729:                               <div className="text-xs font-bold text-white">{h.shares.toLocaleString()}</div>
+730:                               <div className="text-[10px] text-gray-500">{h.avgCost.toFixed(1)}</div>
+731:                             </td>
+732:                             <td className="px-3 py-3 text-right">
+733:                               <div className="text-xs font-bold text-white">{pair.price.toLocaleString()}</div>
+734:                               <div className="text-[10px] text-gray-500">{value.toLocaleString()}</div>
+735:                             </td>
+736:                             <td className="px-3 py-3 text-right">
+737:                               <div className={`text-xs font-bold ${profitColor}`}>
+738:                                 {profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}
+739:                               </div>
+740:                               <div className={`text-[10px] ${profitColor}`}>
+741:                                 {profit >= 0 ? '+' : ''}{roi.toFixed(2)}%
+742:                               </div>
+743:                             </td>
+744:                           </tr>
+745:                         );
+746:                       })}
+747:                     </tbody>
+748:                   </table>
+749:                 </div>
+750:               )}
+751:             </div>
+752:           </div>
+753:         )}
+754:       </div>
+755: 
+756:       <BottomNav currentMode={mode} setMode={handleModeChange} />
+757:     </main>
+758:   );
+759: }
+760: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

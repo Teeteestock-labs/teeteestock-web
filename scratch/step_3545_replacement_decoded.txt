@@ -1,0 +1,71 @@
+"interface TickerItemProps {
+  pair: teeteePair;
+  viewMode: ViewMode;
+}
+
+// è¼å©å½æ¸ï¼ç¹ªè£½ä»æ¥ K æ£
+const renderMiniKBar = (open: number, close: number, high: number, low: number) => {
+  const isUp = close > open;
+  const isDown = close < open;
+  const color = isUp ? '#ef4444' : isDown ? '#22c55e' : '#ffffff'; // ç´æ¼²ç¶ è·å¹³ç¤ç½
+
+  const max = Math.max(high, open, close);
+  const min = Math.min(low, open, close);
+  const range = max - min || 1.0;
+
+  // ç«å¸é«åº¦çº 26pxï¼ä¸ä¸ç 2px padding
+  const padding = 2;
+  const h = 26;
+  const chartH = h - padding * 2;
+
+  const getY = (val: number) => {
+    return padding + (chartH - ((val - min) / range) * chartH);
+  };
+
+  const yHigh = getY(high);
+  const yLow = getY(low);
+  const yOpen = getY(open);
+  const yClose = getY(close);
+
+  const rectY = Math.min(yOpen, yClose);
+  const rectHeight = Math.max(Math.abs(yOpen - yClose), 1.5);
+
+  return (
+    <svg width="8" height="26" className="overflow-visible select-none inline-block">
+      {/* å½±ç· */}
+      <line
+        x1="4"
+        y1={yHigh}
+        x2="4"
+        y2={yLow}
+        stroke={color}
+        strokeWidth="1.2"
+      />
+      {/* å¯¦é«æ£ */}
+      <rect
+        x="1.5"
+        y={rectY}
+        width="5"
+        height={rectHeight}
+        fill={color}
+        stroke={color}
+        strokeWidth="0.5"
+      />
+    </svg>
+  );
+};
+
+function TickerItem({ pair, viewMode }: TickerItemProps) {
+  const [flashClass, setFlashClass] = useState("");
+  const prevPriceRef = useRef(pair.price);
+
+  useEffect(() => {
+    if (pair.price > prevPriceRef.current) {
+      setFlashClass("animate-flash-red");
+      const timer = setTimeout(() => setFlashClass(""), 500);
+      return () => clearTimeout(timer);
+    } else if (pair.price < prevPriceRef.current) {
+      setFlashClass("animate-flash-green");
+      const timer = setTimeout(() => setFlashClass(""), 500);
+      return () => clearTimeout(timer);
+    }<truncated 14001 bytes>

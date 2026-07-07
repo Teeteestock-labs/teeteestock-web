@@ -100,7 +100,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
     prevPriceRef.current = pair.price;
   }, [pair.price]);
 
-  const yesterdayPrice = pair.yesterdayPrice ?? pair.price;
+  const yesterdayPrice = pair.openingPrice ?? pair.price;
   const diff = pair.price - yesterdayPrice;
   const changePercent = yesterdayPrice > 0 ? (diff / yesterdayPrice) * 100 : 0;
 
@@ -116,12 +116,17 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
   const stockId = PAIR_ID_MAP[pair.id.toLowerCase()] || pair.id.toUpperCase();
 
   // Calculate today's Open, Close, High, Low for K-bar
-  const openVal = yesterdayPrice;
-  const closeVal = pair.price;
   const historyPoints = pair.history || [];
   const validKBarPoints = historyPoints.filter(pt => pt !== null);
-  const highs = validKBarPoints.map(pt => pt.high);
-  const lows = validKBarPoints.map(pt => pt.low);
+  
+  // 找出今日第一個有實際成交量 (volume > 0) 的點，作為開盤基準價
+  const firstTradeIdx = validKBarPoints.findIndex(pt => pt.volume > 0);
+  const todayPoints = firstTradeIdx >= 0 ? validKBarPoints.slice(firstTradeIdx) : [];
+  
+  const openVal = todayPoints.length > 0 ? todayPoints[0].open : yesterdayPrice;
+  const closeVal = pair.price;
+  const highs = todayPoints.map(pt => pt.high);
+  const lows = todayPoints.map(pt => pt.low);
   const highVal = highs.length > 0 ? Math.max(...highs, openVal, closeVal) : Math.max(openVal, closeVal);
   const lowVal = lows.length > 0 ? Math.min(...lows, openVal, closeVal) : Math.min(openVal, closeVal);
 
@@ -143,7 +148,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
 
   const coords = historyPoints.map((pt, idx) => {
     if (pt === null || pt.close === null) return null;
-    const x = (idx / 59) * width;
+    const x = (idx / (historyPoints.length - 1 || 1)) * width;
     const y = baselineY - (pt.close - yesterdayPrice) * scale;
     return { x, y, close: pt.close };
   }).filter((c): c is { x: number; y: number; close: number } => c !== null);
@@ -159,14 +164,14 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
 
   if (viewMode === 'compact') {
     const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
-    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-transparent';
-    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/20' : isTodayDown ? 'border-green-500/20' : 'border-gray-900';
+    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-[#0f172a]/30 hover:bg-[#0f172a]/50';
+    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-slate-800';
     const labelColor = isLimitUp || isLimitDown ? 'text-white/70' : 'text-gray-500';
 
     return (
       <Link
         href={`/market/${pair.id}`}
-        className={`flex items-center justify-between px-4 py-2 border rounded-lg ${borderClass} ${bgClass} ${flashClass} hover:bg-gray-900/30 transition-all font-mono select-none`}
+        className={`flex items-center justify-between px-4 py-2 border rounded-lg ${borderClass} ${bgClass} ${flashClass} transition-all duration-150 font-mono select-none`}
       >
         <div className="flex-1 flex items-center gap-2">
           {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
@@ -198,25 +203,35 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
 
   if (viewMode === 'grid') {
     const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
-    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-gray-900/30 hover:bg-gray-900/50';
-    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-gray-800';
+    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-[#0f172a]/30 hover:bg-[#0f172a]/50';
+    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-slate-800';
 
     return (
       <Link
         href={`/market/${pair.id}`}
-        className={`p-3 rounded-xl border flex flex-col justify-between h-24 transition-all duration-150 ${borderClass} ${bgClass} ${flashClass} font-mono`}
+        className={`p-3 rounded-lg border flex flex-col justify-between h-28 transition-all duration-150 ${borderClass} ${bgClass} ${flashClass} font-mono`}
       >
-        <div className="flex justify-between items-center">
-          <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
-          {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+        {/* Top row: Name on left, 4-letter code on right */}
+        <div className="flex justify-between items-center w-full">
+          <span className="font-bold text-sm text-white truncate max-w-[70%]">{pair.name}</span>
+          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{stockId}</span>
         </div>
-        <div className="text-center my-1">
-          <span className={`text-lg font-black tracking-tight ${textClass}`}>{pair.price.toFixed(2)}</span>
+
+        {/* Middle row: Large Price and Today's K-bar next to it */}
+        <div className="flex justify-between items-center w-full my-0.5">
+          <span className={`text-2xl font-black tracking-tight ${textClass}`}>
+            {pair.price.toFixed(2)}
+          </span>
+          <div className="scale-125 transform-gpu origin-right pr-1">
+            {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+          </div>
         </div>
-        <div className={`flex items-center justify-center gap-1 text-[10px] font-bold ${textClass}`}>
-          <span>{diff > 0 ? '🔺' : diff < 0 ? '🔻' : ''}</span>
-          <span>{Math.abs(diff).toFixed(2)}</span>
-          <span>({changePercent.toFixed(2)}%)</span>
+
+        {/* Bottom row: Up/Down arrow, absolute change, percentage change */}
+        <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
+          <span>{diff > 0 ? '▲' : diff < 0 ? '▼' : ''}</span>
+          <span>{diff !== 0 ? Math.abs(diff).toFixed(2) : '0.00'}</span>
+          <span>{Math.abs(changePercent).toFixed(2)}%</span>
         </div>
       </Link>
     );
@@ -224,37 +239,47 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
 
   // viewMode === 'sparkline'
   const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
-  const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-transparent';
-  const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/20' : isTodayDown ? 'border-green-500/20' : 'border-gray-900';
-  const chartBg = isLimitUp || isLimitDown ? 'bg-white/10' : 'bg-gray-950/20';
-  const xLabelColor = isLimitUp || isLimitDown ? 'text-white/50' : 'text-slate-500';
+  const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-[#0f172a]/30 hover:bg-[#0f172a]/50';
+  const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-slate-800';
 
   return (
     <Link
       href={`/market/${pair.id}`}
-      className={`flex justify-between p-2 rounded-xl border ${borderClass} ${bgClass} ${flashClass} hover:bg-gray-900/30 transition-all font-mono`}
+      className={`flex rounded-lg border h-28 transition-all duration-150 ${borderClass} ${bgClass} ${flashClass} font-mono overflow-hidden shadow-sm`}
     >
-      <div className="flex-1 flex flex-col justify-between pr-2">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
+      {/* Left Column: Info part (30% width) */}
+      <div className="w-[30%] flex flex-col justify-between p-3 border-r border-slate-800 bg-slate-950/20">
+        {/* Top row: Name on left, 4-letter code on right */}
+        <div className="flex justify-between items-center w-full">
+          <span className="font-bold text-sm text-white truncate max-w-[70%]">{pair.name}</span>
+          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{stockId}</span>
+        </div>
+
+        {/* Middle row: Large Price and Today's K-bar next to it */}
+        <div className="flex justify-between items-center w-full my-0.5">
+          <span className={`text-xl font-black tracking-tight ${textClass}`}>
+            {pair.price.toFixed(2)}
+          </span>
+          <div className="scale-110 transform-gpu origin-right pr-1">
             {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
           </div>
-          <span className={`text-xs font-black ${textClass}`}>{pair.price.toFixed(2)}</span>
         </div>
-        <div className={`flex items-center gap-1 text-[10px] font-bold ${textClass}`}>
+
+        {/* Bottom row: Up/Down arrow, absolute change, percentage change */}
+        <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
           <span>{diff > 0 ? '▲' : diff < 0 ? '▼' : ''}</span>
-          <span>{Math.abs(diff).toFixed(2)}</span>
-          <span className="ml-1">{changePercent.toFixed(2)}%</span>
+          <span>{diff !== 0 ? Math.abs(diff).toFixed(2) : '0.00'}</span>
+          <span>{Math.abs(changePercent).toFixed(2)}%</span>
         </div>
       </div>
 
-      <div className={`w-1/2 rounded p-1 flex flex-col justify-between select-none ${chartBg}`}>
-        <div className="relative w-full h-[55px]">
+      {/* Right Column: Sparkline graph (70% width) */}
+      <div className="w-[70%] bg-black p-2 flex flex-col justify-between select-none relative">
+        <div className="relative w-full h-[65px]">
           <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
             {/* Grid lines */}
-            {[1, 2, 3, 4, 5].map((idx) => {
-              const gridX = (idx / 6) * width;
+            {[1, 2, 3, 4].map((idx) => {
+              const gridX = (idx / 5) * width;
               return (
                 <line
                   key={idx}
@@ -262,20 +287,21 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
                   y1={0}
                   x2={gridX}
                   y2={height}
-                  stroke="rgba(255,255,255,0.03)"
+                  stroke="rgba(255,255,255,0.06)"
                   strokeWidth="0.5"
                 />
               );
             })}
             
+            {/* Horizontal Baseline (solid cyan-blue line in the middle) */}
             <line
               x1={0}
               y1={baselineY}
               x2={width}
               y2={baselineY}
-              stroke="#475569"
-              strokeWidth="0.5"
-              strokeDasharray="2,2"
+              stroke="#00E5FF"
+              strokeWidth="0.8"
+              opacity="0.6"
             />
 
             {coords.length > 0 && (
@@ -301,7 +327,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
                       x2={c.x}
                       y2={c.y}
                       stroke={stroke}
-                      strokeWidth="0.8"
+                      strokeWidth="0.5"
                       strokeLinecap="round"
                     />
                   );
@@ -310,14 +336,13 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
             )}
           </svg>
         </div>
-        <div className={`flex justify-between px-0.5 text-[8px] font-mono select-none leading-none pt-0.5 border-t border-slate-800/40 ${xLabelColor}`}>
-          <span>18</span>
-          <span>19</span>
-          <span>20</span>
-          <span>21</span>
-          <span>22</span>
-          <span>23</span>
-          <span>24</span>
+        <div className="flex justify-between px-1 text-[9px] font-mono select-none leading-none pt-1 border-t border-slate-800/40 text-gray-500">
+          <span>19:00</span>
+          <span>20:00</span>
+          <span>21:00</span>
+          <span>22:00</span>
+          <span>23:00</span>
+          <span>24:00</span>
         </div>
       </div>
     </Link>
@@ -338,6 +363,8 @@ function HomeContent() {
     simulateMarketMove,
     executeWeeklySettlement
   } = useTee();
+
+  const sortedMarketData = [...marketData].sort((a, b) => a.id.localeCompare(b.id));
 
   useEffect(() => {
     const saved = localStorage.getItem('teeteestock-lobby-view-mode');
@@ -373,9 +400,16 @@ function HomeContent() {
 
       <GlobalStats />
 
-      {marketStatus === 'CLOSED' && (
+      {marketStatus !== 'OPEN' && marketStatus !== 'PRE_MARKET' && (
         <div className="bg-red-600 text-white text-center py-2 text-sm font-bold animate-pulse font-mono">
-          ⚠️ 市場休市中 (除息與結算進行中) ⚠️
+          {marketStatus === 'MAINTENANCE'
+            ? '⚠️ 系統維護中，目前全面禁止任何交易與掛單操作 ⚠️'
+            : '⚠️ 交易所休市中 (開盤時間為週二至週日 19:00 - 24:00，18:45 開放限價掛單) ⚠️'}
+        </div>
+      )}
+      {marketStatus === 'PRE_MARKET' && (
+        <div className="bg-[#F0B90B] text-slate-950 text-center py-2 text-sm font-bold animate-pulse font-mono">
+          📢 盤前試撮掛單期 (18:45 ~ 19:00) 📢
         </div>
       )}
 
@@ -386,20 +420,6 @@ function HomeContent() {
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-gray-900/30 p-3 rounded-xl border border-gray-900">
               <div className="flex items-center gap-2">
                 <SettlementTimer />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={simulateMarketMove}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold flex items-center gap-1 transition-all"
-                >
-                  ⚡ 市場撮合
-                </button>
-                <button
-                  onClick={executeWeeklySettlement}
-                  className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 active:bg-gray-900 text-white text-xs font-bold transition-all border border-gray-700"
-                >
-                  測試: 觸發 5% 除息結算
-                </button>
               </div>
             </div>
 
@@ -436,7 +456,7 @@ function HomeContent() {
                   <div className="w-20 text-right">幅度</div>
                 </div>
                 <div className="p-1.5 space-y-1">
-                  {marketData.map((pair) => (
+                  {sortedMarketData.map((pair) => (
                     <TickerItem key={pair.id} pair={pair} viewMode="compact" />
                   ))}
                 </div>
@@ -445,7 +465,7 @@ function HomeContent() {
 
             {viewMode === 'grid' && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {marketData.map((pair) => (
+                {sortedMarketData.map((pair) => (
                   <TickerItem key={pair.id} pair={pair} viewMode="grid" />
                 ))}
               </div>
@@ -453,7 +473,7 @@ function HomeContent() {
 
             {viewMode === 'sparkline' && (
               <div className="space-y-1">
-                {marketData.map((pair) => (
+                {sortedMarketData.map((pair) => (
                   <TickerItem key={pair.id} pair={pair} viewMode="sparkline" />
                 ))}
               </div>

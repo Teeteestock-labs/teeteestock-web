@@ -4,7 +4,7 @@ import { INITIAL_PAIRS } from '@/app/constants/market';
 import { teeteePair, UserHolding, ChartDataPoint, Order } from '@/app/types';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isValidTickSize, getTickSize, alignToTick } from '@/utils/validatePrice';
-import { isMarketOpen, getTaipeiTime, getTaipeiDateString, getTaipeiTimeStr } from '@/utils/marketHours';
+import { isMarketOpen, getTaipeiTime, getTaipeiDateString, getTaipeiTimeStr, isPreMarketPeriod, isOperatingPeriod } from '@/utils/marketHours';
 
 
 export interface OrderBook {
@@ -17,7 +17,7 @@ interface TeeContextType {
     holdings: UserHolding[];
     marketData: teeteePair[];
     orders: Order[];
-    marketStatus: 'OPEN' | 'CLOSED';
+    marketStatus: 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE';
     getOrderBook: (pairId: string) => OrderBook;
     submitOrder: (pairId: string, type: 'buy' | 'sell', amount: number, price: number) => { success: boolean, message?: string };
     cancelOrder: (orderId: string) => void;
@@ -25,6 +25,7 @@ interface TeeContextType {
     reportInteraction: (pairId: string, type: 'liveCollab' | 'largeEvent' | 'newSong') => void;
     executeWeeklySettlement: () => void;
     submitTeeteeReport: (pairId: string, type: string, url: string) => void;
+    refreshPlayerState: () => Promise<void>;
 }
 
 const TeeContext = createContext<TeeContextType | undefined>(undefined);
@@ -32,7 +33,7 @@ const TeeContext = createContext<TeeContextType | undefined>(undefined);
 // 輔助函數：生成模擬歷史數據
 // 輔助函數：補全歷史數據到 360 筆以保證圖表飽滿且不崩潰
 const padHistory = (dbHistory: ChartDataPoint[], basePrice: number): ChartDataPoint[] => {
-    const requiredPoints = 360;
+    const requiredPoints = 300;
     if (dbHistory.length >= requiredPoints) {
         return dbHistory;
     }
@@ -45,13 +46,13 @@ const padHistory = (dbHistory: ChartDataPoint[], basePrice: number): ChartDataPo
     let lastClose = firstRealPrice;
     
     for (let i = pointsToGen; i > 0; i--) {
-        let h = 18;
+        let h = 19;
         let m = 0;
         
         if (dbHistory.length > 0 && dbHistory[0].time) {
             const parts = dbHistory[0].time.split(':');
             let rh = parseInt(parts[0], 10);
-            if (isNaN(rh)) rh = 18;
+            if (isNaN(rh)) rh = 19;
             let rm = parseInt(parts[1], 10);
             if (isNaN(rm)) rm = 0;
             
@@ -62,19 +63,18 @@ const padHistory = (dbHistory: ChartDataPoint[], basePrice: number): ChartDataPo
             h = Math.floor(totalMin / 60) % 24;
             m = totalMin % 60;
         } else {
-            // 若完全沒有歷史，就從 18:00 開始依序生成
-            const totalMin = 18 * 60 + (pointsToGen - i);
+            // 若完全沒有歷史，就從 19:00 開始依序生成
+            const totalMin = 19 * 60 + (pointsToGen - i);
             h = Math.floor(totalMin / 60) % 24;
             m = totalMin % 60;
         }
         
         const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         const open = lastClose;
-        const volatility = (Math.random() * 0.01) - 0.005;
-        const close = Math.round(open * (1 + volatility) * 100) / 100;
-        const high = Math.round(Math.max(open, close) * (1 + Math.random() * 0.002) * 100) / 100;
-        const low = Math.round(Math.min(open, close) * (1 - Math.random() * 0.002) * 100) / 100;
-        const volume = Math.floor(Math.random() * 200) + 20;
+        const close = open;
+        const high = open;
+        const low = open;
+        const volume = 0;
         
         padded.push({ time, open, high, low, close, volume });
         lastClose = close;
@@ -105,7 +105,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [bots, setBots] = useState<Bot[]>([]);
     
-    const [marketStatus, setMarketStatus] = useState<'OPEN' | 'CLOSED'>('CLOSED');
+    const [marketStatus, setMarketStatus] = useState<'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE'>('CLOSED');
     const [isInitialized, setIsInitialized] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -116,22 +116,27 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             const marketRes = await fetch('/api/market');
             if (marketRes.ok) {
                 const data = await marketRes.json();
-                if (data.success && Array.isArray(data.pairs)) {
-                    const mergedMarket = data.pairs.map((p: any) => {
-                        const initialPair = INITIAL_PAIRS.find(x => x.id === p.id) || INITIAL_PAIRS[0];
-                        return {
-                            ...initialPair,
-                            ...p,
-                            yesterdayPrice: p.openingPrice,
-                            history: padHistory(p.history || [], p.openingPrice || p.price)
-                        };
-                    });
-                    setMarketData(mergedMarket);
-                    localStorage.setItem('tee_market', JSON.stringify(mergedMarket));
-                }
-                if (data.success && Array.isArray(data.orders)) {
-                    setOrders(data.orders);
-                    localStorage.setItem('tee_orders', JSON.stringify(data.orders));
+                if (data.success) {
+                    if (data.marketStatus) {
+                        setMarketStatus(data.marketStatus);
+                    }
+                    if (Array.isArray(data.pairs)) {
+                        const mergedMarket = data.pairs.map((p: any) => {
+                            const initialPair = INITIAL_PAIRS.find(x => x.id === p.id) || INITIAL_PAIRS[0];
+                            return {
+                                ...initialPair,
+                                ...p,
+                                yesterdayPrice: p.openingPrice,
+                                history: padHistory(p.history || [], p.openingPrice || p.price)
+                            };
+                        });
+                        setMarketData(mergedMarket);
+                        localStorage.setItem('tee_market', JSON.stringify(mergedMarket));
+                    }
+                    if (Array.isArray(data.orders)) {
+                        setOrders(data.orders);
+                        localStorage.setItem('tee_orders', JSON.stringify(data.orders));
+                    }
                 }
             }
 
@@ -154,7 +159,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     // 每週除息與結算功能 (呼叫後端 API 進行結算，並單向同步最新玩家餘額與庫存)
     const executeWeeklySettlement = async () => {
-        setMarketStatus('CLOSED');
+        setMarketStatus('SETTLING');
         
         try {
             // ── 1. 撤銷所有委託單 (退還資金/股票到本地) ──
@@ -292,23 +297,23 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             }
 
             setTimeout(() => {
-                setMarketStatus('OPEN');
+                fetchLatestMarketAndPlayer();
                 alert(reportMsg);
             }, 3000);
 
         } catch (error) {
             console.error('Settlement error:', error);
             setTimeout(() => {
-                setMarketStatus('OPEN');
+                fetchLatestMarketAndPlayer();
                 alert(`結算過程發生錯誤：${error instanceof Error ? error.message : '未知錯誤'}`);
-            }, 1000);
+            }, 3000);
         }
     };
 
     // 初次載入: 處理掛載與 LocalStorage
     useEffect(() => {
         setMounted(true);
-        setMarketStatus(isMarketOpen() ? 'OPEN' : 'CLOSED');
+        // Init will sync with server immediately
         const saveBalance = localStorage.getItem('tee_balance');
         const saveHoldings = localStorage.getItem('tee_holdings');
         const savedMarket =  localStorage.getItem('tee_market');
@@ -363,7 +368,12 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     // 提交委託單 (向後端資料庫送出訂單)
     const submitOrder = (pairId: string, type: 'buy' | 'sell', amount: number, price: number) => {
-        if (!isMarketOpen()) return { success: false, message: "交易所目前處於非營運時段，開盤時間為 18:00 - 24:00。" };
+        if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING') {
+            return { success: false, message: `交易所目前處於非營運清算狀態 (${marketStatus})，拒絕任何掛單寫入。` };
+        }
+        if (marketStatus === 'MAINTENANCE') {
+            return { success: false, message: "系統維護中，全面禁止任何交易操作。" };
+        }
         if (amount <= 0 || price <= 0) return { success: false, message: "無效的數量或價格" };
 
         // 台股 Tick Size 跳動單位檢查
@@ -392,6 +402,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             if (!existing || existing.shares < amount) return { success: false, message: "庫存不足" };
         }
 
+        const tempId = `usr_temp_${Date.now()}`;
+
         // 發送請求到後端 API
         fetch('/api/orders/submit', {
             method: 'POST',
@@ -406,13 +418,45 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         }).then(async res => {
             const data = await res.json();
             if (res.ok) {
+                // 若後端回傳成功，將本地臨時單的 ID 替換成真實的 DB 委託單 ID
+                if (data.order && data.order.id) {
+                    setOrders(prev => prev.map(o => o.id === tempId ? { ...o, id: data.order.id } : o));
+                }
                 // 立即更新前端行情與玩家資產
                 fetchLatestMarketAndPlayer();
             } else {
+                // 委託失敗，退回本地暫扣資產，並移去臨時單
+                setOrders(prev => prev.filter(o => o.id !== tempId));
+                if (type === 'buy') {
+                    setBalance(prev => prev + amount * price);
+                } else {
+                    setHoldings(prev => {
+                        const existingIdx = prev.findIndex(h => h.pairId === pairId);
+                        if (existingIdx >= 0) {
+                            return prev.map(h => h.pairId === pairId ? { ...h, shares: h.shares + amount } : h);
+                        } else {
+                            return [...prev, { pairId, shares: amount, avgCost: price }];
+                        }
+                    });
+                }
                 alert(`[委託失敗] ${data.error || '未知錯誤'}`);
             }
         }).catch(err => {
             console.error("Order submission failed:", err);
+            // 發生異常，退回本地暫扣資產，並移去臨時單
+            setOrders(prev => prev.filter(o => o.id !== tempId));
+            if (type === 'buy') {
+                setBalance(prev => prev + amount * price);
+            } else {
+                setHoldings(prev => {
+                    const existingIdx = prev.findIndex(h => h.pairId === pairId);
+                    if (existingIdx >= 0) {
+                        return prev.map(h => h.pairId === pairId ? { ...h, shares: h.shares + amount } : h);
+                    } else {
+                        return [...prev, { pairId, shares: amount, avgCost: price }];
+                    }
+                });
+            }
         });
 
         // 為了 UI 的反應性，在本地先扣除金額/庫存，並掛上臨時單
@@ -422,7 +466,6 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             setHoldings(prev => prev.map(h => h.pairId === pairId ? { ...h, shares: h.shares - amount } : h).filter(h => h.shares > 0));
         }
 
-        const tempId = `usr_temp_${Date.now()}`;
         const newOrder: Order = {
             id: tempId,
             pairId,
@@ -439,8 +482,16 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     // 取消委託單
     const cancelOrder = (orderId: string) => {
-        if (!isMarketOpen()) return;
+        if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING' || marketStatus === 'MAINTENANCE') {
+            alert(`目前交易所狀態為 ${marketStatus}，無法撤單！`);
+            return;
+        }
         
+        if (orderId.startsWith('usr_temp_')) {
+            alert("委託單正在送出中，請稍後再試。");
+            return;
+        }
+
         const order = orders.find(o => o.id === orderId);
         if (!order || !order.isUser) return;
 
@@ -468,10 +519,17 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                 fetchLatestMarketAndPlayer();
             } else {
                 const data = await res.json();
-                console.error("Cancel failed on backend:", data.error);
+                if (data.error === "Order not found") {
+                    // 已成交或撮合刪除的正常競態情況
+                    console.log("Order already filled/matched. Cannot cancel.");
+                } else {
+                    console.error("Cancel failed on backend:", data.error);
+                }
+                fetchLatestMarketAndPlayer();
             }
         }).catch(err => {
             console.error("Cancel order API call failed:", err);
+            fetchLatestMarketAndPlayer();
         });
     };
 
@@ -486,12 +544,9 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     // 手動觸發撮合引擎 (點擊 ⚡ 市場撮合 按鈕時)
     const simulateMarketMove = async () => {
-        const open = isMarketOpen();
+        const open = isPreMarketPeriod() || isOperatingPeriod();
         if (!open) {
-            setMarketStatus('CLOSED');
-            return;
-        } else {
-            setMarketStatus('OPEN');
+            fetchLatestMarketAndPlayer();
         }
 
         try {
@@ -557,7 +612,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     };
 
     return (
-        <TeeContext.Provider value={{ balance, holdings, marketData, orders, marketStatus, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, submitTeeteeReport }}>
+        <TeeContext.Provider value={{ balance, holdings, marketData, orders, marketStatus, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
             {children}
         </TeeContext.Provider>
     );

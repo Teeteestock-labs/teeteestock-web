@@ -45,9 +45,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid CP Pair ID' }, { status: 400 });
     }
 
-    // Unique URL check (prevent spam/duplicate submissions)
+    // Unique URL check (prevent spam/duplicate submissions for the same CP pair)
     const existingEvent = await prisma.teeteeEvents.findUnique({
-      where: { url }
+      where: {
+        pairId_url: {
+          pairId: dbPairId,
+          url
+        }
+      }
     });
 
     if (existingEvent) {

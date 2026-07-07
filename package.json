@@ -6,24 +6,44 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "login:x": "tsx scripts/login-x.ts",
+    "macro:x": "tsx scripts/macro-search.ts",
+    "cron:crawler": "tsx src/cron/crawler.ts"
   },
   "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@types/ws": "^8.18.1",
     "lucide-react": "^1.16.0",
     "next": "16.2.4",
+    "node-cron": "^4.2.1",
+    "puppeteer": "^24.43.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "twitter-api-v2": "^1.29.0",
+    "ws": "^8.21.0",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/xml2js": "^0.4.14",
     "autoprefixer": "^10.5.0",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "postcss": "^8.5.14",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4.2.4",
+    "tsx": "^4.22.3",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

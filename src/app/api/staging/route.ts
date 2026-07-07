@@ -43,7 +43,12 @@ export async function POST(request: Request) {
 
     // Check if the URL already exists (Deduplication)
     const existingEvent = await prisma.teeteeEvents.findUnique({
-      where: { url }
+      where: {
+        pairId_url: {
+          pairId: dbPairId,
+          url
+        }
+      }
     });
 
     if (existingEvent) {
@@ -72,6 +77,7 @@ export async function POST(request: Request) {
         timestamp: timestamp || null,
         reporter: 'CRAWLER',
         status,
+        createdAt: body.createdAt ? new Date(body.createdAt) : undefined
       }
     });
 

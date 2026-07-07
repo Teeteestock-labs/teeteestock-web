@@ -17,7 +17,6 @@ export async function GET() {
     for (const pair of pairs) {
       const statusBefore = pair.status;
       const currentNV = pair.netValue;
-      const adminAdjust = pair.adminAdjust;
 
       // ── Step 1: 計算本週 Collab_Bonus_Sum ──
       const approvedEvents = await prisma.teeteeEvents.findMany({
@@ -28,18 +27,25 @@ export async function GET() {
         }
       });
 
+      const activeOverride = approvedEvents.find(e => e.type.startsWith('OVERRIDE:'));
+      const adminAdjust = activeOverride ? parseFloat(activeOverride.type.split(':')[1]) || 0 : 0;
+
       const collabBonusSum = approvedEvents.reduce(
         (sum, evt) => {
           if (evt.type === EventType.STREAM) return sum + 0.09;
           if (evt.type === EventType.STREAM_3D) return sum + 0.15;
           if (evt.type === EventType.VIDEO) return sum + 0.30;
+          if (evt.type.startsWith('OVERRIDE:')) {
+            const val = parseFloat(evt.type.split(':')[1]) || 0;
+            return sum + val;
+          }
           return sum;
         },
         0
       );
 
       // ── Step 2: 計算 New_NV ──
-      const settledNV = currentNV * (1 + collabBonusSum) + (adminAdjust || 0.0);
+      const settledNV = currentNV * (1 + collabBonusSum);
       const collabBonus = currentNV * collabBonusSum;
       const decay = parseFloat((settledNV * 0.08).toFixed(2));
       

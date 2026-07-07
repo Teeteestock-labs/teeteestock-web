@@ -43,7 +43,7 @@ export async function getTeeTeeNews(pairId: string) {
         percentStr = "15%";
       }
       
-      const formattedTitle = `${event.pairId} [${typeLabel}] (${percentStr}) - 理由：${event.reason || '無'}`;
+      const formattedTitle = `[${event.pairId}] ${event.title}`;
 
       return {
         id: event.id,

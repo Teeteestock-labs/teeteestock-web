@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { MarketStatus, OrderSide, UserChoice } from '@/types/enums';
 import { alignToTick } from '@/utils/validatePrice';
-import { isMarketOpen } from '@/utils/marketHours';
+import { getActiveTradingDay, getTaipeiSessionRange } from '@/utils/marketHours';
+import { checkAndTickMarketStatus } from '@/services/settlementService';
 
 // Helper to recursively serialize BigInt values to Numbers/Strings for JSON safety
 function serializeBigInt(obj: any): any {
@@ -21,106 +22,35 @@ function serializeBigInt(obj: any): any {
 
 export async function POST(request: Request) {
   try {
-    if (!isMarketOpen()) {
+    const now = new Date();
+    const marketStatus = await checkAndTickMarketStatus(now);
+
+    if (marketStatus !== 'OPEN') {
       return NextResponse.json({
         success: false,
-        message: '交易所目前處於非營運時段，開盤時間為 18:00 - 24:00。'
+        error: '撮合引擎保持凍結，僅在開盤狀態開放。',
+        details: `當前市場狀態為 ${marketStatus}，必須為 OPEN 才能執行撮合。`
       }, { status: 200 });
     }
 
-    const results = await prisma.$transaction(async (tx) => {
-      // 1. 撈取目前所有未下市的 CP 組合
-      const pairs = await tx.cpPairs.findMany({
-        where: { status: { not: MarketStatus.DELISTED } },
-      });
+    const results = await new Promise<any[]>((resolve, reject) => {
+      setImmediate(async () => {
+        try {
+          const txResults = await prisma.$transaction(async (tx) => {
+            // 1. 撈取目前所有未下市的 CP 組合
+            const pairs = await tx.cpPairs.findMany({
+              where: { status: { not: MarketStatus.DELISTED } },
+            });
 
       const matchedPairsLog: any[] = [];
 
       for (const pair of pairs) {
-        // ── 影子造市機器人（Shadow Market Maker）防線部署 ──
-        // 步驟一：全面撤銷舊委託（清理殘單）
-        await tx.orderBook.deleteMany({
-          where: {
-            pairId: pair.id,
-            userId: 'MARKET_MAKER'
-          }
-        });
-
-        // 步驟二：市場深度嗅探（流動性判定）
-        // 僅撈取真實玩家（userId !== 'MARKET_MAKER'）的買賣委託
-        const playerOrders = await tx.orderBook.findMany({
-          where: {
-            pairId: pair.id,
-            userId: { not: 'MARKET_MAKER' }
-          }
-        });
-
-        const playerBuys = playerOrders.filter(o => o.side === OrderSide.BUY);
-        const playerSells = playerOrders.filter(o => o.side === OrderSide.SELL);
-
-        let playerMaxVolume = 0;
-        if (playerBuys.length > 0 && playerSells.length > 0) {
-          // 收集玩家出現過的相異報價
-          const playerPriceSet = new Set<number>();
-          for (const o of playerOrders) {
-            playerPriceSet.add(o.price);
-          }
-          const p_Set = Array.from(playerPriceSet).sort((a, b) => a - b);
-
-          for (const p of p_Set) {
-            const accumBuy = playerBuys.filter(o => o.price >= p).reduce((sum, o) => sum + o.volume, 0);
-            const accumSell = playerSells.filter(o => o.price <= p).reduce((sum, o) => sum + o.volume, 0);
-            const volume = Math.min(accumBuy, accumSell);
-            if (volume > playerMaxVolume) {
-              playerMaxVolume = volume;
-            }
-          }
-        }
-
-        // 步驟三：基於隱藏基本面的極限防線鋪設
-        if (playerMaxVolume === 0) {
-          const netValue = pair.netValue;
-          let buyPrice = alignToTick(netValue * 0.85);
-          let sellPrice = alignToTick(netValue * 1.15);
-
-          const ceiling = alignToTick(pair.openingPrice * 1.20);
-          const floor = alignToTick(pair.openingPrice * 0.80);
-
-          // 價格合法性校驗（夾擠對齊）
-          if (buyPrice < floor) {
-            buyPrice = floor;
-          }
-          if (sellPrice > ceiling) {
-            sellPrice = ceiling;
-          }
-
-          // 批量鋪單寫入（數量統一為最微量的 10 股，做為 K 線交割燃料）
-          await tx.orderBook.create({
-            data: {
-              userId: 'MARKET_MAKER',
-              pairId: pair.id,
-              side: OrderSide.BUY,
-              price: buyPrice,
-              volume: 10
-            }
-          });
-
-          await tx.orderBook.create({
-            data: {
-              userId: 'MARKET_MAKER',
-              pairId: pair.id,
-              side: OrderSide.SELL,
-              price: sellPrice,
-              volume: 10
-            }
-          });
-
-          console.log(`[🤖 ShadowMM] ${pair.id} 真空！已秘密於 ${buyPrice} / ${sellPrice} 部署 10 股微量防線。`);
-        }
-
-        // 2. 撈取特定 pairId 的所有未成交委託單 (此時已包含 MARKET_MAKER 補上的防線訂單)
+        // 2. 撈取特定 pairId 的所有未成交委託單 (此時已包含 17:45 時 MARKET_MAKER 部署的委託單)，依據 createdAt ASC 排序以執行時間優先原則
         const dbOrders = await tx.orderBook.findMany({
           where: { pairId: pair.id },
+          orderBy: {
+            createdAt: 'asc'
+          }
         });
 
         if (dbOrders.length === 0) {
@@ -131,10 +61,15 @@ export async function POST(request: Request) {
         const buyOrders = dbOrders.filter(o => o.side === OrderSide.BUY);
         const sellOrders = dbOrders.filter(o => o.side === OrderSide.SELL);
 
-        // 排序規則
-        // BuyOrders：依 price 由高到低排序；若價格相同，依 createdAt 由早到晚排序（時間優先）。
+        // BuyOrders：依 price 由高到低排序；若價格相同，真實玩家優先（MARKET_MAKER 讓步）；若身份也相同，依 createdAt 由早到晚排序（時間優先）。
         buyOrders.sort((a, b) => {
           if (b.price !== a.price) return b.price - a.price;
+          
+          const aIsMM = a.userId === 'MARKET_MAKER';
+          const bIsMM = b.userId === 'MARKET_MAKER';
+          if (aIsMM && !bIsMM) return 1;  // a is MM, yield to player (b goes first)
+          if (!aIsMM && bIsMM) return -1; // b is MM, yield to player (a goes first)
+          
           return a.createdAt.getTime() - b.createdAt.getTime();
         });
 
@@ -222,8 +157,8 @@ export async function POST(request: Request) {
         const eligibleBuys = buyOrders.filter(o => o.price >= finalPrice);
         const eligibleSells = sellOrders.filter(o => o.price <= finalPrice);
 
-        const buyQueue = eligibleBuys.map(o => ({ ...o, remainingVolume: o.volume }));
-        const sellQueue = eligibleSells.map(o => ({ ...o, remainingVolume: o.volume }));
+        const buyQueue = eligibleBuys.map(o => ({ ...o, remainingVolume: o.volume, isCancelled: false }));
+        const sellQueue = eligibleSells.map(o => ({ ...o, remainingVolume: o.volume, isCancelled: false }));
 
         let buyIdx = 0;
         let sellIdx = 0;
@@ -235,6 +170,24 @@ export async function POST(request: Request) {
         while (remainingVolume > 0 && buyIdx < buyQueue.length && sellIdx < sellQueue.length) {
           const bOrder = buyQueue[buyIdx];
           const sOrder = sellQueue[sellIdx];
+
+          // ── Self-Match Prevention (SMP Layer) ──
+          if (bOrder.userId === sOrder.userId) {
+            // Cancel the older order (Cancel Oldest strategy)
+            const isBuyOlder = bOrder.createdAt.getTime() < sOrder.createdAt.getTime();
+            if (isBuyOlder) {
+              await tx.orderBook.delete({ where: { id: bOrder.id } });
+              console.log(`[🛡️ SMP] Self-match detected for user ${bOrder.userId} on ${pair.id}. Cancelled older BUY order ${bOrder.id}`);
+              bOrder.isCancelled = true;
+              buyIdx++;
+            } else {
+              await tx.orderBook.delete({ where: { id: sOrder.id } });
+              console.log(`[🛡️ SMP] Self-match detected for user ${sOrder.userId} on ${pair.id}. Cancelled older SELL order ${sOrder.id}`);
+              sOrder.isCancelled = true;
+              sellIdx++;
+            }
+            continue;
+          }
 
           const matchVol = Math.min(bOrder.remainingVolume, sOrder.remainingVolume, remainingVolume);
 
@@ -360,9 +313,9 @@ export async function POST(request: Request) {
         }
 
         // 清理單倉與剩餘未成交量更新 (OrderBook 批次更新)
-        // 為了確保佇列指針更新的順序，我們處理剩餘尚未完全成交但有部分成交的單
+        // 為了確保佇列指針更新的順序，我們處理剩餘尚未完全成交但有部分成交且未被撤銷的單
         for (const bo of buyQueue) {
-          if (bo.remainingVolume !== bo.volume) {
+          if (!bo.isCancelled && bo.remainingVolume !== bo.volume) {
             if (bo.remainingVolume === 0) {
               await tx.orderBook.delete({ where: { id: bo.id } });
             } else {
@@ -375,7 +328,7 @@ export async function POST(request: Request) {
         }
 
         for (const so of sellQueue) {
-          if (so.remainingVolume !== so.volume) {
+          if (!so.isCancelled && so.remainingVolume !== so.volume) {
             if (so.remainingVolume === 0) {
               await tx.orderBook.delete({ where: { id: so.id } });
             } else {
@@ -406,15 +359,17 @@ export async function POST(request: Request) {
           }
         });
 
+        const actualTradedVolume = tradesCreated.reduce((sum, t) => sum + t.volume, 0);
+
         if (existingKLine) {
-          if (maxVolume > 0) {
+          if (actualTradedVolume > 0) {
             await tx.kLineHistory.update({
               where: { id: existingKLine.id },
               data: {
                 high: Math.max(existingKLine.high, finalPrice),
                 low: Math.min(existingKLine.low, finalPrice),
                 close: finalPrice,
-                volume: existingKLine.volume + BigInt(maxVolume)
+                volume: existingKLine.volume + BigInt(actualTradedVolume)
               }
             });
           }
@@ -423,17 +378,31 @@ export async function POST(request: Request) {
             where: { pairId: pair.id },
             orderBy: { timestamp: 'desc' }
           });
-          const prevClose = lastKLine ? lastKLine.close : pair.currentPrice;
+          
+          // Check if there are K-lines today to determine if this is the first trade of the session
+          const activeTrading = getActiveTradingDay(now);
+          const { startUTC, endUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);
+          const todayKLinesCount = await tx.kLineHistory.count({
+            where: {
+              pairId: pair.id,
+              timestamp: {
+                gte: startUTC,
+                lte: endUTC
+              }
+            }
+          });
+
+          const prevClose = todayKLinesCount === 0 ? pair.openingPrice : (lastKLine ? lastKLine.close : pair.currentPrice);
 
           await tx.kLineHistory.create({
             data: {
               pairId: pair.id,
               timestamp: timestamp,
               open: prevClose,
-              high: maxVolume > 0 ? Math.max(prevClose, finalPrice) : prevClose,
-              low: maxVolume > 0 ? Math.min(prevClose, finalPrice) : prevClose,
-              close: maxVolume > 0 ? finalPrice : prevClose,
-              volume: BigInt(maxVolume)
+              high: actualTradedVolume > 0 ? Math.max(prevClose, finalPrice) : prevClose,
+              low: actualTradedVolume > 0 ? Math.min(prevClose, finalPrice) : prevClose,
+              close: actualTradedVolume > 0 ? finalPrice : prevClose,
+              volume: BigInt(actualTradedVolume)
             }
           });
         }
@@ -442,19 +411,25 @@ export async function POST(request: Request) {
           pairId: pair.id,
           status: 'SUCCESS',
           finalPrice,
-          totalVolume: maxVolume,
+          totalVolume: actualTradedVolume,
           tradesCount: tradesCreated.length,
         });
       }
 
-      return matchedPairsLog;
+          return matchedPairsLog;
+        });
+        resolve(txResults);
+      } catch (err) {
+        reject(err);
+      }
     });
+  });
 
-    return NextResponse.json(serializeBigInt({
-      success: true,
-      message: '撮合執行完成',
-      results,
-    }), { status: 200 });
+  return NextResponse.json(serializeBigInt({
+    success: true,
+    message: '撮合執行完成',
+    results,
+  }), { status: 200 });
 
   } catch (error) {
     console.error('[Matching Engine Error]:', error);

@@ -66,3 +66,15 @@ body {
   animation: flash-green 0.5s ease-out;
 }
 
+/* 隱藏瀏覽器預設的數字輸入框上下調整箭頭 */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+

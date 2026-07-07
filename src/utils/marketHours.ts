@@ -70,11 +70,100 @@ export function getTaipeiTimeStr(date: Date = new Date()): string {
   return `${hour}:${minute}`;
 }
 
-export function isMarketOpen(date: Date = new Date()): boolean {
+export function getCurrentMarketStatus(date: Date = new Date()): 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' {
+  const tz = getTaipeiTime(date);
+  const totalMinutes = tz.hour * 60 + tz.minute;
+
+  // SETTLING: 週一全天 (dayOfWeek === 1) 至 週二 18:45 前 (dayOfWeek === 2 && totalMinutes < 1125)
+  if (tz.dayOfWeek === 1 || (tz.dayOfWeek === 2 && totalMinutes < 1125)) {
+    return 'SETTLING';
+  }
+
+  // PRE_MARKET: 18:45 ~ 19:00 (1125 <= totalMinutes < 1140)
+  if (totalMinutes >= 1125 && totalMinutes < 1140) {
+    return 'PRE_MARKET';
+  }
+
+  // OPEN: 19:00 ~ 24:00 (1140 <= totalMinutes < 1440)
+  if (totalMinutes >= 1140 && totalMinutes < 1440) {
+    return 'OPEN';
+  }
+
+  return 'CLOSED';
+}
+
+export function isPreMarketPeriod(date: Date = new Date()): boolean {
+  if (process.env.BYPASS_MARKET_HOURS === 'true') {
+    return false;
+  }
+  return getCurrentMarketStatus(date) === 'PRE_MARKET';
+}
+
+export function isOperatingPeriod(date: Date = new Date()): boolean {
   if (process.env.BYPASS_MARKET_HOURS === 'true') {
     return true;
   }
-  const { dayOfWeek, hour } = getTaipeiTime(date);
-  const normHour = hour === 24 ? 0 : hour;
-  return dayOfWeek !== 1 && normHour >= 18 && normHour < 24;
+  return getCurrentMarketStatus(date) === 'OPEN';
 }
+
+export function isMarketOpen(date: Date = new Date()): boolean {
+  return isOperatingPeriod(date);
+}
+
+export interface TradingDayInfo {
+  year: number;
+  month: number;
+  day: number;
+  dateStr: string;
+}
+
+export function getActiveTradingDay(date: Date = new Date()): TradingDayInfo {
+  let check = new Date(date.getTime());
+  for (let i = 0; i < 10; i++) {
+    const t = getTaipeiTime(check);
+    const isTradingDay = t.dayOfWeek !== 1; // Tue to Sun
+    if (isTradingDay) {
+      if (i === 0) {
+        const isPast1745 = t.hour > 17 || (t.hour === 17 && t.minute >= 45);
+        if (isPast1745) {
+          return { year: t.year, month: t.month, day: t.day, dateStr: `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` };
+        }
+      } else {
+        return { year: t.year, month: t.month, day: t.day, dateStr: `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` };
+      }
+    }
+    check.setTime(check.getTime() - 24 * 60 * 60 * 1000);
+  }
+  const t = getTaipeiTime(date);
+  return { year: t.year, month: t.month, day: t.day, dateStr: `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` };
+}
+
+export function getTaipeiSessionRange(year: number, month: number, day: number) {
+  const startUTC = new Date(Date.UTC(year, month - 1, day, 10, 0, 0)); // 18:00 Taipei
+  const endUTC = new Date(Date.UTC(year, month - 1, day, 16, 0, 0)); // 24:00 Taipei
+  return { startUTC, endUTC };
+}
+
+export function getPreviousSundayEndInTaipei(now: Date = new Date()): Date {
+  const tz = getTaipeiTime(now);
+  const tzDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+  const daysToSubtract = tz.dayOfWeek === 0 ? 6 : tz.dayOfWeek - 1;
+  tzDate.setDate(tzDate.getDate() - daysToSubtract);
+  const year = tzDate.getFullYear();
+  const month = tzDate.getMonth() + 1;
+  const day = tzDate.getDate();
+  const mondayStartStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00+08:00`;
+  return new Date(mondayStartStr);
+}
+
+export function getNextSettlementBoundary(now: Date = new Date()): Date {
+  const tz = getTaipeiTime(now);
+  const daysToNextTuesday = (9 - tz.dayOfWeek) % 7 || 7;
+  const tzDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+  tzDate.setDate(tzDate.getDate() + daysToNextTuesday - 1);
+  const year = tzDate.getFullYear();
+  const month = tzDate.getMonth() + 1;
+  const day = tzDate.getDate();
+  return new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00+08:00`);
+}
+

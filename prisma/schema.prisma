@@ -15,6 +15,8 @@ model CpPairs {
   netValue      Float          @default(100.0) // 當前淨值
   currentPrice  Float          @default(100.0) // 最後成交價
   openingPrice  Float          @default(100.0) // 本週開盤參考價
+  last_close_price Float       @default(100.0) // 昨日收盤價
+  next_open_price  Float       @default(100.0) // 隔日開盤參考價
   total_shares  BigInt         @default(1000000) // 總股本
   status        String         @default("NORMAL") // 市場狀態 (NORMAL, WARNING, DELISTED)
   warningWeeks  Int            @default(0) // 結算輔助：警戒週數
@@ -34,7 +36,7 @@ model CpPairs {
 model TeeteeEvents {
   id         String       @id @default(uuid())
   pairId     String
-  url        String       @unique
+  url        String
   type       String       // EventType (STREAM, VIDEO)
   title      String
   timestamp  String?
@@ -47,18 +49,21 @@ model TeeteeEvents {
   pair       CpPairs      @relation(fields: [pairId], references: [id])
 
   @@index([status, pairId])
+  @@unique([pairId, url])
 }
 
 model ArchivedEvents {
   id         String   @id @default(uuid())
   pairId     String
-  url        String   @unique
+  url        String
   type       String   // EventType (STREAM, STREAM_3D, VIDEO)
   title      String
   timestamp  String?
   reporter   String
   createdAt  DateTime @default(now())
   reason     String   @default("")
+
+  @@unique([pairId, url])
 }
 
 model OrderBook {
@@ -119,6 +124,7 @@ model UserPortfolios {
 model UserAccount {
   userId    String   @id
   balance   Float    @default(10000.0)
+  isMuted   Boolean  @default(false)
   updatedAt DateTime @updatedAt
 }
 
@@ -144,5 +150,22 @@ model SystemConfig {
   tax_rate       Float   @default(0.003)
   warning_line   Float   @default(10.0)
   delisting_line Float   @default(5.0)
+  marketStatus   String  @default("CLOSED")
 }
+
+model ChatMessage {
+  id         String   @id @default(uuid())
+  stock_code String
+  user_id    String
+  content    String
+  color      String
+  font_size  String   // 'normal' | 'large'
+  highlight  Boolean
+  is_top     Boolean
+  cost       Int
+  created_at DateTime @default(now())
+
+  @@index([stock_code, created_at])
+}
+
 

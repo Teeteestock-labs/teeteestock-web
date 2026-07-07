@@ -29,6 +29,7 @@ async function main() {
       tax_rate: 0.003,
       warning_line: 10.0,
       delisting_line: 5.0,
+      marketStatus: 'CLOSED',
     },
   });
   console.log('✅ SystemConfig seeded.');
@@ -45,6 +46,8 @@ async function main() {
         netValue: 100.0,
         currentPrice: 100.0,
         openingPrice: 100.0,
+        last_close_price: 100.0,
+        next_open_price: 100.0,
         total_shares: BigInt(1000000),
         status: MarketStatus.NORMAL, // evaluates to 'NORMAL'
       },

@@ -4,16 +4,41 @@ import {
   rejectEvent, 
   updateAdminAdjust, 
   approveOneAndRejectOthers, 
-  rejectMultipleEvents 
+  rejectMultipleEvents
 } from '../actions';
 import { ReviewStatus, EventType } from '@/types/enums';
 import Link from 'next/link';
+import { getNextSettlementBoundary } from '@/utils/marketHours';
+import TriggerCrawlerButton from './TriggerCrawlerButton';
+import AdminAdjustForm from './AdminAdjustForm';
+import ProcessedEventEditor from './ProcessedEventEditor';
+import { INITIAL_PAIRS } from '@/app/constants/market';
 
 export const dynamic = 'force-dynamic';
 
 const WARNING_LINE = 10;
 const DELISTING_LINE = 5;
 const MIN_VALUE = 0.1;
+
+const MEMBER_JP_MAP: Record<string, string> = {
+  'AZKi': 'AZKi',
+  'KazamaIroha': '風真いろは',
+  'ShirakamiFubuki': '白上フブキ',
+  'OokamiMio': '大神ミオ',
+  'SakuraMiko': 'さくらみこ',
+  'HoshimachiSuisei': '星街すいせい',
+  'ShiraganeNoel': '白銀ノエル',
+  'ShiranuiFurea': '不知火フレア',
+  'NekomataOkayu': '猫又おかゆ',
+  'InugamiKorone': '戌神ころね',
+  'UsadaPekora': '兎田ぺこら',
+  'HoshoMarin': '宝鐘マリン',
+  'ShishiroBotan': '獅白ぼたん',
+  'TsunomakiWatame': '角巻わため',
+  'TokinoSora': 'ときのそら',
+  'OozoraSubaru': '大空スバル',
+  'HimemoriRuna': '姫森ルーナ'
+};
 
 // Tokenize title for duplicate grouping
 function tokenize(text: string): Set<string> {
@@ -64,23 +89,36 @@ export default async function AdminReviewPage() {
   for (const pair of pairs) {
     const statusBefore = pair.status;
     const currentNV = pair.netValue;
-    const adminAdjust = pair.adminAdjust;
 
+    const nextSettlementBoundary = getNextSettlementBoundary(new Date());
     const approvedEvents = allEvents.filter(
-      e => e.pairId.toLowerCase() === pair.id.toLowerCase() && e.status === ReviewStatus.APPROVED && !e.isSettled
+      e => e.pairId.toLowerCase() === pair.id.toLowerCase() &&
+           e.status === ReviewStatus.APPROVED &&
+           !e.isSettled &&
+           e.createdAt < nextSettlementBoundary
     );
+
+    // 取得本週尚未結算的行政干預加成情報
+    const activeOverride = approvedEvents.find(e => e.type.startsWith('OVERRIDE:'));
+    const adminAdjust = activeOverride ? parseFloat(activeOverride.type.split(':')[1]) || 0 : 0;
+    const adminAdjustReason = activeOverride ? activeOverride.title.replace('[行政干預] ', '') : '';
+    const adminAdjustUrl = activeOverride ? activeOverride.url : '';
 
     const collabBonusSum = approvedEvents.reduce(
       (sum, evt) => {
         if (evt.type === EventType.STREAM) return sum + 0.09;
         if (evt.type === EventType.STREAM_3D) return sum + 0.15;
         if (evt.type === EventType.VIDEO) return sum + 0.30;
+        if (evt.type.startsWith('OVERRIDE:')) {
+          const val = parseFloat(evt.type.split(':')[1]) || 0;
+          return sum + val;
+        }
         return sum;
       },
       0
     );
 
-    const settledNV = currentNV * (1 + collabBonusSum) + (adminAdjust || 0.0);
+    const settledNV = currentNV * (1 + collabBonusSum);
     const collabBonus = currentNV * collabBonusSum;
     const decay = parseFloat((settledNV * 0.08).toFixed(2));
     
@@ -108,6 +146,8 @@ export default async function AdminReviewPage() {
       collabBonus,
       decay,
       adminAdjust,
+      adminAdjustReason,
+      adminAdjustUrl,
       predictedNV: nextWeekNV,
       statusBefore,
       statusAfter,
@@ -129,11 +169,16 @@ export default async function AdminReviewPage() {
           <span className="text-xs text-gray-600">伺服器本地時間: {new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</span>
         </div>
 
-        <header className="bg-gray-900/40 border border-gray-800/80 p-6 rounded-2xl backdrop-blur-md">
-          <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 tracking-tight">
-            數據監控與情報審查中樞
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">外顯數據主控牆 • 行政干預與情報審查風箱</p>
+        <header className="bg-gray-900/40 border border-gray-800/80 p-6 rounded-2xl backdrop-blur-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 tracking-tight">
+              數據監控與情報審查中樞
+            </h1>
+            <p className="text-xs text-gray-500 mt-1">外顯數據主控牆 • 行政干預與情報審查風箱</p>
+          </div>
+          <div className="flex gap-3">
+            <TriggerCrawlerButton />
+          </div>
         </header>
 
         {/* CP Accordions (九大組合數據監控牆) */}
@@ -188,6 +233,11 @@ export default async function AdminReviewPage() {
                 });
               }
 
+              const initialPair = INITIAL_PAIRS.find(x => x.id.toLowerCase() === pair.id.toLowerCase());
+              const displayMembers = initialPair 
+                ? initialPair.members.map(m => MEMBER_JP_MAP[m] || m).join(' × ') 
+                : '';
+
               return (
                 <div 
                   key={pair.id} 
@@ -195,9 +245,9 @@ export default async function AdminReviewPage() {
                 >
                   {/* 外顯第一層：全知數據監控標頭 (完全外顯，不可摺疊) */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-900/60 border-b border-gray-800/80 gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-sm tracking-wider bg-gray-800 px-2 py-0.5 rounded text-gray-400 font-bold">{pair.id.toUpperCase()}</span>
-                      <span className="text-sm font-bold text-white">{pair.name}</span>
+                    <div className="flex items-center gap-3 w-48 sm:w-64 md:w-72 lg:w-80 shrink-0 min-w-0">
+                      <span className="font-mono text-sm tracking-wider bg-gray-800 px-2 py-0.5 rounded text-gray-400 font-bold shrink-0">{pair.id.toUpperCase()}</span>
+                      <span className="text-sm font-bold text-white truncate">{displayMembers}</span>
                     </div>
                     
                     <div className="flex-1 grid grid-cols-4 gap-2 text-center text-xs px-2 md:px-8">
@@ -225,7 +275,7 @@ export default async function AdminReviewPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 justify-end">
+                    <div className="flex items-center gap-3 justify-end w-24 sm:w-28 md:w-32 shrink-0">
                       {pendingCount > 0 ? (
                         <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] rounded-full font-semibold whitespace-nowrap">
                           [ {pendingCount} 筆待審 ]
@@ -247,9 +297,12 @@ export default async function AdminReviewPage() {
                     name="cp-accordion" 
                     className="group"
                   >
-                    <summary className="flex items-center justify-between px-4 py-2 cursor-pointer select-none bg-gray-950/20 text-[10px] text-gray-500 hover:text-gray-300 font-bold border-b border-gray-900 list-none">
-                      <span>⚙️ 點擊展開行政干預與情報審查明細</span>
-                      <span className="text-gray-600 group-open:rotate-180 transition-transform duration-200 text-[10px]">▼</span>
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none bg-purple-950/25 hover:bg-purple-900/35 text-xs sm:text-sm text-purple-400 hover:text-purple-300 font-black border-b border-purple-900/40 list-none transition-all tracking-wide">
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block animate-pulse text-purple-500">⚙️</span>
+                        <span>點擊展開行政干預與情報審查明細</span>
+                      </span>
+                      <span className="text-purple-500 group-open:rotate-180 transition-transform duration-200 text-[10px]">▼</span>
                     </summary>
 
                     <div className="p-4 bg-gray-950/40 space-y-6">
@@ -260,44 +313,7 @@ export default async function AdminReviewPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                           行政干預微調 (Override)
                         </h4>
-                        <form 
-                          action={async (formData: FormData) => {
-                            'use server';
-                            const val = parseFloat(formData.get('adjust') as string) || 0;
-                            const reason = formData.get('reason') as string;
-                            await updateAdminAdjust(pair.id, val, reason);
-                          }}
-                          className="bg-gray-900/20 border border-gray-900/80 p-3 rounded-lg flex flex-col sm:flex-row gap-3 items-stretch sm:items-center"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400 whitespace-nowrap">微調值:</span>
-                            <input
-                              type="number"
-                              name="adjust"
-                              step="0.1"
-                              placeholder="0.0"
-                              defaultValue={pair.adminAdjust || ""}
-                              className="w-20 bg-gray-950 border border-gray-800 rounded px-2 py-1 text-center font-mono text-xs text-white focus:outline-none focus:border-purple-500"
-                            />
-                          </div>
-                          <div className="flex-1 flex items-center gap-2">
-                            <span className="text-xs text-gray-400 whitespace-nowrap">行政理由:</span>
-                            <input
-                              type="text"
-                              name="reason"
-                              placeholder="強制寫入微調理由 (必填)..."
-                              defaultValue={pair.adminAdjustReason}
-                              required
-                              className="w-full bg-gray-950 border border-gray-800 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-purple-500"
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            className="px-4 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
-                          >
-                            套用微調
-                          </button>
-                        </form>
+                        <AdminAdjustForm pairId={pair.id} />
                       </div>
 
                       {/* 【情報審查流水線】 */}
@@ -333,8 +349,7 @@ export default async function AdminReviewPage() {
                                           <input 
                                             type="text" 
                                             name="rejectReason" 
-                                            placeholder="整組拒絕理由 (必填)..." 
-                                            required
+                                            placeholder="整組拒絕理由 (選填)..." 
                                             className="w-36 bg-gray-900 border border-gray-850 rounded px-2 py-0.5 text-xs focus:outline-none"
                                           />
                                           <button type="submit" className="text-[10px] font-bold bg-rose-950/80 hover:bg-rose-700 text-rose-400 hover:text-white px-2 py-1 rounded transition-colors">
@@ -368,8 +383,7 @@ export default async function AdminReviewPage() {
                                                 <input
                                                   type="text"
                                                   name="reason"
-                                                  placeholder="核可理由 (必填)..."
-                                                  required
+                                                  placeholder="核可理由 (選填)..."
                                                   className="bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white focus:outline-none"
                                                 />
                                                 <div className="flex gap-1">
@@ -418,8 +432,7 @@ export default async function AdminReviewPage() {
                                       <input
                                         type="text"
                                         name="reason"
-                                        placeholder="請輸入加成或拒絕理由 (必填)..."
-                                        required
+                                        placeholder="請輸入加成或拒絕理由 (選填)..."
                                         className="bg-gray-900 border border-gray-800 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-pink-500 flex-1 sm:w-48"
                                       />
                                       <div className="flex gap-1">
@@ -448,43 +461,9 @@ export default async function AdminReviewPage() {
                             <div className="text-xs text-gray-650 bg-gray-950/10 px-3 py-1 rounded-lg border border-gray-900">本週目前無已處理情報。</div>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {processedEvents.map((event) => {
-                                const isApproved = event.status === ReviewStatus.APPROVED;
-                                const cardBorderClass = isApproved ? 'border-red-500/80 bg-red-950/5' : 'border-emerald-500/80 bg-emerald-950/5';
-                                const tagColorClass = isApproved ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-                                const badgeLabel = isApproved ? '[已核可]' : '[已拒絕]';
-                                
-                                let bonusLabel = "";
-                                if (isApproved) {
-                                  if (event.type === EventType.STREAM) bonusLabel = "(9%)";
-                                  else if (event.type === EventType.STREAM_3D) bonusLabel = "(15%)";
-                                  else if (event.type === EventType.VIDEO) bonusLabel = "(30%)";
-                                }
-
-                                return (
-                                  <div 
-                                    key={event.id} 
-                                    className={`p-3 rounded-lg border ${cardBorderClass} opacity-60 pointer-events-none select-none flex justify-between items-start gap-2`}
-                                  >
-                                    <div className="space-y-1 flex-1 min-w-0">
-                                      <h3 className="font-semibold text-xs text-gray-300 truncate">{event.title}</h3>
-                                      <div className="text-[9px] text-gray-500 font-mono">
-                                        <span>來源: {event.reporter}</span>
-                                      </div>
-                                      <div className="text-[10px] text-gray-400 bg-gray-900/60 p-1.5 rounded border border-gray-800/50 mt-1.5 font-mono break-all">
-                                        <span className="text-gray-500 mr-1">審查理由:</span>
-                                        {event.reason || '未填寫'}
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="text-right flex flex-col items-end gap-1 flex-shrink-0">
-                                      <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${tagColorClass}`}>
-                                        {badgeLabel} {bonusLabel}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                              {processedEvents.map((event) => (
+                                <ProcessedEventEditor key={event.id} event={event} />
+                              ))}
                             </div>
                           )}
                         </div>

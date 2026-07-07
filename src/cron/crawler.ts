@@ -5,6 +5,7 @@ import { parseStringPromise } from 'xml2js';
 import dotenv from 'dotenv';
 import { prisma } from '../lib/prisma';
 import { EventType, ReviewStatus } from '../types/enums';
+import { runDailyRolloverOrSettlement } from '../services/settlementService';
 
 // Load environment variables
 dotenv.config();
@@ -180,6 +181,8 @@ interface VideoFeed {
   title: string;
   description: string;
   publishedAt: string;
+  actualStartTime?: string;
+  scheduledStartTime?: string;
   tags?: string[];
 }
 
@@ -199,21 +202,57 @@ function loadCache(): string[] {
 
 function saveCache(cache: string[]) {
   try {
-    const trimmed = cache.slice(-500); // Max 500 URLs in cache
+    const trimmed = cache.slice(-500); // Max 500 entries in cache
     fs.writeFileSync(CACHE_FILE, JSON.stringify(trimmed, null, 2), 'utf-8');
   } catch (error) {
     console.error('Failed to save cache file:', error);
   }
 }
 
+function isCached(pairId: string, url: string, cache: string[]): boolean {
+  return cache.includes(`${pairId}:${url}`) || cache.includes(url);
+}
+
+// ── Date Helpers ──
+
+export function isYesterdayInTaipei(dateInput: string | Date, executionDate: Date = new Date()): boolean {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+  
+  const yesterday = new Date(executionDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const yesterdayParts = formatter.formatToParts(yesterday);
+  const getYesterdayPart = (type: string) => parseInt(yesterdayParts.find(p => p.type === type)?.value || '0', 10);
+  
+  const yestYear = getYesterdayPart('year');
+  const yestMonth = getYesterdayPart('month');
+  const yestDay = getYesterdayPart('day');
+  
+  const startStr = `${yestYear}-${String(yestMonth).padStart(2, '0')}-${String(yestDay).padStart(2, '0')}T00:00:00`;
+  const endStr = `${yestYear}-${String(yestMonth).padStart(2, '0')}-${String(yestDay).padStart(2, '0')}T23:59:59.999`;
+  
+  const startMs = Date.parse(`${startStr}+08:00`);
+  const endMs = Date.parse(`${endStr}+08:00`);
+  
+  const targetMs = typeof dateInput === 'string' ? Date.parse(dateInput) : dateInput.getTime();
+  
+  if (isNaN(targetMs)) return false;
+  return targetMs >= startMs && targetMs <= endMs;
+}
+
 // ── Crawl Handlers ──
 
 async function fetchVideosFromAPI(channelId: string): Promise<VideoFeed[]> {
   const uploadsPlaylistId = channelId.substring(0, 1) + 'U' + channelId.substring(2);
-  const apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=5&key=${YOUTUBE_API_KEY}`;
+  const apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=10&key=${YOUTUBE_API_KEY}`;
   
   try {
-    const res = await fetch(apiUrl);
+    const res = await fetch(apiUrl, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) {
       throw new Error(`YouTube API returned status ${res.status}`);
     }
@@ -224,9 +263,9 @@ async function fetchVideosFromAPI(channelId: string): Promise<VideoFeed[]> {
     const videoIds = items.map((item: any) => item.snippet?.resourceId?.videoId).filter(Boolean).join(',');
     if (!videoIds) return [];
 
-    // Query video details batch to fetch descriptions and tags
+    // Query video details batch to fetch descriptions, tags and liveStreamingDetails
     const detailUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
-    const detailRes = await fetch(detailUrl);
+    const detailRes = await fetch(detailUrl, { signal: AbortSignal.timeout(10000) });
     if (!detailRes.ok) {
       // Fallback to playlistItems
       return items.map((item: any) => {
@@ -247,11 +286,14 @@ async function fetchVideosFromAPI(channelId: string): Promise<VideoFeed[]> {
 
     return details.map((video: any) => {
       const snippet = video.snippet || {};
+      const liveDetails = video.liveStreamingDetails || {};
       return {
         url: `https://www.youtube.com/watch?v=${video.id}`,
         title: snippet.title || '',
         description: snippet.description || '',
         publishedAt: snippet.publishedAt || new Date().toISOString(),
+        actualStartTime: liveDetails.actualStartTime,
+        scheduledStartTime: liveDetails.scheduledStartTime,
         tags: snippet.tags || []
       };
     });
@@ -270,7 +312,8 @@ async function fetchVideosFromRSS(channelId: string): Promise<VideoFeed[]> {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5'
-      }
+      },
+      signal: AbortSignal.timeout(10000)
     });
     if (!res.ok) {
       throw new Error(`YouTube RSS returned status ${res.status}`);
@@ -280,7 +323,7 @@ async function fetchVideosFromRSS(channelId: string): Promise<VideoFeed[]> {
 
     if (!result.feed || !result.feed.entry) return [];
 
-    const entries = result.feed.entry.slice(0, 5);
+    const entries = result.feed.entry.slice(0, 10);
     return entries.map((entry: any) => {
       const videoId = entry['yt:videoId']?.[0] || '';
       const title = entry.title?.[0] || '';
@@ -300,68 +343,6 @@ async function fetchVideosFromRSS(channelId: string): Promise<VideoFeed[]> {
     console.error(`[YouTube RSS Error] Channel ${channelId} fetch failed:`, error);
     return [];
   }
-}
-
-// ── Match Logic ──
-
-function matchCP(config: CPConfig, channelId: string, video: VideoFeed): boolean {
-  const title = video.title || '';
-  const desc = video.description || '';
-  const tagsList = video.tags || [];
-
-  const partnerInfo = config.channels.find(c => c.channelId !== channelId);
-  const channelInfo = config.channels.find(c => c.channelId === channelId);
-
-  // 1. Channel ID Bidirectional Collision (Scan description & tags for partner's Channel ID)
-  if (partnerInfo) {
-    const partnerId = partnerInfo.channelId;
-    const hasChannelId = desc.includes(partnerId) || tagsList.some(t => t.includes(partnerId));
-    if (hasChannelId) {
-      console.log(`[Collision Match] Channel ID ${partnerId} found in description/tags of ${channelInfo?.name}`);
-      return true;
-    }
-  }
-
-  // 2. Specific nicknames/tags in description/tags list
-  if (channelInfo && partnerInfo) {
-    const descAndTags = `${desc} ${tagsList.join(' ')}`;
-    for (const regex of channelInfo.targetKeywords) {
-      if (regex.test(descAndTags)) {
-        console.log(`[Collision Match] Nickname ${regex} found in description/tags of ${channelInfo.name}`);
-        return true;
-      }
-    }
-
-    for (const regex of config.generalKeywords) {
-      if (regex.test(descAndTags)) {
-        console.log(`[Collision Match] General CP keyword ${regex} found in description/tags of ${channelInfo.name}`);
-        return true;
-      }
-    }
-  }
-
-  // 3. Fallback: Title check
-  const titleText = title;
-  for (const regex of config.generalKeywords) {
-    if (regex.test(titleText)) return true;
-  }
-  if (channelInfo) {
-    for (const regex of channelInfo.targetKeywords) {
-      if (regex.test(titleText)) return true;
-    }
-  }
-
-  // 4. Special Event Match: 3DLIVE, 生誕, ライブ (Title only to avoid boilerplate desc matches)
-  if (/(?:3DLIVE|生誕|ライブ)/i.test(titleText)) {
-    console.log(`[Special Event Match] Found 3DLIVE/生誕/ライブ in title of ${config.pairId}`);
-    return true;
-  }
-
-  return false;
-}
-
-function determineEventType(title: string): EventType {
-  return EventType.STREAM;
 }
 
 // ── Notification Trigger ──
@@ -403,123 +384,110 @@ async function sendNotification(newEventCount: number) {
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function runPoll() {
-  console.log(`[${new Date().toLocaleString()}] Starting YouTube CP Crawler job...`);
+export async function runPoll(options?: { targetDate?: Date }) {
+  const executionDate = options?.targetDate || new Date();
+  console.log(`[${new Date().toLocaleString()}] Starting Yesterday Fact-Based YouTube Crawler job...`);
   
   const cache = loadCache();
-  const newProcessedUrls: string[] = [];
+  const newProcessedCacheKeys: string[] = [];
   let newEventsInsertedCount = 0;
 
+  // 1. Gather all unique channels to query each exactly once
+  const uniqueChannels = new Map<string, { name: string; channelId: string }>();
+  for (const cpConfig of CP_CONFIGS) {
+    for (const channelInfo of cpConfig.channels) {
+      uniqueChannels.set(channelInfo.channelId, channelInfo);
+    }
+  }
+
+  // 2. Fetch all channels in parallel with concurrent requests
+  console.log(`Fetching videos for ${uniqueChannels.size} unique channels in parallel...`);
+  const channelVideosMap = new Map<string, VideoFeed[]>();
+  
+  await Promise.all(
+    Array.from(uniqueChannels.values()).map(async (ch) => {
+      try {
+        let videos: VideoFeed[] = [];
+        if (YOUTUBE_API_KEY) {
+          videos = await fetchVideosFromAPI(ch.channelId);
+        } else {
+          videos = await fetchVideosFromRSS(ch.channelId);
+        }
+        channelVideosMap.set(ch.channelId, videos);
+        console.log(`Fetched ${videos.length} videos from ${ch.name} (${ch.channelId})`);
+      } catch (err) {
+        console.error(`Failed to fetch videos for channel ${ch.name} (${ch.channelId}):`, err);
+      }
+    })
+  );
+
+  // 3. Process the results for each CP configuration
   for (const cpConfig of CP_CONFIGS) {
     for (const channelInfo of cpConfig.channels) {
       const channelId = channelInfo.channelId;
-      console.log(`Scanning channel [${channelInfo.name}] (${channelId}) for CP: ${cpConfig.pairId}...`);
-
-      // Add 1.5s delay to avoid YouTube RSS rate limiting
-      await delay(1500);
-
-      let videos: VideoFeed[] = [];
-      if (YOUTUBE_API_KEY) {
-        videos = await fetchVideosFromAPI(channelId);
-      } else {
-        videos = await fetchVideosFromRSS(channelId);
-      }
-
-      console.log(`Fetched ${videos.length} videos from ${channelInfo.name}.`);
+      const videos = channelVideosMap.get(channelId) || [];
 
       for (const video of videos) {
-        // Cache deduplication (fast check)
-        if (cache.includes(video.url) || newProcessedUrls.includes(video.url)) {
+        // Date check: actualStartTime or scheduledStartTime must fall strictly in "yesterday Taipei Time"
+        const startTimeStr = video.actualStartTime || video.scheduledStartTime || video.publishedAt;
+        if (!isYesterdayInTaipei(startTimeStr, executionDate)) {
           continue;
         }
 
-        // Perform keyword matching
-        if (matchCP(cpConfig, channelId, video)) {
-          const type = determineEventType(video.title);
-          
-          // 判定是否為潛在有效連動事件並放入 PENDING 審核列表：
-          // 1. 標題或說明欄含有連動關鍵字 (コラボ, collab, 連動, 聯動)
-          // 2. 標題或說明欄含有 CP 組合專屬字眼 (如：あずいろ, みこめっと)
-          // 3. 說明欄含有對方的頻道 ID (頻道連結) 或對方名稱 (例如：@AZKi)
-          const hasCollabKeyword = /(?:コラボ|collab|連動|聯動)/i.test(`${video.title} ${video.description}`);
+        // Cache deduplication (fast check on compound key)
+        const cacheKey = `${cpConfig.pairId}:${video.url}`;
+        if (isCached(cpConfig.pairId, video.url, cache) || newProcessedCacheKeys.includes(cacheKey)) {
+          continue;
+        }
 
-          let hasCPKeyword = false;
-          for (const regex of cpConfig.generalKeywords) {
-            if (regex.test(`${video.title} ${video.description}`)) {
-              hasCPKeyword = true;
-              break;
+        console.log(`Yesterday stream detected: pair=${cpConfig.pairId} | title=${video.title} | url=${video.url} | start=${startTimeStr}`);
+
+        // Database deduplication (strict check on compound key)
+        const existingEvent = await prisma.teeteeEvents.findUnique({
+          where: {
+            pairId_url: {
+              pairId: cpConfig.pairId,
+              url: video.url
             }
           }
+        });
 
-          let hasPartnerLinkOrMention = false;
-          const partnerInfo = cpConfig.channels.find(c => c.channelId !== channelId);
-          if (partnerInfo) {
-            const partnerId = partnerInfo.channelId;
-            const partnerName = partnerInfo.name;
-            const descLower = (video.description || '').toLowerCase();
-            const partnerNameLower = partnerName.toLowerCase();
-            const partnerNameNoSpace = partnerNameLower.replace(/\s+/g, '');
-            hasPartnerLinkOrMention = 
-              descLower.includes(partnerId.toLowerCase()) || 
-              descLower.includes(`@${partnerNameLower}`) ||
-              descLower.includes(partnerNameLower) ||
-              descLower.includes(`@${partnerNameNoSpace}`) ||
-              descLower.includes(partnerNameNoSpace);
-          }
+        if (existingEvent) {
+          // Already in DB, add to cache and skip
+          newProcessedCacheKeys.push(cacheKey);
+          continue;
+        }
 
-          const isSpecialEvent = /(?:3DLIVE|生誕|ライブ)/i.test(video.title);
-          const isPotentialCollab = hasCollabKeyword || hasCPKeyword || hasPartnerLinkOrMention || isSpecialEvent;
-          const targetStatus = isPotentialCollab ? ReviewStatus.PENDING : ReviewStatus.REJECTED;
-
-          console.log(`🔥 Match detected for pair: ${cpConfig.pairId} | Type: ${type} | Title: ${video.title} | Status: ${targetStatus}`);
-
-          // Database deduplication (strict check)
-          const existingEvent = await prisma.teeteeEvents.findUnique({
-            where: { url: video.url }
+        // Create new TeeteeEvent (All yesterday streams are force-pushed as PENDING)
+        try {
+          const streamDate = new Date(startTimeStr);
+          await prisma.teeteeEvents.create({
+            data: {
+              pairId: cpConfig.pairId,
+              url: video.url,
+              type: EventType.STREAM,
+              title: video.title,
+              timestamp: '00:00:00',
+              reporter: 'CRAWLER',
+              status: ReviewStatus.PENDING,
+              createdAt: streamDate
+            }
           });
-
-          if (existingEvent) {
-            // Already in DB, add to cache and skip
-            newProcessedUrls.push(video.url);
-            continue;
-          }
-
-          // Create new TeeteeEvent
-          try {
-            await prisma.teeteeEvents.create({
-              data: {
-                pairId: cpConfig.pairId,
-                url: video.url,
-                type: type,
-                title: video.title,
-                timestamp: '00:00:00',
-                reporter: 'CRAWLER',
-                status: targetStatus,
-              }
-            });
-            newProcessedUrls.push(video.url);
-            if (targetStatus === ReviewStatus.PENDING) {
-              newEventsInsertedCount++;
-              console.log(`✅ Successfully inserted PENDING event for ${cpConfig.pairId} (URL: ${video.url})`);
-            } else {
-              console.log(`📁 Successfully inserted REJECTED (archived) event for ${cpConfig.pairId} (URL: ${video.url})`);
-            }
-          } catch (dbError) {
-            console.error(`[DB Error] Failed to create event for URL ${video.url}:`, dbError);
-          }
-        } else {
-          // If it doesn't match, cache it as well to avoid parsing it again in future runs
-          newProcessedUrls.push(video.url);
+          newProcessedCacheKeys.push(cacheKey);
+          newEventsInsertedCount++;
+          console.log(`✅ Successfully inserted PENDING event for ${cpConfig.pairId} (URL: ${video.url})`);
+        } catch (dbError) {
+          console.error(`[DB Error] Failed to create event for URL ${video.url}:`, dbError);
         }
       }
     }
   }
 
   // Save new URLs to cache
-  if (newProcessedUrls.length > 0) {
-    const updatedCache = [...cache, ...newProcessedUrls];
+  if (newProcessedCacheKeys.length > 0) {
+    const updatedCache = [...cache, ...newProcessedCacheKeys];
     saveCache(updatedCache);
-    console.log(`Added ${newProcessedUrls.length} new URLs to cache.`);
+    console.log(`Added ${newProcessedCacheKeys.length} new compound keys to cache.`);
   }
 
   console.log(`Crawler job completed. Inserted ${newEventsInsertedCount} new events.`);
@@ -530,11 +498,14 @@ async function runPoll() {
   } else {
     console.log('No new events inserted. Notification skipped.');
   }
+
+  return { insertedCount: newEventsInsertedCount };
 }
 
 // ── Startup Entry Point ──
 
 const isOnceMode = process.argv.includes('--once');
+const isDirectRun = process.argv[1] && (process.argv[1].endsWith('crawler.ts') || process.argv[1].endsWith('crawler.js'));
 
 if (isOnceMode) {
   runPoll()
@@ -546,22 +517,24 @@ if (isOnceMode) {
       console.error('Crawler failed in single run mode:', err);
       process.exit(1);
     });
-} else {
+} else if (isDirectRun) {
   // Run poll immediately on startup
   runPoll().catch((err) => console.error('Initial crawler run failed:', err));
 
-  // Schedule to wake up every 4 hours: 0 */4 * * *
-  const cronExpression = '0 */4 * * *';
-  cron.schedule(cronExpression, () => {
+  // Schedule daily crawler at 01:00:00 Taipei time (0 1 * * *).
+  const crawlerCronExpression = '0 1 * * *';
+  cron.schedule(crawlerCronExpression, () => {
     runPoll().catch((err) => console.error('Scheduled crawler run failed:', err));
+  }, {
+    timezone: 'Asia/Taipei'
   });
 
-  console.log(`Cron scheduler started. Crawler will wake up every 4 hours. (Cron: ${cronExpression})`);
+  console.log(`Cron scheduler started. Crawler will wake up daily at 01:00 Taipei time. (Cron: ${crawlerCronExpression})`);
 
-  // Schedule Tuesday 00:00:00 cleanup job: 0 0 * * 2
-  const cleanupCronExpression = '0 0 * * 2';
+  // Schedule Tuesday 02:00:00 Taipei time cleanup job: 0 2 * * 2
+  const cleanupCronExpression = '0 2 * * 2';
   cron.schedule(cleanupCronExpression, async () => {
-    console.log('[Cleanup Cron] Starting Tuesday 00:00:00 history events cleanup...');
+    console.log('[Cleanup Cron] Starting Tuesday 02:00:00 history events cleanup...');
     try {
       const result = await prisma.teeteeEvents.deleteMany({
         where: {
@@ -573,7 +546,25 @@ if (isOnceMode) {
     } catch (err) {
       console.error('[Cleanup Cron] Failed to clean up history events:', err);
     }
+  }, {
+    timezone: 'Asia/Taipei'
   });
 
-  console.log(`Cleanup cron scheduler started. Will run every Tuesday at 00:00. (Cron: ${cleanupCronExpression})`);
+  console.log(`Cleanup cron scheduler started. Will run every Tuesday at 02:00 Taipei time. (Cron: ${cleanupCronExpression})`);
+
+  // Schedule daily rollover / settlement at exactly 17:45:00 Taipei time (45 17 * * *).
+  const settlementCronExpression = '45 17 * * *';
+  cron.schedule(settlementCronExpression, async () => {
+    console.log('[Daily Settle/Rollover Cron] Triggering daily rollover or weekly settlement...');
+    try {
+      const serviceResult = await runDailyRolloverOrSettlement();
+      console.log(`[Daily Settle/Rollover Cron] Completed: action=${serviceResult.actionExecuted}, message=${serviceResult.message}`);
+    } catch (err) {
+      console.error('[Daily Settle/Rollover Cron] Execution failed:', err);
+    }
+  }, {
+    timezone: 'Asia/Taipei'
+  });
+
+  console.log(`Daily Settle/Rollover cron scheduler started. Will run every day at 17:45 Taipei time. (Cron: ${settlementCronExpression})`);
 }

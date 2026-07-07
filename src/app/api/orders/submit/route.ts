@@ -2,14 +2,23 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { OrderSide } from '@/types/enums';
 import { alignToTick } from '@/utils/validatePrice';
-import { isMarketOpen } from '@/utils/marketHours';
+import { checkAndTickMarketStatus } from '@/services/settlementService';
 
 export async function POST(request: Request) {
   try {
-    if (!isMarketOpen()) {
+    const now = new Date();
+    const marketStatus = await checkAndTickMarketStatus(now);
+
+    if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING') {
       return NextResponse.json(
-        { error: '交易所目前處於非營運時段，開盤時間為 18:00 - 24:00。' },
-        { status: 400 }
+        { error: `交易所目前處於非營運清算狀態 (${marketStatus})，拒絕任何掛單寫入。` },
+        { status: 403 }
+      );
+    }
+    if (marketStatus === 'MAINTENANCE') {
+      return NextResponse.json(
+        { error: '系統維護中，全面禁止任何交易操作。' },
+        { status: 403 }
       );
     }
 
@@ -20,7 +29,20 @@ export async function POST(request: Request) {
       price: number;
       volume: number;
       userId?: string;
+      orderType?: string;
+      type?: string;
     };
+
+    if (marketStatus === 'PRE_MARKET') {
+      const orderType = (body.orderType || body.type || 'LIMIT').toUpperCase();
+      const isMarketOrder = orderType === 'MARKET' || orderType === 'MARKET_ORDER';
+      if (isMarketOrder) {
+        return NextResponse.json(
+          { error: '盤前純掛單期禁止市價單搶跑' },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!pairId || !side || !price || !volume) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -56,6 +78,42 @@ export async function POST(request: Request) {
     }
 
     const targetUserId = userId || 'default_player';
+
+    // ── Self-Match Prevention (API-Level Defense) ──
+    const isBot = targetUserId === 'SYSTEM_MM' || targetUserId === 'MARKET_MAKER' || targetUserId.startsWith('TEST_BOT_');
+    if (!isBot) {
+      let hasOppositeOrder = false;
+      if (cleanSide === OrderSide.BUY) {
+        // New buy order: check if there are pending sells <= new price
+        const opp = await prisma.orderBook.findFirst({
+          where: {
+            userId: targetUserId,
+            pairId: pair.id,
+            side: OrderSide.SELL,
+            price: { lte: price }
+          }
+        });
+        hasOppositeOrder = !!opp;
+      } else {
+        // New sell order: check if there are pending buys >= new price
+        const opp = await prisma.orderBook.findFirst({
+          where: {
+            userId: targetUserId,
+            pairId: pair.id,
+            side: OrderSide.BUY,
+            price: { gte: price }
+          }
+        });
+        hasOppositeOrder = !!opp;
+      }
+
+      if (hasOppositeOrder) {
+        return NextResponse.json(
+          { error: "不允許自買自賣。您在該價位已有反向的未結委託在排隊，請先至下方的未結委託區手動撤單。" },
+          { status: 400 }
+        );
+      }
+    }
 
     // ── 資產與庫存安全檢查 ──
     if (cleanSide === OrderSide.BUY) {

@@ -1,37 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { INITIAL_PAIRS } from '@/app/constants/market';
-import { getTaipeiTime } from '@/utils/marketHours';
+import { getTaipeiTime, getActiveTradingDay, getTaipeiSessionRange, isPreMarketPeriod } from '@/utils/marketHours';
+import { checkAndTickMarketStatus } from '@/services/settlementService';
 
-function getActiveTradingDay(date: Date = new Date()) {
-  let check = new Date(date.getTime());
-  for (let i = 0; i < 10; i++) {
-    const t = getTaipeiTime(check);
-    const isTradingDay = t.dayOfWeek !== 1; // Tue to Sun
-    if (isTradingDay) {
-      if (i === 0) {
-        if (t.hour >= 18) {
-          return { year: t.year, month: t.month, day: t.day, dateStr: `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` };
-        }
-      } else {
-        return { year: t.year, month: t.month, day: t.day, dateStr: `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` };
-      }
-    }
-    check.setTime(check.getTime() - 24 * 60 * 60 * 1000);
-  }
-  const t = getTaipeiTime(date);
-  return { year: t.year, month: t.month, day: t.day, dateStr: `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` };
-}
-
-function getTaipeiSessionRange(year: number, month: number, day: number) {
-  const startUTC = new Date(Date.UTC(year, month - 1, day, 10, 0, 0));
-  const endUTC = new Date(Date.UTC(year, month - 1, day, 16, 0, 0));
-  return { startUTC, endUTC };
-}
 
 export async function GET() {
   try {
     const now = new Date();
+    const marketStatus = await checkAndTickMarketStatus(now);
     const activeTrading = getActiveTradingDay(now);
     const { startUTC, endUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);
 
@@ -69,20 +46,24 @@ export async function GET() {
     const today = getTaipeiTime(now);
     const todayDateStr = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
     
-    let maxAllowedIndex = 359;
+    let maxAllowedIndex = 299;
     if (activeTrading.dateStr === todayDateStr) {
-      let currentMinutesSince18 = 0;
-      if (today.hour >= 18) {
-        currentMinutesSince18 = (today.hour - 18) * 60 + today.minute;
+      if (marketStatus === 'PRE_MARKET') {
+        maxAllowedIndex = 0;
       } else {
-        currentMinutesSince18 = (today.hour + 6) * 60 + today.minute;
+        let currentMinutes = 0;
+        if (today.hour >= 19) {
+          currentMinutes = (today.hour - 19) * 60 + today.minute;
+        } else if (today.hour < 19) {
+          currentMinutes = (today.hour + 5) * 60 + today.minute;
+        }
+        maxAllowedIndex = Math.min(299, Math.max(0, currentMinutes));
       }
-      maxAllowedIndex = Math.min(359, Math.max(0, currentMinutesSince18));
     }
 
     const mappedPairs = pairs.map(p => {
-      // Aggregate 1-minute K-lines into 360 1-minute buckets
-      const chartPoints = new Array(360).fill(null);
+      // Aggregate 1-minute K-lines into 300 1-minute buckets (19:00 to 24:00)
+      const chartPoints = new Array(300).fill(null);
 
       p.klineHistory.forEach(h => {
         const date = new Date(h.timestamp);
@@ -94,30 +75,31 @@ export async function GET() {
           hour12: false
         });
         const parts = formatter.formatToParts(date);
-        let hour = parseInt(parts.find(x => x.type === 'hour')?.value || '18', 10);
+        let hour = parseInt(parts.find(x => x.type === 'hour')?.value || '19', 10);
         const minute = parseInt(parts.find(x => x.type === 'minute')?.value || '0', 10);
 
         if (hour === 24) hour = 0;
         
-        let minutesSince18 = 0;
-        if (hour >= 18) {
-          minutesSince18 = (hour - 18) * 60 + minute;
-        } else {
-          minutesSince18 = (hour + 6) * 60 + minute;
+        let minutesSince1900 = -1;
+        if (hour >= 19) {
+          minutesSince1900 = (hour - 19) * 60 + minute;
+        } else if (hour < 19) {
+          minutesSince1900 = (hour + 5) * 60 + minute;
         }
         
-        let index = minutesSince18;
-        if (index >= 360) index = 359;
-        if (index < 0) index = 0;
-
-        chartPoints[index] = {
-          time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-          open: h.open,
-          high: h.high,
-          low: h.low,
-          close: h.close,
-          volume: Number(h.volume)
-        };
+        let index = minutesSince1900;
+        if (index >= 300) index = 299;
+        
+        if (index >= 0) {
+          chartPoints[index] = {
+            time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+            open: h.open,
+            high: h.high,
+            low: h.low,
+            close: h.close,
+            volume: Number(h.volume)
+          };
+        }
       });
 
       // Fill vacuum gaps and truncate future points
@@ -125,7 +107,7 @@ export async function GET() {
       const history = chartPoints.map((pt, idx) => {
         if (idx <= maxAllowedIndex) {
           if (pt === null) {
-            const bucketMin = 18 * 60 + idx;
+            const bucketMin = 19 * 60 + idx;
             const h = Math.floor(bucketMin / 60) % 24;
             const m = bucketMin % 60;
             return {
@@ -187,7 +169,7 @@ export async function GET() {
           percentStr = "15%";
         }
 
-        const formattedTitle = `${event.pairId} [${typeLabel}] (${percentStr}) - 理由：${event.reason || '無'}`;
+        const formattedTitle = `[${event.pairId}] ${event.title}`;
 
         return {
           id: event.id,
@@ -219,7 +201,7 @@ export async function GET() {
         id: p.id,
         price: p.currentPrice,
         openingPrice: p.openingPrice,
-        yesterdayPrice: p.openingPrice,
+        yesterdayPrice: p.last_close_price,
         status: p.status,
         warningWeeks: p.warningWeeks,
         todayVolume,
@@ -245,7 +227,8 @@ export async function GET() {
     return NextResponse.json({ 
       success: true, 
       pairs: mappedPairs,
-      orders: mappedOrders
+      orders: mappedOrders,
+      marketStatus
     });
   } catch (error) {
     console.error('Error fetching market list:', error);

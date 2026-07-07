@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { ReviewStatus } from '@/types/enums';
+import { runPoll } from '@/cron/crawler';
+import { runDailyRolloverOrSettlement } from '@/services/settlementService';
 
 function safeRevalidatePath(path: string) {
   try {
@@ -13,10 +15,7 @@ function safeRevalidatePath(path: string) {
 }
 
 
-export async function approveEvent(id: string, type: string, reason: string) {
-  if (!reason || reason.trim() === '') {
-    throw new Error('審查核可必須填寫理由！');
-  }
+export async function approveEvent(id: string, type: string, reason?: string) {
   const event = await prisma.teeteeEvents.findUnique({ where: { id } });
   if (!event || event.status !== ReviewStatus.PENDING) return;
 
@@ -27,7 +26,7 @@ export async function approveEvent(id: string, type: string, reason: string) {
       data: { 
         status: ReviewStatus.APPROVED,
         type: type,
-        reason: reason.trim()
+        reason: reason ? reason.trim() : ""
       }
     });
 
@@ -53,15 +52,12 @@ export async function approveEvent(id: string, type: string, reason: string) {
   safeRevalidatePath('/admin/review');
 }
 
-export async function rejectEvent(id: string, reason: string) {
-  if (!reason || reason.trim() === '') {
-    throw new Error('審查拒絕必須填寫理由！');
-  }
+export async function rejectEvent(id: string, reason?: string) {
   await prisma.teeteeEvents.update({
     where: { id },
     data: { 
       status: ReviewStatus.REJECTED,
-      reason: reason.trim()
+      reason: reason ? reason.trim() : ""
     }
   });
   safeRevalidatePath('/admin');
@@ -70,44 +66,78 @@ export async function rejectEvent(id: string, reason: string) {
 
 
 export async function triggerSettlement() {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/cron/settle`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.ADMIN_SECRET || 'secret'}` // basic auth
-    }
-  });
-  
-  if (!response.ok) {
-    throw new Error('Settlement failed');
+  try {
+    await runDailyRolloverOrSettlement({ forceAction: 'settle' });
+    safeRevalidatePath('/admin');
+    safeRevalidatePath('/admin/review');
+    return true;
+  } catch (error) {
+    console.error('Direct settlement failed:', error);
+    throw new Error('Settlement failed: ' + (error instanceof Error ? `${error.message}\n${error.stack}` : String(error)));
   }
-  
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
-  return true;
 }
 
-export async function updateAdminAdjust(pairId: string, value: number, reason: string) {
-  if (value !== 0 && (!reason || reason.trim() === '')) {
-    throw new Error('行政干預微調必須填寫理由！');
+export async function triggerCrawler() {
+  try {
+    const result = await runPoll();
+    safeRevalidatePath('/admin');
+    safeRevalidatePath('/admin/review');
+    return result;
+  } catch (error) {
+    console.error('Direct crawler run failed:', error);
+    throw new Error('Crawler trigger failed: ' + (error instanceof Error ? `${error.message}\n${error.stack}` : String(error)));
   }
+}
+
+export async function updateAdminAdjust(pairId: string, value: number, reason: string, url: string) {
+  if (value === 0) {
+    throw new Error('微調加成百分比不能為 0！');
+  }
+  if (!reason || reason.trim() === '') {
+    throw new Error('行政理由必須填寫！');
+  }
+  if (!url || url.trim() === '') {
+    throw new Error('網址必須填寫！');
+  }
+
+  // 1. 每週能重複進行，因此不刪除先前的行政干預事件，直接新增一筆獨立的已核可情報
+  const overrideVal = value / 100; // 5 -> 0.05
+  
+  let uniqueUrl = url.trim();
+  const existing = await prisma.teeteeEvents.findUnique({
+    where: { pairId_url: { pairId, url: uniqueUrl } }
+  });
+  if (existing) {
+    const separator = uniqueUrl.includes('?') ? '&' : '?';
+    uniqueUrl = `${uniqueUrl}${separator}_t=${Date.now()}`;
+  }
+
+  await prisma.teeteeEvents.create({
+    data: {
+      pairId,
+      title: reason.trim(), // 不要 [行政干預] 字眼
+      url: uniqueUrl,
+      type: `OVERRIDE:${overrideVal}`,
+      reporter: 'ADMIN',
+      status: 'APPROVED',
+      isSettled: false
+    }
+  });
+
+  // 2. 同時清除 CpPairs 表上的舊暫存欄位，確保資料乾淨
   await prisma.cpPairs.update({
     where: { id: pairId },
-    data: { 
-      adminAdjust: value,
-      adminAdjustReason: value === 0 ? "" : reason.trim()
+    data: {
+      adminAdjust: 0.0,
+      adminAdjustReason: ""
     }
   });
+
   safeRevalidatePath('/admin');
   safeRevalidatePath('/admin/review');
 }
 
-export async function approveOneAndRejectOthers(approvedId: string, rejectIds: string[], type: string, approvedReason: string, rejectReason: string) {
-  if (!approvedReason || approvedReason.trim() === '') {
-    throw new Error('審查核可必須填寫理由！');
-  }
-  if (!rejectReason || rejectReason.trim() === '') {
-    throw new Error('審查拒絕必須填寫理由！');
-  }
+export async function approveOneAndRejectOthers(approvedId: string, rejectIds: string[], type: string, approvedReason?: string, rejectReason?: string) {
   await prisma.$transaction(async (tx) => {
     // 1. Approve the selected event and update its type and reason
     const event = await tx.teeteeEvents.findUnique({ where: { id: approvedId } });
@@ -117,7 +147,7 @@ export async function approveOneAndRejectOthers(approvedId: string, rejectIds: s
         data: {
           status: ReviewStatus.APPROVED,
           type: type,
-          reason: approvedReason.trim()
+          reason: approvedReason ? approvedReason.trim() : ""
         }
       });
       
@@ -142,7 +172,7 @@ export async function approveOneAndRejectOthers(approvedId: string, rejectIds: s
         where: { id: rId },
         data: { 
           status: ReviewStatus.REJECTED,
-          reason: rejectReason.trim()
+          reason: rejectReason ? rejectReason.trim() : ""
         }
       });
     }
@@ -152,16 +182,85 @@ export async function approveOneAndRejectOthers(approvedId: string, rejectIds: s
   safeRevalidatePath('/admin/review');
 }
 
-export async function rejectMultipleEvents(ids: string[], reason: string) {
-  if (!reason || reason.trim() === '') {
-    throw new Error('審查拒絕必須填寫理由！');
-  }
+export async function rejectMultipleEvents(ids: string[], reason?: string) {
   await prisma.teeteeEvents.updateMany({
     where: { id: { in: ids } },
     data: { 
       status: ReviewStatus.REJECTED,
+      reason: reason ? reason.trim() : ""
+    }
+  });
+  safeRevalidatePath('/admin');
+  safeRevalidatePath('/admin/review');
+}
+
+export async function updateProcessedEvent(
+  id: string,
+  title: string,
+  url: string,
+  type: string,
+  status: string,
+  reason: string
+) {
+  if (!title || title.trim() === '') {
+    throw new Error('標題不能為空！');
+  }
+  if (!url || url.trim() === '') {
+    throw new Error('網址不能為空！');
+  }
+
+  if (type.startsWith('OVERRIDE:')) {
+    const valStr = type.split(':')[1];
+    const val = parseFloat(valStr);
+    if (isNaN(val) || val === 0) {
+      throw new Error('行政微調加成百分比不能為 0！');
+    }
+  } else if (type !== 'STREAM' && type !== 'STREAM_3D' && type !== 'VIDEO') {
+    throw new Error('不支援的情報類型！');
+  }
+
+  if (status !== 'APPROVED' && status !== 'REJECTED') {
+    throw new Error('無效的審核狀態！');
+  }
+
+  const currentEvent = await prisma.teeteeEvents.findUnique({ where: { id } });
+  if (!currentEvent) {
+    throw new Error('找不到該情報！');
+  }
+
+  let uniqueUrl = url.trim();
+  if (uniqueUrl !== currentEvent.url) {
+    const existing = await prisma.teeteeEvents.findFirst({
+      where: { 
+        pairId: currentEvent.pairId, 
+        url: uniqueUrl,
+        id: { not: id }
+      }
+    });
+    if (existing) {
+      const separator = uniqueUrl.includes('?') ? '&' : '?';
+      uniqueUrl = `${uniqueUrl}${separator}_t=${Date.now()}`;
+    }
+  }
+
+  await prisma.teeteeEvents.update({
+    where: { id },
+    data: {
+      title: title.trim(),
+      url: uniqueUrl,
+      type,
+      status,
       reason: reason.trim()
     }
+  });
+
+  safeRevalidatePath('/admin');
+  safeRevalidatePath('/admin/review');
+}
+
+export async function deleteProcessedEvent(id: string) {
+  await prisma.teeteeEvents.delete({
+    where: { id }
   });
   safeRevalidatePath('/admin');
   safeRevalidatePath('/admin/review');

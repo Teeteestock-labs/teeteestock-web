@@ -13,7 +13,12 @@ export async function POST(request: Request) {
 
     // Deduplication logic
     const existingEvent = await prisma.teeteeEvents.findUnique({
-      where: { url }
+      where: {
+        pairId_url: {
+          pairId,
+          url
+        }
+      }
     });
 
     if (existingEvent) {
@@ -41,6 +46,7 @@ export async function POST(request: Request) {
         title: rawText,
         reporter: userId || 'USER_ID',
         status: ReviewStatus.PENDING,
+        createdAt: body.createdAt ? new Date(body.createdAt) : undefined
       }
     });
 
