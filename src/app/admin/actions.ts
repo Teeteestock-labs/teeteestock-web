@@ -9,7 +9,7 @@ import { runDailyRolloverOrSettlement } from '@/services/settlementService';
 function safeRevalidatePath(path: string) {
   try {
     revalidatePath(path);
-  } catch (error) {
+  } catch (_error) {
     // Ignore error if run from CLI or standalone scripts where Next.js context is absent
   }
 }

@@ -33,14 +33,14 @@ export async function getTeeTeeNews(pairId: string) {
     console.log(`[getTeeTeeNews] Found ${events.length} events in DB for "${dbPairId}".`);
 
     const mapped = events.map(event => {
-      let typeLabel = "日常連動";
-      let percentStr = "9%";
+      let _typeLabel = "日常連動";
+      let _percentStr = "9%";
       if (event.type === 'VIDEO') {
-        typeLabel = "新曲/MV";
-        percentStr = "30%";
+        _typeLabel = "新曲/MV";
+        _percentStr = "30%";
       } else if (event.type === 'STREAM_3D') {
-        typeLabel = "大型/3D";
-        percentStr = "15%";
+        _typeLabel = "大型/3D";
+        _percentStr = "15%";
       }
       
       const formattedTitle = `[${event.pairId}] ${event.title}`;

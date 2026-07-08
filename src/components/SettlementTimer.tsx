@@ -2,6 +2,7 @@
 
 
 import React, { useState, useEffect } from 'react';
+import { getTaipeiTime } from '@/utils/marketHours';
 
 export default function SettlementTimer(){
     const [timeLeft, setTimeLeft] = useState<string>("");
@@ -11,8 +12,9 @@ export default function SettlementTimer(){
     useEffect(() =>{
         const calculateTime = () => {
             const now = new Date();
-            const day = now.getDay(); // 0 = 週日, 1-6為週一至週六
-            const hour = now.getHours();
+            const taipei = getTaipeiTime(now);
+            const day = taipei.dayOfWeek; // 0 = 週日, 1-6為週一至週六
+            const hour = taipei.hour;
 
             // 半段是否處於結算時間 : 週一且09:00之前
             const isMondayMorning = (day === 1 && hour < 9);
@@ -24,20 +26,19 @@ export default function SettlementTimer(){
             } else {
                 setIssettling(false);
 
-                // 目標時間為 "下一個週一 00:00:00"
-                const nextMonday = new Date(now);
-                // 計算距離下周一還差幾天
-                // 如果為週一(>=9點)，需+7天；如為週日(0)，則+1天
-                const daysToNextMonday = day === 0 ? 1 : 8 - day;
+                // 計算台北時間當前的 totalMinutes，用來推算距離下週一 00:00 的差值
+                const currentTotalMinutes = day * 24 * 60 + hour * 60 + taipei.minute;
+                // 下週一 00:00:00 = dayOfWeek=1, hour=0, minute=0
+                const targetTotalMinutes = 1 * 24 * 60; // Monday 00:00
+                let diffMinutes = targetTotalMinutes - currentTotalMinutes;
+                if (diffMinutes <= 0) diffMinutes += 7 * 24 * 60; // wrap to next week
 
-                nextMonday.setDate(now.getDate() + daysToNextMonday);
-                nextMonday.setHours(0, 0, 0, 0);
+                // 扣除已過的秒數
+                const diffSeconds = diffMinutes * 60 - taipei.second;
 
-                const diff = nextMonday.getTime() -now.getTime();
-
-                const h = Math.floor(diff / (1000 * 60 * 60));
-                const m = Math.floor((diff / (1000 * 60)) % 60);
-                const s = Math.floor((diff / 1000) % 60);
+                const h = Math.floor(diffSeconds / 3600);
+                const m = Math.floor((diffSeconds % 3600) / 60);
+                const s = diffSeconds % 60;
 
                 setIsFinalHour(h === 0);
 

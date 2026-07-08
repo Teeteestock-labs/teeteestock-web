@@ -314,7 +314,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
         : 0;
 
     const closestPtIdx = hoverCoords ? getClosestPointIndex(canvasHoverX) : -1;
-    const closestPt = closestPtIdx !== -1 ? data[closestPtIdx] : null;
+    const closestPt = closestPtIdx !== -1 ? chartData[closestPtIdx] : null;
 
     // Snapped Coordinates relative to the parent view boundingbox for the Crosshair lines
     let snapX = 0;
@@ -335,11 +335,11 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
         snapX >= paddingLeft && snapX <= (hoverCoords.containerWidth - paddingRight) && 
         snapY >= paddingTop && snapY <= (hoverCoords.containerHeight - paddingBottom);
 
-    const maxPt = maxVisibleIdx !== -1 ? data[maxVisibleIdx] : null;
-    const minPt = minVisibleIdx !== -1 ? data[minVisibleIdx] : null;
+    const maxPt = maxVisibleIdx !== -1 ? chartData[maxVisibleIdx] : null;
+    const minPt = minVisibleIdx !== -1 ? chartData[minVisibleIdx] : null;
 
     // ── 頂部 HUD 動態注入文字 ──
-    const displayPt = closestPt || data[data.length - 1];
+    const displayPt = closestPt || chartData[chartData.length - 1];
     const hudTime = displayPt ? displayPt.time : '--';
     const hudOpen = displayPt ? displayPt.open.toFixed(2) : '--';
     const hudHigh = displayPt ? displayPt.high.toFixed(2) : '--';

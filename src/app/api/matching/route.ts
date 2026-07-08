@@ -33,14 +33,11 @@ export async function POST(request: Request) {
       }, { status: 200 });
     }
 
-    const results = await new Promise<any[]>((resolve, reject) => {
-      setImmediate(async () => {
-        try {
-          const txResults = await prisma.$transaction(async (tx) => {
-            // 1. 撈取目前所有未下市的 CP 組合
-            const pairs = await tx.cpPairs.findMany({
-              where: { status: { not: MarketStatus.DELISTED } },
-            });
+    const results = await prisma.$transaction(async (tx) => {
+      // 1. 撈取目前所有未下市的 CP 組合
+      const pairs = await tx.cpPairs.findMany({
+        where: { status: { not: MarketStatus.DELISTED } },
+      });
 
       const matchedPairsLog: any[] = [];
 
@@ -165,7 +162,6 @@ export async function POST(request: Request) {
         let remainingVolume = maxVolume;
 
         const tradesCreated: any[] = [];
-        const orderUpdates: { id: string; action: 'DELETE' | 'UPDATE'; volume?: number }[] = [];
 
         while (remainingVolume > 0 && buyIdx < buyQueue.length && sellIdx < sellQueue.length) {
           const bOrder = buyQueue[buyIdx];
@@ -302,11 +298,9 @@ export async function POST(request: Request) {
 
             // 移動佇列指標
             if (bOrder.remainingVolume === 0) {
-              orderUpdates.push({ id: bOrder.id, action: 'DELETE' });
               buyIdx++;
             }
             if (sOrder.remainingVolume === 0) {
-              orderUpdates.push({ id: sOrder.id, action: 'DELETE' });
               sellIdx++;
             }
           }
@@ -416,14 +410,8 @@ export async function POST(request: Request) {
         });
       }
 
-          return matchedPairsLog;
-        });
-        resolve(txResults);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
+      return matchedPairsLog;
+    }, { timeout: 25000 });
 
   return NextResponse.json(serializeBigInt({
     success: true,

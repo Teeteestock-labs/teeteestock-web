@@ -4,15 +4,15 @@ import { MarketStatus, UserChoice } from '../src/types/enums';
 const prisma = new PrismaClient();
 
 const INITIAL_PAIRS = [
-  { id: 'MCMT', name: 'MiComet (櫻巫女 × 星街彗星)' },
-  { id: 'OKKR', name: 'OkaKoro (貓又小粥 × 戌神沁音)' },
-  { id: 'PKMR', name: 'PekoMarine (兔田佩克拉 × 寶鐘瑪琳)' },
-  { id: 'NEFL', name: 'NoelFlare (白銀諾艾爾 × 不知火芙蕾雅)' },
-  { id: 'SRAZ', name: 'SorAZ (時乃空 × AZKi)' },
-  { id: 'FBMO', name: 'FubuMio (白上吹雪 × 大神澪)' },
-  { id: 'SSWT', name: 'ShishiWata (獅白牡丹 × 角卷綿芽)' },
-  { id: 'SBRN', name: 'SubaRuna (大空昴 × 姬森璐娜)' },
-  { id: 'AZIR', name: 'AZIro (AZKi × 風真伊呂波)' },
+  { id: 'MCMT', name: 'MiComet' },
+  { id: 'OKKR', name: 'OkaKoro' },
+  { id: 'PKMR', name: 'PekoMarine' },
+  { id: 'NEFL', name: 'NoelFlare' },
+  { id: 'SRAZ', name: 'SorAZ' },
+  { id: 'FBMO', name: 'FubuMio' },
+  { id: 'SSWT', name: 'ShishiWata' },
+  { id: 'SBRN', name: 'SubaRuna' },
+  { id: 'AZIR', name: 'AZIro' },
 ];
 
 async function main() {
@@ -39,7 +39,7 @@ async function main() {
   for (const pair of INITIAL_PAIRS) {
     await prisma.cpPairs.upsert({
       where: { id: pair.id },
-      update: {}, // Avoid overwriting existing state/pricing data
+      update: { name: pair.name }, // Update names to strip Chinese text
       create: {
         id: pair.id,
         name: pair.name,

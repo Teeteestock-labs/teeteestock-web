@@ -3,6 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { ReviewStatus } from '@/types/enums';
 
 export async function POST(request: Request) {
+  const authHeader = request.headers.get('Authorization');
+  const adminSecret = process.env.ADMIN_SECRET || 'secret';
+  if (authHeader !== `Bearer ${adminSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const result = await prisma.teeteeEvents.deleteMany({
       where: {

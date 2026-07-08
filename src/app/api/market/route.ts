@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { INITIAL_PAIRS } from '@/app/constants/market';
-import { getTaipeiTime, getActiveTradingDay, getTaipeiSessionRange, isPreMarketPeriod } from '@/utils/marketHours';
+import { getTaipeiTime, getActiveTradingDay, getTaipeiSessionRange } from '@/utils/marketHours';
 import { checkAndTickMarketStatus } from '@/services/settlementService';
 
 
@@ -125,7 +125,7 @@ export async function GET() {
         } else {
           return null;
         }
-      });
+      }).filter((pt: any) => pt !== null);
 
       // Map recentTrades
       const recentTrades = p.trades.map((t, idx) => {
@@ -159,14 +159,14 @@ export async function GET() {
           day: '2-digit' 
         });
         
-        let typeLabel = "日常連動";
-        let percentStr = "9%";
+        let _typeLabel = "日常連動";
+        let _percentStr = "9%";
         if (event.type === 'VIDEO') {
-          typeLabel = "新曲/MV";
-          percentStr = "30%";
+          _typeLabel = "新曲/MV";
+          _percentStr = "30%";
         } else if (event.type === 'STREAM_3D') {
-          typeLabel = "大型/3D";
-          percentStr = "15%";
+          _typeLabel = "大型/3D";
+          _percentStr = "15%";
         }
 
         const formattedTitle = `[${event.pairId}] ${event.title}`;
@@ -199,9 +199,12 @@ export async function GET() {
 
       return {
         id: p.id,
+        name: p.name,
         price: p.currentPrice,
         openingPrice: p.openingPrice,
         yesterdayPrice: p.last_close_price,
+        change24h: p.openingPrice !== 0 ? ((p.currentPrice - p.openingPrice) / p.openingPrice) * 100 : 0,
+        netValue: p.netValue,
         status: p.status,
         warningWeeks: p.warningWeeks,
         todayVolume,

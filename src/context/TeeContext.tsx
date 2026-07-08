@@ -4,7 +4,7 @@ import { INITIAL_PAIRS } from '@/app/constants/market';
 import { teeteePair, UserHolding, ChartDataPoint, Order } from '@/app/types';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isValidTickSize, getTickSize, alignToTick } from '@/utils/validatePrice';
-import { isMarketOpen, getTaipeiTime, getTaipeiDateString, getTaipeiTimeStr, isPreMarketPeriod, isOperatingPeriod } from '@/utils/marketHours';
+import { isPreMarketPeriod, isOperatingPeriod } from '@/utils/marketHours';
 
 
 export interface OrderBook {
@@ -18,9 +18,11 @@ interface TeeContextType {
     marketData: teeteePair[];
     orders: Order[];
     marketStatus: 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE';
+    isSubmitting: boolean;
+    isCancelling: boolean;
     getOrderBook: (pairId: string) => OrderBook;
-    submitOrder: (pairId: string, type: 'buy' | 'sell', amount: number, price: number) => { success: boolean, message?: string };
-    cancelOrder: (orderId: string) => void;
+    submitOrder: (pairId: string, type: 'buy' | 'sell', amount: number, price: number) => Promise<{ success: boolean, message?: string }>;
+    cancelOrder: (orderId: string) => Promise<{ success: boolean, message?: string }>;
     simulateMarketMove: () => void;
     reportInteraction: (pairId: string, type: 'liveCollab' | 'largeEvent' | 'newSong') => void;
     executeWeeklySettlement: () => void;
@@ -90,7 +92,7 @@ export interface Bot {
     holdings: { [pairId: string]: number };
 }
 
-const INITIAL_BOTS: Bot[] = [
+const _INITIAL_BOTS: Bot[] = [
     { id: 'bot_1', name: '大戶A', balance: 10000, holdings: {} },
     { id: 'bot_2', name: '外資B', balance: 10000, holdings: {} },
     { id: 'bot_3', name: '散戶C', balance: 10000, holdings: {} },
@@ -108,6 +110,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [marketStatus, setMarketStatus] = useState<'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE'>('CLOSED');
     const [isInitialized, setIsInitialized] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     // 同步後端行情與玩家狀態
     const fetchLatestMarketAndPlayer = async () => {
@@ -164,8 +168,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         try {
             // ── 1. 撤銷所有委託單 (退還資金/股票到本地) ──
             let newBalance = balance;
-            let newHoldings = [...holdings];
-            let nextBots = [...bots];
+            const newHoldings = [...holdings];
+            const nextBots = [...bots];
 
             orders.forEach(order => {
                 if (order.isUser) {
@@ -222,7 +226,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             }
 
             // ── 5. 套用結算結果到市場資料與機器人模擬 ──
-            const delistedIds = new Set<string>(data.delistedPairs || []);
+            const _delistedIds = new Set<string>(data.delistedPairs || []);
 
             const updatedMarket = marketData.map(pair => {
                 const settlementResult = data.results.find((r: any) => r.pairId === pair.id);
@@ -321,10 +325,10 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         const savedBots = localStorage.getItem('tee_bots');
 
         if (saveBalance) setBalance(Number(saveBalance));
-        if (saveHoldings) setHoldings(JSON.parse(saveHoldings));
-        if (savedMarket) setMarketData(JSON.parse(savedMarket));
-        if (savedOrders) setOrders(JSON.parse(savedOrders));
-        if (savedBots) setBots(JSON.parse(savedBots));
+        try { if (saveHoldings) setHoldings(JSON.parse(saveHoldings)); } catch (_e) { console.warn('Failed to parse holdings from localStorage'); }
+        try { if (savedMarket) setMarketData(JSON.parse(savedMarket)); } catch (_e) { console.warn('Failed to parse market from localStorage'); }
+        try { if (savedOrders) setOrders(JSON.parse(savedOrders)); } catch (_e) { console.warn('Failed to parse orders from localStorage'); }
+        try { if (savedBots) setBots(JSON.parse(savedBots)); } catch (_e) { console.warn('Failed to parse bots from localStorage'); }
 
         fetchLatestMarketAndPlayer().then(() => {
             setIsInitialized(true);
@@ -366,13 +370,16 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         return { bids, asks };
     };
 
-    // 提交委託單 (向後端資料庫送出訂單)
-    const submitOrder = (pairId: string, type: 'buy' | 'sell', amount: number, price: number) => {
+    // 提交委託單 (向後端資料庫送出訂單，等待確認後才更新 UI)
+    const submitOrder = async (pairId: string, type: 'buy' | 'sell', amount: number, price: number): Promise<{ success: boolean, message?: string }> => {
         if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING') {
             return { success: false, message: `交易所目前處於非營運清算狀態 (${marketStatus})，拒絕任何掛單寫入。` };
         }
         if (marketStatus === 'MAINTENANCE') {
             return { success: false, message: "系統維護中，全面禁止任何交易操作。" };
+        }
+        if (isSubmitting) {
+            return { success: false, message: "委託處理中，請稍候..." };
         }
         if (amount <= 0 || price <= 0) return { success: false, message: "無效的數量或價格" };
 
@@ -402,135 +409,75 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             if (!existing || existing.shares < amount) return { success: false, message: "庫存不足" };
         }
 
-        const tempId = `usr_temp_${Date.now()}`;
-
-        // 發送請求到後端 API
-        fetch('/api/orders/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pairId,
-                side: type.toUpperCase(),
-                price,
-                volume: amount,
-                userId: 'default_player'
-            })
-        }).then(async res => {
+        setIsSubmitting(true);
+        try {
+            const res = await fetch('/api/orders/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pairId,
+                    side: type.toUpperCase(),
+                    price,
+                    volume: amount,
+                    userId: 'default_player'
+                })
+            });
             const data = await res.json();
-            if (res.ok) {
-                // 若後端回傳成功，將本地臨時單的 ID 替換成真實的 DB 委託單 ID
-                if (data.order && data.order.id) {
-                    setOrders(prev => prev.map(o => o.id === tempId ? { ...o, id: data.order.id } : o));
-                }
-                // 立即更新前端行情與玩家資產
-                fetchLatestMarketAndPlayer();
-            } else {
-                // 委託失敗，退回本地暫扣資產，並移去臨時單
-                setOrders(prev => prev.filter(o => o.id !== tempId));
-                if (type === 'buy') {
-                    setBalance(prev => prev + amount * price);
-                } else {
-                    setHoldings(prev => {
-                        const existingIdx = prev.findIndex(h => h.pairId === pairId);
-                        if (existingIdx >= 0) {
-                            return prev.map(h => h.pairId === pairId ? { ...h, shares: h.shares + amount } : h);
-                        } else {
-                            return [...prev, { pairId, shares: amount, avgCost: price }];
-                        }
-                    });
-                }
-                alert(`[委託失敗] ${data.error || '未知錯誤'}`);
+
+            if (!res.ok) {
+                return { success: false, message: data.error || '委託失敗' };
             }
-        }).catch(err => {
+
+            // 成功：從 DB 同步最新狀態（餘額、庫存、訂單、行情）
+            await fetchLatestMarketAndPlayer();
+            return { success: true, message: "委託單已送出" };
+        } catch (err) {
             console.error("Order submission failed:", err);
-            // 發生異常，退回本地暫扣資產，並移去臨時單
-            setOrders(prev => prev.filter(o => o.id !== tempId));
-            if (type === 'buy') {
-                setBalance(prev => prev + amount * price);
-            } else {
-                setHoldings(prev => {
-                    const existingIdx = prev.findIndex(h => h.pairId === pairId);
-                    if (existingIdx >= 0) {
-                        return prev.map(h => h.pairId === pairId ? { ...h, shares: h.shares + amount } : h);
-                    } else {
-                        return [...prev, { pairId, shares: amount, avgCost: price }];
-                    }
-                });
-            }
-        });
-
-        // 為了 UI 的反應性，在本地先扣除金額/庫存，並掛上臨時單
-        if (type === 'buy') {
-            setBalance(prev => prev - amount * price);
-        } else {
-            setHoldings(prev => prev.map(h => h.pairId === pairId ? { ...h, shares: h.shares - amount } : h).filter(h => h.shares > 0));
+            return { success: false, message: "網路錯誤，請稍後重試" };
+        } finally {
+            setIsSubmitting(false);
         }
-
-        const newOrder: Order = {
-            id: tempId,
-            pairId,
-            type,
-            price,
-            amount,
-            isUser: true,
-            timestamp: Date.now()
-        };
-        setOrders(prev => [...prev, newOrder]);
-
-        return { success: true, message: "委託單已送出" };
     };
 
-    // 取消委託單
-    const cancelOrder = (orderId: string) => {
+    // 取消委託單 (等待 API 確認後才更新 UI)
+    const cancelOrder = async (orderId: string): Promise<{ success: boolean, message?: string }> => {
         if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING' || marketStatus === 'MAINTENANCE') {
-            alert(`目前交易所狀態為 ${marketStatus}，無法撤單！`);
-            return;
-        }
-        
-        if (orderId.startsWith('usr_temp_')) {
-            alert("委託單正在送出中，請稍後再試。");
-            return;
+            return { success: false, message: `目前交易所狀態為 ${marketStatus}，無法撤單！` };
         }
 
         const order = orders.find(o => o.id === orderId);
-        if (!order || !order.isUser) return;
-
-        // 本地預先退還，提供即時反應
-        if (order.type === 'buy') {
-            setBalance(b => b + (order.price * order.amount));
-        } else {
-            setHoldings(h => {
-                const existing = h.find(x => x.pairId === order.pairId);
-                if (existing) {
-                    return h.map(x => x.pairId === order.pairId ? { ...x, shares: x.shares + order.amount } : x);
-                }
-                return [...h, { pairId: order.pairId, shares: order.amount, avgCost: order.price }];
-            });
+        if (!order || !order.isUser) {
+            return { success: false, message: '找不到該委託單' };
         }
-        setOrders(prev => prev.filter(o => o.id !== orderId));
 
-        // 呼叫後端 API 取消
-        fetch('/api/orders/cancel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId })
-        }).then(async res => {
+        setIsCancelling(true);
+        try {
+            const res = await fetch('/api/orders/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, userId: 'default_player' })
+            });
+
             if (res.ok) {
-                fetchLatestMarketAndPlayer();
+                // 成功：從 DB 同步最新狀態
+                await fetchLatestMarketAndPlayer();
+                return { success: true, message: '撤單成功' };
             } else {
                 const data = await res.json();
-                if (data.error === "Order not found") {
-                    // 已成交或撮合刪除的正常競態情況
-                    console.log("Order already filled/matched. Cannot cancel.");
-                } else {
-                    console.error("Cancel failed on backend:", data.error);
+                // 不論原因，都同步一次 DB 狀態以確保 UI 正確
+                await fetchLatestMarketAndPlayer();
+                if (data.error === 'Order not found') {
+                    return { success: false, message: '該委託單已成交或已被撮合，無法撤銷。' };
                 }
-                fetchLatestMarketAndPlayer();
+                return { success: false, message: data.error || '撤單失敗' };
             }
-        }).catch(err => {
-            console.error("Cancel order API call failed:", err);
-            fetchLatestMarketAndPlayer();
-        });
+        } catch (err) {
+            console.error('Cancel order API call failed:', err);
+            await fetchLatestMarketAndPlayer();
+            return { success: false, message: '網路錯誤，請稍後重試' };
+        } finally {
+            setIsCancelling(false);
+        }
     };
 
     const reportInteraction = (pairId: string, type: 'liveCollab' | 'largeEvent' | 'newSong') => {
@@ -604,7 +551,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             body: JSON.stringify({
                 pairId,
                 url: url,
-                userId: 'default_player'
+                userId: 'default_player',
+                type: type
             })
         }).catch(err => {
             console.error('Error submitting report to events report api:', err);
@@ -612,7 +560,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     };
 
     return (
-        <TeeContext.Provider value={{ balance, holdings, marketData, orders, marketStatus, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
+        <TeeContext.Provider value={{ balance, holdings, marketData, orders, marketStatus, isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
             {children}
         </TeeContext.Provider>
     );

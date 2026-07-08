@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { MarketStatus, EventType, ReviewStatus, UserChoice, OrderSide } from '../types/enums';
+import { MarketStatus, EventType, ReviewStatus, OrderSide } from '../types/enums';
 import { alignToTick, getTickSize } from '../utils/validatePrice';
 import { getTaipeiTime } from '../utils/marketHours';
 
@@ -255,6 +255,25 @@ export async function runDailyRolloverOrSettlement(options?: {
     }
   }
 
+  // Guard against duplicate settlement
+  if (action === 'settle') {
+    const anyPair = await prisma.cpPairs.findFirst({
+      where: { lastSettledAt: { not: null } },
+      orderBy: { lastSettledAt: 'desc' }
+    });
+    if (anyPair?.lastSettledAt) {
+      const hoursSinceLastSettlement = (now.getTime() - anyPair.lastSettledAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceLastSettlement < 48) {
+        console.log(`[Settlement] Skipping: last settlement was ${hoursSinceLastSettlement.toFixed(1)} hours ago (< 48h guard).`);
+        return {
+          actionExecuted: 'none' as any,
+          results: [],
+          message: `Settlement skipped: already settled ${hoursSinceLastSettlement.toFixed(1)} hours ago.`
+        };
+      }
+    }
+  }
+
   if (action === 'rollover') {
     // ── Scenario 1: Weekday Rollover (Tue-Sat 24:00) ──
     const results = await prisma.$transaction(async (tx) => {
@@ -387,7 +406,7 @@ export async function runDailyRolloverOrSettlement(options?: {
         await expireAndRefundOrders(tx, latestPair.id);
 
         // 8. Update CP Pair in database (write to last_close_price and next_open_price)
-        const updatedPair = await tx.cpPairs.update({
+        const _updatedPair = await tx.cpPairs.update({
           where: { id: latestPair.id },
           data: {
             netValue: nextWeekNV,
@@ -513,7 +532,7 @@ export async function runDailyRolloverOrSettlement(options?: {
   }
 }
 
-export async function runPreMarketMMDeployment(now: Date = new Date()) {
+export async function runPreMarketMMDeployment(_now: Date = new Date()) {
   const result = await prisma.$transaction(async (tx) => {
     const pairs = await tx.cpPairs.findMany({
       where: { status: { not: MarketStatus.DELISTED } }
@@ -544,6 +563,8 @@ export async function runPreMarketMMDeployment(now: Date = new Date()) {
     for (const pair of updatedPairs) {
       await deployMarketMakerOrders(tx, pair, pair.openingPrice, alertPairIds);
     }
+
+    return updatedPairs;
   }, { timeout: 15000 });
 
   return result;
@@ -575,7 +596,15 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   if (currentStatus === 'OPEN' && (clockStatus === 'CLOSED' || clockStatus === 'SETTLING')) {
     if (clockStatus === 'SETTLING') {
       console.log(`[State Machine] Transitioning OPEN -> SETTLING at ${now.toISOString()}`);
-      await prisma.systemConfig.update({ where: { id: 1 }, data: { marketStatus: 'SETTLING' } });
+      // Atomic check-and-set to prevent concurrent transitions
+      const updatedSettling = await prisma.systemConfig.updateMany({
+        where: { id: 1, marketStatus: currentStatus },
+        data: { marketStatus: 'SETTLING' }
+      });
+      if (updatedSettling.count === 0) {
+        // Another request already handled this transition
+        return currentStatus;
+      }
       try {
         await runDailyRolloverOrSettlement({ forceAction: 'settle', targetDate: now });
       } catch (err) {
@@ -584,7 +613,15 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
       return 'SETTLING';
     } else {
       console.log(`[State Machine] Transitioning OPEN -> CLOSED (Daily Rollover) at ${now.toISOString()}`);
-      await prisma.systemConfig.update({ where: { id: 1 }, data: { marketStatus: 'CLOSED' } });
+      // Atomic check-and-set to prevent concurrent transitions
+      const updatedClosed = await prisma.systemConfig.updateMany({
+        where: { id: 1, marketStatus: currentStatus },
+        data: { marketStatus: 'CLOSED' }
+      });
+      if (updatedClosed.count === 0) {
+        // Another request already handled this transition
+        return currentStatus;
+      }
       try {
         await runDailyRolloverOrSettlement({ forceAction: 'rollover', targetDate: now });
       } catch (err) {
@@ -597,7 +634,15 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   // 2. Transition/Recovery from CLOSED/SETTLING to PRE_MARKET (18:45)
   if ((currentStatus === 'CLOSED' || currentStatus === 'SETTLING') && clockStatus === 'PRE_MARKET') {
     console.log(`[State Machine] Transitioning ${currentStatus} -> PRE_MARKET at ${now.toISOString()}`);
-    await prisma.systemConfig.update({ where: { id: 1 }, data: { marketStatus: 'PRE_MARKET' } });
+    // Atomic check-and-set to prevent concurrent transitions
+    const updatedPreMarket = await prisma.systemConfig.updateMany({
+      where: { id: 1, marketStatus: currentStatus },
+      data: { marketStatus: 'PRE_MARKET' }
+    });
+    if (updatedPreMarket.count === 0) {
+      // Another request already handled this transition
+      return currentStatus;
+    }
     await runPreMarketMMDeployment(now);
     return 'PRE_MARKET';
   }
@@ -605,16 +650,35 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   // 3. Transition/Recovery from PRE_MARKET to OPEN (19:00)
   if (currentStatus === 'PRE_MARKET' && clockStatus === 'OPEN') {
     console.log(`[State Machine] Transitioning PRE_MARKET -> OPEN at ${now.toISOString()}`);
-    await prisma.systemConfig.update({ where: { id: 1 }, data: { marketStatus: 'OPEN' } });
+    // Atomic check-and-set to prevent concurrent transitions
+    const updatedOpen = await prisma.systemConfig.updateMany({
+      where: { id: 1, marketStatus: currentStatus },
+      data: { marketStatus: 'OPEN' }
+    });
+    if (updatedOpen.count === 0) {
+      // Another request already handled this transition
+      return currentStatus;
+    }
     return 'OPEN';
   }
 
   // 4. Recover missed transition if DB is CLOSED/SETTLING but clock is OPEN (e.g. server restarted during session)
   if ((currentStatus === 'CLOSED' || currentStatus === 'SETTLING') && clockStatus === 'OPEN') {
     console.log(`[State Machine] Recovering missed open transition. Running MM deployment & setting to OPEN.`);
-    await prisma.systemConfig.update({ where: { id: 1 }, data: { marketStatus: 'PRE_MARKET' } });
+    // Atomic check-and-set to prevent concurrent transitions
+    const updatedRecoverPre = await prisma.systemConfig.updateMany({
+      where: { id: 1, marketStatus: currentStatus },
+      data: { marketStatus: 'PRE_MARKET' }
+    });
+    if (updatedRecoverPre.count === 0) {
+      // Another request already handled this transition
+      return currentStatus;
+    }
     await runPreMarketMMDeployment(now);
-    await prisma.systemConfig.update({ where: { id: 1 }, data: { marketStatus: 'OPEN' } });
+    await prisma.systemConfig.updateMany({
+      where: { id: 1, marketStatus: 'PRE_MARKET' },
+      data: { marketStatus: 'OPEN' }
+    });
     return 'OPEN';
   }
 

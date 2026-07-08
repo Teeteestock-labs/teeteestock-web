@@ -118,7 +118,7 @@ export interface TradingDayInfo {
 }
 
 export function getActiveTradingDay(date: Date = new Date()): TradingDayInfo {
-  let check = new Date(date.getTime());
+  const check = new Date(date.getTime());
   for (let i = 0; i < 10; i++) {
     const t = getTaipeiTime(check);
     const isTradingDay = t.dayOfWeek !== 1; // Tue to Sun

@@ -353,7 +353,13 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>('list');
-  const [viewMode, setViewMode] = useState<ViewMode>('compact');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('teeteestock-lobby-view-mode');
+      if (saved === 'compact' || saved === 'grid' || saved === 'sparkline') return saved;
+    }
+    return 'compact';
+  });
 
   const {
     balance,
@@ -366,12 +372,7 @@ function HomeContent() {
 
   const sortedMarketData = [...marketData].sort((a, b) => a.id.localeCompare(b.id));
 
-  useEffect(() => {
-    const saved = localStorage.getItem('teeteestock-lobby-view-mode');
-    if (saved === 'compact' || saved === 'grid' || saved === 'sparkline') {
-      setViewMode(saved);
-    }
-  }, []);
+
 
   useEffect(() => {
     const queryMode = searchParams.get('mode');

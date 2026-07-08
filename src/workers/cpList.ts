@@ -1,7 +1,7 @@
 export const cpList = [
   {
     id: "miComet",
-    name: "MiComet (櫻巫女 × 星街彗星)",
+    name: "MiComet",
     member1: {
       name: "さくらみこ",
       xUrl: "https://x.com/sakuramiko35",
@@ -21,7 +21,7 @@ export const cpList = [
   },
   {
     id: "OkaKoro",
-    name: "OkaKoro (貓又小粥 × 戌神沁音)",
+    name: "OkaKoro",
     member1: {
       name: "猫又おかゆ",
       xUrl: "https://x.com/nekomataokayu",
@@ -41,7 +41,7 @@ export const cpList = [
   },
   {
     id: "PekoMarine",
-    name: "PekoMarine (兔田佩克拉 × 寶鐘瑪琳)",
+    name: "PekoMarine",
     member1: {
       name: "兎田ぺこら",
       xUrl: "https://x.com/usadapekora",
@@ -61,7 +61,7 @@ export const cpList = [
   },
   {
     id: "NoelFlare",
-    name: "NoelFlare (白銀諾艾爾 × 不知火芙蕾雅)",
+    name: "NoelFlare",
     member1: {
       name: "白銀ノエル",
       xUrl: "https://x.com/shiroganenoel",
@@ -81,7 +81,7 @@ export const cpList = [
   },
   {
     id: "SorAZ",
-    name: "SorAZ (時乃空 × AZKi)",
+    name: "SorAZ",
     member1: {
       name: "ときのそら",
       xUrl: "https://x.com/tokino_sora",
@@ -101,7 +101,7 @@ export const cpList = [
   },
   {
     id: "FubuMio",
-    name: "FubuMio (白上吹雪 × 大神澪)",
+    name: "FubuMio",
     member1: {
       name: "白上フブキ",
       xUrl: "https://x.com/shirakamifubuki",
@@ -121,7 +121,7 @@ export const cpList = [
   },
   {
     id: "ShishiWata",
-    name: "ShishiWata (獅白牡丹 × 角卷綿芽)",
+    name: "ShishiWata",
     member1: {
       name: "獅白ぼたん",
       xUrl: "https://x.com/shishirobotan",
@@ -141,7 +141,7 @@ export const cpList = [
   },
   {
     id: "SubaRuna",
-    name: "SubaRuna (大空昴 × 姬森璐娜)",
+    name: "SubaRuna",
     member1: {
       name: "大空スバル",
       xUrl: "https://x.com/oozorasubaru",
@@ -161,7 +161,7 @@ export const cpList = [
   },
   {
     id: "AZIro",
-    name: "AZIro (AZKi × 風真伊呂波)",
+    name: "AZIro",
     member1: {
       name: "風真いろは",
       xUrl: "https://x.com/kazamairohach",

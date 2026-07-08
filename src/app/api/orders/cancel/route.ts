@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { orderId } = body as { orderId: string };
+    const { orderId, userId = 'default_player' } = body as { orderId: string; userId?: string };
 
     if (!orderId) {
       return NextResponse.json({ error: 'Missing orderId' }, { status: 400 });
@@ -34,6 +34,16 @@ export async function POST(request: Request) {
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    // Prevent cancelling MARKET_MAKER orders
+    if (order.userId === 'MARKET_MAKER') {
+      return NextResponse.json({ error: '無法撤銷造市商委託單。' }, { status: 403 });
+    }
+
+    // Verify the requesting user owns the order
+    if (order.userId !== userId) {
+      return NextResponse.json({ error: '您無權撤銷此委託單。' }, { status: 403 });
     }
 
     // Delete the order

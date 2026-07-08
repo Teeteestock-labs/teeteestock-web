@@ -76,6 +76,8 @@ model OrderBook {
   createdAt DateTime  @default(now())
 
   pair      CpPairs   @relation(fields: [pairId], references: [id])
+
+  @@index([pairId, side, price])
 }
 
 model Trades {
@@ -117,6 +119,7 @@ model UserPortfolios {
   pair           CpPairs    @relation(fields: [pairId], references: [id])
 
   @@unique([userId, pairId])
+  @@index([userId])
 }
 
 // ── 輔助表 ──

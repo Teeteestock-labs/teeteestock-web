@@ -6,7 +6,9 @@ const PAIR_ID_MAP: Record<string, string> = {
   'micomet': 'MCMT',
   'okakoro': 'OKKR',
   'pekomarin': 'PKMR',
+  'pekomarine': 'PKMR',    // cpList uses 'PekoMarine'
   'noefure': 'NEFL',
+  'noelflare': 'NEFL',      // cpList uses 'NoelFlare'
   'soraz': 'SRAZ',
   'fubumio': 'FBMO',
   'shishiwata': 'SSWT',
@@ -17,7 +19,7 @@ const PAIR_ID_MAP: Record<string, string> = {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { pairId, url, userId } = body as { pairId: string; url: string; userId?: string };
+    const { pairId, url, userId, type: reportType } = body as { pairId: string; url: string; userId?: string; type?: string };
 
     if (!pairId || !url) {
       return NextResponse.json({ error: 'Missing pairId or url' }, { status: 400 });
@@ -62,8 +64,13 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Determine default EventType (default to STREAM as a placeholder)
-    const type = EventType.STREAM;
+    // Determine EventType from request body, default to STREAM
+    let type = EventType.STREAM;
+    if (reportType === 'VIDEO' || reportType === 'new_song') {
+      type = EventType.VIDEO;
+    } else if (reportType === 'STREAM_3D' || reportType === 'large_event') {
+      type = EventType.STREAM_3D;
+    }
 
     const reporterId = userId || 'default_player';
 

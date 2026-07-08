@@ -6,7 +6,9 @@ const PAIR_ID_MAP: Record<string, string> = {
   'micomet': 'MCMT',
   'okakoro': 'OKKR',
   'pekomarin': 'PKMR',
+  'pekomarine': 'PKMR',    // cpList uses 'PekoMarine'
   'noefure': 'NEFL',
+  'noelflare': 'NEFL',      // cpList uses 'NoelFlare'
   'soraz': 'SRAZ',
   'fubumio': 'FBMO',
   'shishiwata': 'SSWT',
