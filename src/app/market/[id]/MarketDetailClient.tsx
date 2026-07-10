@@ -30,7 +30,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const [activeTab, setActiveTab] = useState<'time' | 'k' | 'orders'>('k');
     const [newsList, setNewsList] = useState<any[]>([]);
 
-    const [reportType, setReportType] = useState<string>('live_collab');
+    const [reportTargetId, setReportTargetId] = useState<string>('');
     const [reportUrl, setReportUrl] = useState('');
     const [reportErrorMsg, setReportErrorMsg] = useState('');
     const [reportSuccessMsg, setReportSuccessMsg] = useState('');
@@ -38,6 +38,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const pair: teeteePair | undefined = marketData.find(
         p => p.id.toLowerCase() === id.toLowerCase() || PAIR_ID_MAP[p.id.toLowerCase()] === id
     ); 
+
+    useEffect(() => {
+        if (pair && !reportTargetId) {
+            setReportTargetId(pair.id);
+        }
+    }, [pair, reportTargetId]); 
 
     // 當選擇的交易對價格更新時，動態帶入最新價格
     if (pair && pair.price !== lastSeenPrice) {
@@ -251,7 +257,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
             return;
         }
 
-        submitTeeteeReport(pair.id, reportType, reportUrl);
+        submitTeeteeReport(reportTargetId || pair.id, 'live_collab', reportUrl);
         setReportUrl("");
         setReportSuccessMsg("回報成功！已送往後台審查，感謝您的奉獻！");
         setTimeout(() => setReportSuccessMsg(""), 4000);
@@ -277,26 +283,26 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
             {marketStatus === 'CLOSED' && (
                 <div className="max-w-[1600px] w-full mx-auto mb-6 bg-red-500/20 text-red-500 text-center py-2 text-sm font-bold animate-pulse rounded border border-red-500/50">
-                    ⚠️ 交易所目前處於非營運時段，開盤時間為 18:00 - 24:00。 ⚠️
+                    ⚠️ 交易所目前處於非營運時段，開盤時間為 19:00 - 24:00。 ⚠️
                 </div>
             )}
 
             <div className="max-w-[1600px] w-full mx-auto space-y-4">
                     {/* 標題卡片 - 仿看盤軟體頂部 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] p-5 rounded flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h1 className="text-3xl font-black text-white tracking-tighter">{pair.name}</h1>
-                                    <span className="bg-[#2B2F36] text-[#848E9C] text-[10px] px-2 py-0.5 rounded">{pair.id.toUpperCase()}</span>
+                    <div className="bg-[#181A20] border border-[#2B2F36] p-5 rounded flex flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                    <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tighter truncate">{pair.name}</h1>
+                                    <span className="bg-[#2B2F36] text-[#848E9C] text-[10px] px-2 py-0.5 rounded flex-shrink-0">{pair.id.toUpperCase()}</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <p className={`text-4xl font-mono font-black ${isUp ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
+                        <div className="text-right whitespace-nowrap flex-shrink-0">
+                            <p className={`text-3xl sm:text-4xl font-mono font-black ${isUp ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
                                 {pair.price.toFixed(2)}
                             </p>
-                            <p className={`text-sm font-mono font-bold flex items-center justify-end gap-1.5 ${isUp ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
+                            <p className={`text-xs sm:text-sm font-mono font-bold flex items-center justify-end gap-1.5 ${isUp ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
                                 <span>{isUp ? '▲' : '▼'} {Math.abs(priceDiff).toFixed(2)}</span>
                                 <span>({isUp ? '+' : ''}{pair.change24h.toFixed(2)}%)</span>
                             </p>
@@ -749,42 +755,27 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
                         <form onSubmit={handleReportSubmit} className="space-y-3 text-xs">
                             <div className="space-y-1">
-                                <label className="text-[10px] text-[#848E9C] font-semibold">回報項目/管道</label>
-                                <div className="grid grid-cols-3 gap-1.5">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setReportType('live_collab')}
-                                        className={`py-1.5 rounded font-bold border transition-all text-center text-[10px] ${
-                                            reportType === 'live_collab' 
-                                                ? 'bg-[#FF69B4]/20 text-[#FF69B4] border-[#FF69B4]' 
-                                                : 'bg-[#0B0E11] text-[#848E9C] border-[#2B2F36] hover:text-white'
-                                        }`}
-                                    >
-                                        日常連動
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setReportType('large_event')}
-                                        className={`py-1.5 rounded font-bold border transition-all text-center text-[10px] ${
-                                            reportType === 'large_event' 
-                                                ? 'bg-[#FF69B4]/20 text-[#FF69B4] border-[#FF69B4]' 
-                                                : 'bg-[#0B0E11] text-[#848E9C] border-[#2B2F36] hover:text-white'
-                                        }`}
-                                    >
-                                        大型/3D
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setReportType('new_song')}
-                                        className={`py-1.5 rounded font-bold border transition-all text-center text-[10px] ${
-                                            reportType === 'new_song' 
-                                                ? 'bg-[#FF69B4]/20 text-[#FF69B4] border-[#FF69B4]' 
-                                                : 'bg-[#0B0E11] text-[#848E9C] border-[#2B2F36] hover:text-white'
-                                        }`}
-                                    >
-                                        新曲/MV
-                                    </button>
-                                </div>
+                                <label className="text-[10px] text-[#848E9C] font-semibold">目標個股組合</label>
+                                <select 
+                                    value={reportTargetId}
+                                    onChange={(e) => setReportTargetId(e.target.value)}
+                                    className="w-full bg-[#0B0E11] border border-[#2B2F36] focus:border-[#FF69B4] rounded p-2 text-white outline-none font-mono text-[11px] transition-colors"
+                                >
+                                    {[...marketData]
+                                        .sort((a, b) => {
+                                            const codeA = PAIR_ID_MAP[a.id.toLowerCase()] || a.id.toUpperCase();
+                                            const codeB = PAIR_ID_MAP[b.id.toLowerCase()] || b.id.toUpperCase();
+                                            return codeA.localeCompare(codeB);
+                                        })
+                                        .map((p) => {
+                                            const stockId = PAIR_ID_MAP[p.id.toLowerCase()] || p.id.toUpperCase();
+                                            return (
+                                                <option key={p.id} value={p.id}>
+                                                    {p.name} ({stockId})
+                                                </option>
+                                            );
+                                        })}
+                                </select>
                             </div>
 
                             <div className="space-y-1">
@@ -794,7 +785,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 </label>
                                 <input 
                                     type="text" 
-                                    placeholder="https://x.com/... 或 https://youtube.com/..." 
+                                    placeholder="https://youtube.com/..." 
                                     value={reportUrl}
                                     onChange={(e) => setReportUrl(e.target.value)}
                                     className="w-full bg-[#0B0E11] border border-[#2B2F36] focus:border-[#FF69B4] rounded p-2 text-white outline-none font-mono text-[11px] transition-colors"

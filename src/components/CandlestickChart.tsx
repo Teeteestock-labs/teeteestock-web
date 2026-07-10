@@ -88,13 +88,13 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     }, []);
 
     // Layout configuration matching TradingView dimensions
-    const paddingLeft = 40;
-    const paddingRight = 60;
+    const paddingLeft = isTimeChart ? 0 : 40;
+    const paddingRight = isTimeChart ? 32 : 60;
     const paddingTop = 25;
     const paddingBottom = 35;
     const height = 400;
     
-    // Filter pre-market data (18:45 - 19:00, which has hour 18) for the time chart
+    // Filter pre-market data (18:45 - 19:00) and off-market hours for the time chart
     const tradingData = React.useMemo(() => {
         if (!isTimeChart) return data;
         return data.filter(d => {
@@ -102,9 +102,9 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
             const parts = d.time.split(':');
             const h = parseInt(parts[0], 10);
             const m = parseInt(parts[1], 10);
-            if (h === 18 && m >= 45) return false;
-            if (h < 18) return false;
-            return true;
+            // 僅允許交易時間：19:00 至 24:00 (含 00:00)
+            const isTradeTime = (h >= 19 && h <= 23) || (h === 0 && m === 0);
+            return isTradeTime;
         });
     }, [data, isTimeChart]);
 
@@ -115,7 +115,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const isScrollableKLine = !isTimeChart && chartData.length > 80;
     const candleSpacing = 11;
     const computedWidth = isScrollableKLine ? Math.max(1000, chartData.length * candleSpacing + paddingLeft + paddingRight) : 1000;
-    const width = computedWidth;
+    const width = isScrollableKLine ? computedWidth : scrollState.clientWidth;
 
     const chartWidth = width - paddingLeft - paddingRight;
     const chartHeight = height - paddingTop - paddingBottom;
@@ -170,21 +170,31 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
         const container = containerRef.current;
         if (container) {
             container.addEventListener('scroll', handleScroll);
-            setScrollState({
-                scrollLeft: container.scrollLeft,
-                clientWidth: container.clientWidth
-            });
             
-            const handleResize = () => {
+            const updateDimensions = () => {
                 setScrollState({
                     scrollLeft: container.scrollLeft,
                     clientWidth: container.clientWidth
                 });
             };
+            
+            updateDimensions();
+            
+            // 使用 ResizeObserver 監聽容器尺寸動態縮放
+            const resizeObserver = new ResizeObserver(() => {
+                updateDimensions();
+            });
+            resizeObserver.observe(container);
+            
+            const handleResize = () => {
+                updateDimensions();
+            };
             window.addEventListener('resize', handleResize);
+            
             return () => {
                 container.removeEventListener('scroll', handleScroll);
                 window.removeEventListener('resize', handleResize);
+                resizeObserver.disconnect();
             };
         }
     }, [chartData.length, handleScroll]);
@@ -272,6 +282,13 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const range = maxPrice - minPrice || 1.0;
 
     const getY = (price: number) => {
+        if (isTimeChart) {
+            // 在分時圖的上下增加繪圖緩衝區 (頂部留 22px 防 HUD 遮擋，底部留 18px 防標籤重疊)
+            const topBuffer = 22;
+            const bottomBuffer = 18;
+            const drawableHeight = chartHeight - topBuffer - bottomBuffer;
+            return paddingTop + topBuffer + (drawableHeight - ((price - minPrice) / range) * drawableHeight);
+        }
         return paddingTop + (chartHeight - ((price - minPrice) / range) * chartHeight);
     };
 
@@ -316,19 +333,39 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const closestPtIdx = hoverCoords ? getClosestPointIndex(canvasHoverX) : -1;
     const closestPt = closestPtIdx !== -1 ? chartData[closestPtIdx] : null;
 
-    // Snapped Coordinates relative to the parent view boundingbox for the Crosshair lines
+    // Snapped X coordinate (to align with the time bucket) and smooth Y coordinate (to match cursor height)
     let snapX = 0;
     let snapY = 0;
     let priceAtHover = 0;
+
+    // 逆向計算滑鼠 Y 軸位置對應的精確價格
+    const getPriceFromY = (yPixel: number) => {
+        if (!hoverCoords || hoverCoords.containerHeight <= 0) return refPrice;
+        const ySvg = (yPixel / hoverCoords.containerHeight) * height;
+        
+        if (isTimeChart) {
+            const topBuffer = 22;
+            const bottomBuffer = 18;
+            const drawableHeight = chartHeight - topBuffer - bottomBuffer;
+            const ratio = 1 - (ySvg - paddingTop - topBuffer) / drawableHeight;
+            const price = minPrice + range * ratio;
+            return Math.max(minPrice, Math.min(maxPrice, price));
+        } else {
+            const ratio = 1 - (ySvg - paddingTop) / chartHeight;
+            const price = minPrice + range * ratio;
+            return Math.max(minPrice, Math.min(maxPrice, price));
+        }
+    };
+
     if (hoverCoords && closestPt && closestPtIdx !== -1) {
         const ratioX = getX(closestPtIdx) / width;
         snapX = (isScrollableKLine 
             ? getX(closestPtIdx) - scrollState.scrollLeft
             : ratioX * hoverCoords.containerWidth);
 
-        const ratioY = getY(closestPt.close) / height;
-        snapY = ratioY * hoverCoords.containerHeight;
-        priceAtHover = closestPt.close;
+        // 準星 Y 軸跟隨滑鼠移動，提供平滑且無分時差距的看盤體驗 (比照 TradingView)
+        snapY = hoverCoords.y;
+        priceAtHover = getPriceFromY(hoverCoords.y);
     }
 
     const showCrosshair = hoverCoords && closestPt && 
@@ -364,7 +401,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
             onTouchEnd={handleMouseLeave}
         >
             {/* 頂部 HUD 動態文字面板 */}
-            <div className="absolute top-1.5 left-2 z-30 font-mono text-[9px] text-gray-400 pointer-events-none select-none flex flex-wrap items-center gap-x-1.5 gap-y-0.5 bg-[#131722]/80 px-2 py-0.5 rounded border border-[#2a2e39]/30">
+            <div className="absolute top-1.5 left-2 z-30 font-mono text-[8px] sm:text-[9px] text-gray-400 pointer-events-none select-none flex flex-wrap items-center gap-x-1 sm:gap-x-1.5 gap-y-0.5 bg-[#131722]/80 px-2 py-0.5 rounded border border-[#2a2e39]/30">
                 <span>時間: <span className="text-gray-100 font-semibold">{hudTime}</span></span>
                 <span className="text-[#2a2e39]">|</span>
                 <span>開: <span style={{ color: hudColor }} className="font-semibold">{hudOpen}</span></span>
@@ -381,7 +418,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
             </div>
 
             {/* 主圖表區 (可橫向捲動) */}
-            <div ref={containerRef} className="w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar pr-[60px]">
+            <div ref={containerRef} className={`w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar ${isTimeChart ? '' : 'pr-[60px]'}`}>
                 <div style={{ width: isScrollableKLine ? `${width}px` : '100%', height: '100%', position: 'relative' }}>
                     <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="absolute inset-0">
                         <defs>
@@ -405,13 +442,14 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                         {Array.from({ length: isTimeChart ? 9 : 8 }).map((_, i) => {
                             const totalSteps = isTimeChart ? 8 : 7;
                             const ratio = i / totalSteps;
-                            const y = paddingTop + ratio * chartHeight;
+                            const price = minPrice + range * ratio;
+                            const y = getY(price);
                             const isCenter = isTimeChart && i === 4;
                             
-                            const strokeColor = isCenter ? "rgba(255, 255, 255, 0.3)" : "#2B2F36";
+                            const strokeColor = isCenter ? "#474D57" : "#2B2F36";
                             const strokeW = isCenter ? 1.2 : 0.8;
-                            const dashArray = isCenter ? "5,4" : "3,3";
-                            const opacityVal = isCenter ? 0.6 : 0.35;
+                            const dashArray = isCenter ? undefined : "3,3";
+                            const opacityVal = isCenter ? 0.8 : 0.35;
                             
                             return (
                                 <line 
@@ -422,6 +460,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                                     strokeWidth={strokeW} 
                                     strokeDasharray={dashArray} 
                                     opacity={opacityVal}
+                                    className={isCenter ? "z-10" : ""}
                                 />
                             );
                         })}
@@ -457,87 +496,67 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                         {/* 2. 折線圖 (isTimeChart === true) / 蠟燭圖 (isTimeChart === false) */}
                         {isTimeChart ? (
                             <>
-                                {chartData.length > 0 && (
-                                    <>
-                                        {/* 雙色區間漸層填滿 (利用 Clip Path 物理隔離，防跨越基準線相互污染) */}
-                                        <polygon 
-                                            points={`${getX(0, chartData[0].time).toFixed(1)},${yRef.toFixed(1)} ` + 
-                                                chartData.map((d, i) => `${getX(i, d.time).toFixed(1)},${getY(d.close).toFixed(1)}`).join(' ') + 
-                                                ` ${getX(chartData.length - 1, chartData[chartData.length - 1].time).toFixed(1)},${yRef.toFixed(1)}`} 
-                                            clipPath="url(#clip-above)"
-                                            fill="url(#area-gradient-red)"
-                                        />
-                                        <polygon 
-                                            points={`${getX(0, chartData[0].time).toFixed(1)},${yRef.toFixed(1)} ` + 
-                                                chartData.map((d, i) => `${getX(i, d.time).toFixed(1)},${getY(d.close).toFixed(1)}`).join(' ') + 
-                                                ` ${getX(chartData.length - 1, chartData[chartData.length - 1].time).toFixed(1)},${yRef.toFixed(1)}`} 
-                                            clipPath="url(#clip-below)"
-                                            fill="url(#area-gradient-green)"
-                                        />
-                                    </>
-                                )}
-                                
-                                {/* 雙色折線與穿梭斷點切換 */}
-                                {chartData.slice(1).flatMap((d, index) => {
-                                    const i = index + 1;
-                                    const prevD = chartData[i - 1];
-                                    const x1 = getX(i - 1, prevD.time);
-                                    const y1 = getY(prevD.close);
-                                    const x2 = getX(i, d.time);
-                                    const y2 = getY(d.close);
-                                    
-                                    const p1 = prevD.close;
-                                    const p2 = d.close;
-                                    
-                                    const crossed = (p1 > refPrice && p2 < refPrice) || (p1 < refPrice && p2 > refPrice);
-                                    
-                                    if (crossed) {
-                                        // 完美在交叉點切斷
-                                        const t = (refPrice - p1) / (p2 - p1);
-                                        const xMid = x1 + t * (x2 - x1);
-                                        const yMid = getY(refPrice);
-                                        
-                                        const color1 = p1 > refPrice ? colorUp : colorDown;
-                                        const color2 = p2 > refPrice ? colorUp : colorDown;
-                                        
-                                        return [
-                                            <line
-                                                key={`seg-${i}-a`}
-                                                x1={x1}
-                                                y1={y1}
-                                                x2={xMid}
-                                                y2={yMid}
-                                                stroke={color1}
-                                                strokeWidth="2.2"
-                                                strokeLinecap="round"
-                                            />,
-                                            <line
-                                                key={`seg-${i}-b`}
-                                                x1={xMid}
-                                                y1={yMid}
-                                                x2={x2}
-                                                y2={y2}
-                                                stroke={color2}
-                                                strokeWidth="2.2"
-                                                strokeLinecap="round"
+                                {chartData.length > 0 && (() => {
+                                    const x0 = getX(0, chartData[0].time).toFixed(1);
+                                    const xn = getX(chartData.length - 1, chartData[chartData.length - 1].time).toFixed(1);
+                                    const yRefStr = yRef.toFixed(1);
+
+                                    // 1. 建立連續的折線 Path D
+                                    const linePathD = chartData.map((d, i) => 
+                                        `${i === 0 ? 'M' : 'L'}${getX(i, d.time).toFixed(1)} ${getY(d.close).toFixed(1)}`
+                                    ).join(' ');
+
+                                    // 2. 紅色漸層區多邊形 (基準線之上，低於基準線的值強制限幅在 yRef)
+                                    const redPoints = `${x0},${yRefStr} ` + 
+                                        chartData.map((d, i) => 
+                                            `${getX(i, d.time).toFixed(1)},${Math.min(yRef, getY(d.close)).toFixed(1)}`
+                                        ).join(' ') + 
+                                        ` ${xn},${yRefStr}`;
+
+                                    // 3. 綠色漸層區多邊形 (基準線之下，高於基準線的值強制限幅在 yRef)
+                                    const greenPoints = `${x0},${yRefStr} ` + 
+                                        chartData.map((d, i) => 
+                                            `${getX(i, d.time).toFixed(1)},${Math.max(yRef, getY(d.close)).toFixed(1)}`
+                                        ).join(' ') + 
+                                        ` ${xn},${yRefStr}`;
+
+                                    return (
+                                        <>
+                                            {/* 紅色漸層區 (限幅 + Clip Path 雙重物理隔離) */}
+                                            <polygon 
+                                                points={redPoints} 
+                                                clipPath="url(#clip-above)"
+                                                fill="url(#area-gradient-red)"
                                             />
-                                        ];
-                                    } else {
-                                        const segmentColor = p2 > refPrice ? colorUp : (p2 < refPrice ? colorDown : (p1 >= refPrice ? colorUp : colorDown));
-                                        return [
-                                            <line
-                                                key={`seg-${i}`}
-                                                x1={x1}
-                                                y1={y1}
-                                                x2={x2}
-                                                y2={y2}
-                                                stroke={segmentColor}
-                                                strokeWidth="2.2"
-                                                strokeLinecap="round"
+                                            {/* 綠色漸層區 (限幅 + Clip Path 雙重物理隔離) */}
+                                            <polygon 
+                                                points={greenPoints} 
+                                                clipPath="url(#clip-below)"
+                                                fill="url(#area-gradient-green)"
                                             />
-                                        ];
-                                    }
-                                })}
+
+                                            {/* 雙色折線：藉由 Clip Path 於基準線完美割離，無遞延或混色 */}
+                                            <path 
+                                                d={linePathD} 
+                                                stroke={colorUp} 
+                                                strokeWidth="1.5" 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round" 
+                                                fill="none" 
+                                                clipPath="url(#clip-above)" 
+                                            />
+                                            <path 
+                                                d={linePathD} 
+                                                stroke={colorDown} 
+                                                strokeWidth="1.5" 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round" 
+                                                fill="none" 
+                                                clipPath="url(#clip-below)" 
+                                            />
+                                        </>
+                                    );
+                                })()}
                             </>
                         ) : (
                             chartData.map((d, i) => {
@@ -700,7 +719,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                         {/* 底部邊界線 */}
                         <line 
                             x1={paddingLeft} y1={paddingTop + chartHeight}
-                            x2={width} y2={paddingTop + chartHeight}
+                            x2={width - paddingRight} y2={paddingTop + chartHeight}
                             stroke="#2B2F36" strokeWidth="1"
                         />
                     </svg>
@@ -708,9 +727,9 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
             </div>
 
             {/* Sticky 價格刻度面板 (固定在右側) */}
-            <div className="absolute right-0 top-0 bottom-0 w-[60px] bg-[#131722] border-l border-[#2a2e39] pointer-events-none select-none z-20 font-mono text-[9px] text-[#848E9C]">
+            <div className={`absolute right-0 top-0 bottom-0 w-[60px] ${isTimeChart ? 'bg-transparent' : 'bg-[#131722] border-l border-[#2a2e39]'} pointer-events-none select-none z-20 font-mono text-[9px] text-[#848E9C]`}>
                 <div 
-                    className="absolute left-0 right-0 border-t border-[#2a2e39]" 
+                    className={`absolute left-0 right-0 ${isTimeChart ? '' : 'border-t border-[#2a2e39]'}`} 
                     style={{ bottom: `${paddingBottom}px` }} 
                 />
 
@@ -761,8 +780,8 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                     
                     {/* 十字虛線：水平 */}
                     <div 
-                        className="absolute left-0 right-[60px] border-t border-dashed border-[#848E9C]/35" 
-                        style={{ top: `${snapY}px` }} 
+                        className="absolute left-0 border-t border-dashed border-[#848E9C]/35" 
+                        style={{ top: `${snapY}px`, right: `${isTimeChart ? 32 : 60}px` }} 
                     />
 
                     {/* Y 軸價格懸浮標籤 */}

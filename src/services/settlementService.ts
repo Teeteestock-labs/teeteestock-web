@@ -197,9 +197,9 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
     console.log(`[🤖 MarketMaker] ${pair.id} 啟動【流動性注入模式】：掛出中心價左右 2% 內四檔委託各 5,000 股。`);
   } else if (ratio >= 0.20 && ratio <= 0.70) {
     // 比例處於 20% ~ 70%（中期）：【野性波動模式】
-    // 撤出盤口中央，Spread 放寬至 5%（左右各 2.5%），每檔掛 1,000 股。
-    const buyPrice = alignToTick(openingPrice * 0.975);
-    const sellPrice = alignToTick(openingPrice * 1.025);
+    // 撤出盤口中央，Spread 放寬至 10%（左右各 5%），每檔掛 1,000 股。
+    const buyPrice = alignToTick(openingPrice * 0.95);
+    const sellPrice = alignToTick(openingPrice * 1.05);
 
     await tx.orderBook.create({
       data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice, volume: 1000 }
@@ -207,7 +207,7 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
     await tx.orderBook.create({
       data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: sellPrice, volume: 1000 }
     });
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【野性波動模式】：盤口 Spread 放寬至 5% 雙向各 1,000 股。`);
+    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【野性波動模式】：盤口 Spread 放寬至 10% 雙向各 1,000 股。`);
   } else {
     // 比例 > 70%（後期）：【終極護盤與欺敵模式】
     // 在當日跌停限制線（Limit Down，-20%）精準掛出基本面淨值清算保底買單（10,000 股）。

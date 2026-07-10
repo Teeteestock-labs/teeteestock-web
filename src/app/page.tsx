@@ -143,24 +143,56 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
   const height = 55;
   const baselineY = 27.5;
 
-  const validHistoryPoints = historyPoints.filter(pt => pt !== null && pt.close !== null);
-  const scale = 22 / (Math.max(...validHistoryPoints.map(pt => Math.abs(pt.close - yesterdayPrice)), 1.0));
+  const getXByTime = (timeStr: string) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':');
+    let h = parseInt(parts[0], 10) || 19;
+    const m = parseInt(parts[1], 10) || 0;
+    const s = parseInt(parts[2], 10) || 0;
+    if (h === 24) h = 0;
+    let secondsSince19 = 0;
+    if (h >= 19) {
+      secondsSince19 = (h - 19) * 3600 + m * 60 + s;
+    } else {
+      secondsSince19 = (h + 5) * 3600 + m * 60 + s;
+    }
+    secondsSince19 = Math.max(0, Math.min(18000, secondsSince19));
+    return (secondsSince19 / 18000) * width;
+  };
 
-  const coords = historyPoints.map((pt, idx) => {
-    if (pt === null || pt.close === null) return null;
-    const x = (idx / (historyPoints.length - 1 || 1)) * width;
+  const scale = yesterdayPrice > 0 ? (25 / (yesterdayPrice * 0.20)) : 1.0;
+
+  const coords = historyPoints.map((pt) => {
+    if (pt === null || pt.close === null || !pt.time) return null;
+    
+    // 排除非交易時間的補貼點 (僅允許 19:00 ~ 24:00，包含 00:00 收盤點)
+    const parts = pt.time.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const isTradeTime = (h >= 19 && h <= 23) || (h === 0 && m === 0);
+    if (!isTradeTime) return null;
+
+    const x = getXByTime(pt.time);
     const y = baselineY - (pt.close - yesterdayPrice) * scale;
     return { x, y, close: pt.close };
   }).filter((c): c is { x: number; y: number; close: number } => c !== null);
 
-  let areaPoints = "";
-  if (coords.length > 0) {
-    const firstX = coords[0].x.toFixed(1);
-    const lastX = coords[coords.length - 1].x.toFixed(1);
-    areaPoints = `${firstX},${baselineY} ` + coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ") + ` ${lastX},${baselineY}`;
-  }
+  // 紅色與綠色漸層的多邊形頂點 (基準線限幅，防止跨越基準線相互污染)
+  const redPoints = coords.length > 0
+    ? `${coords[0].x.toFixed(1)},${baselineY.toFixed(1)} ` +
+      coords.map(c => `${c.x.toFixed(1)},${Math.min(baselineY, c.y).toFixed(1)}`).join(" ") +
+      ` ${coords[coords.length - 1].x.toFixed(1)},${baselineY.toFixed(1)}`
+    : "";
 
-  const pathAreaFill = isLimitUp || isLimitDown ? "rgba(255, 255, 255, 0.15)" : isTodayUp ? "rgba(239, 68, 68, 0.08)" : isTodayDown ? "rgba(34, 197, 94, 0.08)" : "rgba(255, 255, 255, 0.05)";
+  const greenPoints = coords.length > 0
+    ? `${coords[0].x.toFixed(1)},${baselineY.toFixed(1)} ` +
+      coords.map(c => `${c.x.toFixed(1)},${Math.max(baselineY, c.y).toFixed(1)}`).join(" ") +
+      ` ${coords[coords.length - 1].x.toFixed(1)},${baselineY.toFixed(1)}`
+    : "";
+
+  const linePathD = coords.map((c, i) => 
+    `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)} ${c.y.toFixed(1)}`
+  ).join(' ');
 
   if (viewMode === 'compact') {
     const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
@@ -273,10 +305,26 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
         </div>
       </div>
 
-      {/* Right Column: Sparkline graph (70% width) */}
       <div className="w-[70%] bg-black p-2 flex flex-col justify-between select-none relative">
         <div className="relative w-full h-[65px]">
           <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+            <defs>
+              <linearGradient id={`area-gradient-red-${pair.id.toLowerCase()}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ef4444" stopOpacity="0.3"/>
+                <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0"/>
+              </linearGradient>
+              <linearGradient id={`area-gradient-green-${pair.id.toLowerCase()}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#22c55e" stopOpacity="0.0"/>
+                <stop offset="100%" stopColor="#22c55e" stopOpacity="0.3"/>
+              </linearGradient>
+              <clipPath id={`clip-above-${pair.id.toLowerCase()}`}>
+                <rect x="0" y="0" width={width} height={baselineY} />
+              </clipPath>
+              <clipPath id={`clip-below-${pair.id.toLowerCase()}`}>
+                <rect x="0" y={baselineY} width={width} height={height - baselineY} />
+              </clipPath>
+            </defs>
+
             {/* Grid lines */}
             {[1, 2, 3, 4].map((idx) => {
               const gridX = (idx / 5) * width;
@@ -293,45 +341,51 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
               );
             })}
             
-            {/* Horizontal Baseline (solid cyan-blue line in the middle) */}
+            {/* Horizontal Baseline (灰色虛線) */}
             <line
               x1={0}
               y1={baselineY}
               x2={width}
               y2={baselineY}
-              stroke="#00E5FF"
-              strokeWidth="0.8"
-              opacity="0.6"
+              stroke="#474D57"
+              strokeWidth="0.6"
+              opacity="0.8"
             />
 
             {coords.length > 0 && (
               <>
+                {/* 紅色漸層區 (限幅 + Clip Path 雙重防跨線污染) */}
                 <polygon
-                  points={areaPoints}
-                  fill={pathAreaFill}
+                  points={redPoints}
+                  fill={`url(#area-gradient-red-${pair.id.toLowerCase()})`}
+                  clipPath={`url(#clip-above-${pair.id.toLowerCase()})`}
                 />
-                {coords.map((c, idx) => {
-                  if (idx === 0) return null;
-                  const prev = coords[idx - 1];
-                  const price = c.close;
-                  
-                  const isUp = price > yesterdayPrice;
-                  const isDown = price < yesterdayPrice;
-                  const stroke = isUp ? "#ef4444" : isDown ? "#22c55e" : "#ffffff";
-                  
-                  return (
-                    <line
-                      key={idx}
-                      x1={prev.x}
-                      y1={prev.y}
-                      x2={c.x}
-                      y2={c.y}
-                      stroke={stroke}
-                      strokeWidth="0.5"
-                      strokeLinecap="round"
-                    />
-                  );
-                })}
+                {/* 綠色漸層區 (限幅 + Clip Path 雙重防跨線污染) */}
+                <polygon
+                  points={greenPoints}
+                  fill={`url(#area-gradient-green-${pair.id.toLowerCase()})`}
+                  clipPath={`url(#clip-below-${pair.id.toLowerCase()})`}
+                />
+
+                {/* 雙色折線：藉由 Clip Path 於基準線完美割離，無遞延或混色 */}
+                <path
+                  d={linePathD}
+                  stroke="#ef4444"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                  clipPath={`url(#clip-above-${pair.id.toLowerCase()})`}
+                />
+                <path
+                  d={linePathD}
+                  stroke="#22c55e"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                  clipPath={`url(#clip-below-${pair.id.toLowerCase()})`}
+                />
               </>
             )}
           </svg>
@@ -522,7 +576,11 @@ function HomeContent() {
                         const profitColor = profit > 0 ? "text-red-500" : profit < 0 ? "text-green-500" : "text-gray-400";
                         const stockId = PAIR_ID_MAP[pair.id.toLowerCase()] || pair.id.toUpperCase();
                         return (
-                          <tr key={h.pairId} className="hover:bg-gray-900/40 transition-colors">
+                          <tr 
+                            key={h.pairId} 
+                            onClick={() => router.push(`/market/${pair.id}`)}
+                            className="hover:bg-gray-900/40 transition-colors cursor-pointer select-none"
+                          >
                             <td className="px-3 py-3">
                               <div className="font-bold text-xs text-white uppercase tracking-wider">{stockId}</div>
                               <div className="text-[9px] text-gray-500 truncate max-w-[80px]">{pair.name}</div>
