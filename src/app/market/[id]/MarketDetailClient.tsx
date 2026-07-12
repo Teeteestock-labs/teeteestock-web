@@ -553,6 +553,50 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                                 ? 'text-[#00FFA3]' 
                                                 : 'text-white';
 
+                                        // Bid styling logic
+                                        const isBidCurrent = hasBid && bid.price === pair.price;
+                                        const isBidCeiling = hasBid && bid.price === ceiling;
+                                        const isBidFloor = hasBid && bid.price === floor;
+                                        const isBidSelected = hasBid && orderPrice === bid.price;
+
+                                        let bidBgBorderClass = '';
+                                        let bidTextClass = bidColor;
+                                        if (isBidCeiling || isBidFloor) {
+                                            const bgColor = isBidCeiling ? 'bg-red-600' : 'bg-green-600';
+                                            const borderColor = isBidCurrent ? 'border-white' : (isBidCeiling ? 'border-red-600' : 'border-green-600');
+                                            bidBgBorderClass = `${bgColor} border ${borderColor}`;
+                                            bidTextClass = 'text-white font-bold';
+                                        } else if (isBidCurrent) {
+                                            bidBgBorderClass = 'border border-white bg-transparent';
+                                            bidTextClass = 'text-white';
+                                        } else if (isBidSelected) {
+                                            bidBgBorderClass = 'border border-[#FFD700] bg-[#FFD700]/10 shadow-[0_0_8px_rgba(255,215,0,0.2)]';
+                                        } else {
+                                            bidBgBorderClass = 'border border-transparent hover:bg-[#2B3139]';
+                                        }
+
+                                        // Ask styling logic
+                                        const isAskCurrent = hasAsk && ask.price === pair.price;
+                                        const isAskCeiling = hasAsk && ask.price === ceiling;
+                                        const isAskFloor = hasAsk && ask.price === floor;
+                                        const isAskSelected = hasAsk && orderPrice === ask.price;
+
+                                        let askBgBorderClass = '';
+                                        let askTextClass = askColor;
+                                        if (isAskCeiling || isAskFloor) {
+                                            const bgColor = isAskCeiling ? 'bg-red-600' : 'bg-green-600';
+                                            const borderColor = isAskCurrent ? 'border-white' : (isAskCeiling ? 'border-red-600' : 'border-green-600');
+                                            askBgBorderClass = `${bgColor} border ${borderColor}`;
+                                            askTextClass = 'text-white font-bold';
+                                        } else if (isAskCurrent) {
+                                            askBgBorderClass = 'border border-white bg-transparent';
+                                            askTextClass = 'text-white';
+                                        } else if (isAskSelected) {
+                                            askBgBorderClass = 'border border-[#FFD700] bg-[#FFD700]/10 shadow-[0_0_8px_rgba(255,215,0,0.2)]';
+                                        } else {
+                                            askBgBorderClass = 'border border-transparent hover:bg-[#2B3139]';
+                                        }
+
                                         return (
                                             <div key={`five-tier-${i}`} className="grid grid-cols-4 items-center h-10 px-3 font-bold font-mono text-xs">
                                                 <div className="text-right text-[#EAECEF] pr-2 truncate">
@@ -561,22 +605,14 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                                 
                                                 <div 
                                                     onClick={() => hasBid && setOrderPrice(bid.price)}
-                                                    className={`text-center py-1 cursor-pointer transition-all rounded ${bidColor} ${
-                                                        hasBid && orderPrice === bid.price 
-                                                            ? 'border border-[#FFD700] bg-[#FFD700]/10 shadow-[0_0_8px_rgba(255,215,0,0.2)]' 
-                                                            : 'border border-transparent hover:bg-[#2B3139]'
-                                                    }`}
+                                                    className={`text-center py-1 cursor-pointer transition-all rounded ${bidTextClass} ${bidBgBorderClass}`}
                                                 >
                                                     {hasBid ? bid.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '--'}
                                                 </div>
 
                                                 <div 
                                                     onClick={() => hasAsk && setOrderPrice(ask.price)}
-                                                    className={`text-center py-1 cursor-pointer transition-all rounded ${askColor} ${
-                                                        hasAsk && orderPrice === ask.price 
-                                                            ? 'border border-[#FFD700] bg-[#FFD700]/10 shadow-[0_0_8px_rgba(255,215,0,0.2)]' 
-                                                            : 'border border-transparent hover:bg-[#2B3139]'
-                                                    }`}
+                                                    className={`text-center py-1 cursor-pointer transition-all rounded ${askTextClass} ${askBgBorderClass}`}
                                                 >
                                                     {hasAsk ? ask.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '--'}
                                                 </div>
@@ -679,12 +715,24 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                                 return 'text-[#FFD700]';
                                             };
 
+                                            const isCeiling = trade.price === ceiling;
+                                            const isFloor = trade.price === floor;
+                                            const tradePriceClass = isCeiling 
+                                                ? 'bg-red-600 text-white font-bold rounded px-1.5 py-0.5 shadow-sm' 
+                                                : isFloor 
+                                                    ? 'bg-green-600 text-white font-bold rounded px-1.5 py-0.5 shadow-sm' 
+                                                    : `font-bold ${getPriceColor(trade.price)}`;
+
                                             return (
                                                 <tr key={i} className="hover:bg-[#2B3139] border-b border-[#2B2F36] transition-colors text-[11px] font-mono text-right">
                                                     <td className="py-1 px-2 text-left text-gray-400">{trade.time}</td>
                                                     <td className={`py-1 px-2 ${getPriceColor(bid)}`}>{bid.toFixed(2)}</td>
                                                     <td className={`py-1 px-2 ${getPriceColor(ask)}`}>{ask.toFixed(2)}</td>
-                                                    <td className={`py-1 px-2 font-bold ${getPriceColor(trade.price)}`}>{trade.price.toFixed(2)}</td>
+                                                    <td className="py-1 px-2">
+                                                        <span className={tradePriceClass}>
+                                                            {trade.price.toFixed(2)}
+                                                        </span>
+                                                    </td>
                                                     <td className={`py-1 px-2 ${getChangeColor(change)}`}>
                                                         {change > 0 ? '+' : ''}{change.toFixed(2)}
                                                     </td>

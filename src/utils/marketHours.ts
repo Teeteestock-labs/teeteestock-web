@@ -24,7 +24,8 @@ export function getTaipeiTime(date: Date = new Date()): {
   const year = getPart('year');
   const month = getPart('month');
   const day = getPart('day');
-  const hour = getPart('hour');
+  let hour = getPart('hour');
+  if (hour === 24) hour = 0;
   const minute = getPart('minute');
   const second = getPart('second');
 
@@ -65,7 +66,8 @@ export function getTaipeiTimeStr(date: Date = new Date()): string {
     hour12: false,
   });
   const parts = formatter.formatToParts(date);
-  const hour = parts.find(p => p.type === 'hour')?.value || '00';
+  let hour = parts.find(p => p.type === 'hour')?.value || '00';
+  if (hour === '24') hour = '00';
   const minute = parts.find(p => p.type === 'minute')?.value || '00';
   return `${hour}:${minute}`;
 }

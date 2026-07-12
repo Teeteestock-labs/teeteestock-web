@@ -194,38 +194,42 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
     `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)} ${c.y.toFixed(1)}`
   ).join(' ');
 
-  if (viewMode === 'compact') {
-    const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
-    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-[#0f172a]/30 hover:bg-[#0f172a]/50';
-    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-slate-800';
-    const labelColor = isLimitUp || isLimitDown ? 'text-white/70' : 'text-gray-500';
+  const normalTextClass = isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
+  const textClass = (isLimitUp || isLimitDown) ? 'text-white' : normalTextClass;
+  const normalBg = 'bg-[#0f172a]/30 hover:bg-[#0f172a]/50';
+  const normalBorder = isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-slate-800';
+  const limitBorder = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : normalBorder;
 
+  if (viewMode === 'compact') {
     return (
       <Link
         href={`/market/${pair.id}`}
-        className={`flex items-center justify-between px-4 py-2 border rounded-lg ${borderClass} ${bgClass} ${flashClass} transition-all duration-150 font-mono select-none`}
+        className={`flex items-stretch justify-between h-11 border rounded-lg ${normalBorder} ${normalBg} ${flashClass} transition-all duration-150 font-mono select-none overflow-hidden`}
       >
-        <div className="flex-1 flex items-center gap-2">
+        {/* 商品 */}
+        <div className="flex-1 flex items-center gap-2 pl-4 border-r border-slate-800/80">
           {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
           <div>
             <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
-            <span className={`text-[9px] block ${labelColor}`}>{pair.name}</span>
+            <span className="text-[9px] block text-gray-500">{pair.name}</span>
           </div>
         </div>
-        <div className="w-24 text-right pr-2">
+        
+        {/* 成交 (漲跌停時變色為矩形) */}
+        <div className={`w-24 flex items-center justify-center border-r border-slate-800/80 ${isLimitUp ? 'bg-red-600 text-white' : isLimitDown ? 'bg-green-600 text-white' : ''}`}>
           <span className={`text-xs font-bold ${textClass}`}>{pair.price.toFixed(2)}</span>
-          <div className="w-16 h-1 bg-gray-800 rounded-full overflow-hidden ml-auto mt-1 flex">
-            <div className="bg-red-500 h-full" style={{ width: `${ratio}%` }} />
-            <div className="bg-green-500 h-full" style={{ width: `${100 - ratio}%` }} />
-          </div>
         </div>
-        <div className="w-20 text-right pr-2">
-          <span className={`text-xs font-bold ${textClass}`}>
+
+        {/* 漲跌 */}
+        <div className="w-20 flex items-center justify-center border-r border-slate-800/80">
+          <span className={`text-xs font-bold ${normalTextClass}`}>
             {diff > 0 ? '+' : ''}{diff.toFixed(2)}
           </span>
         </div>
-        <div className="w-20 text-right">
-          <span className={`text-xs font-bold ${textClass}`}>
+
+        {/* 幅度 */}
+        <div className="w-20 flex items-center justify-center">
+          <span className={`text-xs font-bold ${normalTextClass}`}>
             {diff > 0 ? '+' : ''}{changePercent.toFixed(2)}%
           </span>
         </div>
@@ -234,79 +238,84 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
   }
 
   if (viewMode === 'grid') {
-    const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
-    const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-[#0f172a]/30 hover:bg-[#0f172a]/50';
-    const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-slate-800';
-
+    const bottomBg = isLimitUp ? 'bg-red-900' : isLimitDown ? 'bg-green-900' : '';
+    const topBg = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : '';
+    const headerCodeClass = isLimitUp || isLimitDown ? 'text-white' : 'text-gray-500';
     return (
       <Link
         href={`/market/${pair.id}`}
-        className={`p-3 rounded-lg border flex flex-col justify-between h-28 transition-all duration-150 ${borderClass} ${bgClass} ${flashClass} font-mono`}
+        className={`rounded-lg border flex flex-col justify-between h-28 transition-all duration-150 ${limitBorder} ${normalBg} ${flashClass} font-mono overflow-hidden`}
       >
         {/* Top row: Name on left, 4-letter code on right */}
-        <div className="flex justify-between items-center w-full">
+        <div className={`flex justify-between items-center w-full px-3 py-2.5 ${topBg}`}>
           <span className="font-bold text-sm text-white truncate max-w-[70%]">{pair.name}</span>
-          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{stockId}</span>
+          <span className={`text-[10px] ${headerCodeClass} font-bold uppercase tracking-wider`}>{stockId}</span>
         </div>
 
-        {/* Middle row: Large Price and Today's K-bar next to it */}
-        <div className="flex justify-between items-center w-full my-0.5">
-          <span className={`text-2xl font-black tracking-tight ${textClass}`}>
-            {pair.price.toFixed(2)}
-          </span>
-          <div className="scale-125 transform-gpu origin-right pr-1">
-            {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+        {/* Bottom section: Price, K-bar and Changes */}
+        <div className={`flex flex-col justify-between flex-1 p-3 pt-1.5 pb-2.5 ${bottomBg}`}>
+          {/* Middle row: Large Price and Today's K-bar next to it */}
+          <div className="flex justify-between items-center w-full my-0.5">
+            <span className={`text-2xl font-black tracking-tight ${textClass}`}>
+              {pair.price.toFixed(2)}
+            </span>
+            <div className="scale-125 transform-gpu origin-right pr-1">
+              {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+            </div>
           </div>
-        </div>
 
-        {/* Bottom row: Up/Down arrow, absolute change, percentage change */}
-        <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
-          <span>{diff > 0 ? '▲' : diff < 0 ? '▼' : ''}</span>
-          <span>{diff !== 0 ? Math.abs(diff).toFixed(2) : '0.00'}</span>
-          <span>{Math.abs(changePercent).toFixed(2)}%</span>
+          {/* Bottom row: Up/Down arrow, absolute change, percentage change */}
+          <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
+            <span>{diff > 0 ? '▲' : diff < 0 ? '▼' : ''}</span>
+            <span>{diff !== 0 ? Math.abs(diff).toFixed(2) : '0.00'}</span>
+            <span>{Math.abs(changePercent).toFixed(2)}%</span>
+          </div>
         </div>
       </Link>
     );
   }
 
-  // viewMode === 'sparkline'
-  const textClass = isLimitUp ? 'text-white' : isTodayUp ? 'text-red-500' : isTodayDown ? 'text-green-500' : 'text-gray-400';
-  const bgClass = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-[#0f172a]/30 hover:bg-[#0f172a]/50';
-  const borderClass = isLimitUp ? 'border-red-600' : isLimitDown ? 'border-green-600' : isTodayUp ? 'border-red-500/30' : isTodayDown ? 'border-green-500/30' : 'border-slate-800';
+  const bottomBg = isLimitUp ? 'bg-red-900' : isLimitDown ? 'bg-green-900' : '';
+  const topBg = isLimitUp ? 'bg-red-600' : isLimitDown ? 'bg-green-600' : 'bg-slate-950/20';
+  const headerCodeClass = isLimitUp || isLimitDown ? 'text-white' : 'text-gray-500';
 
   return (
     <Link
       href={`/market/${pair.id}`}
-      className={`flex rounded-lg border h-28 transition-all duration-150 ${borderClass} ${bgClass} ${flashClass} font-mono overflow-hidden shadow-sm`}
+      className={`flex rounded-lg border h-28 transition-all duration-150 ${limitBorder} ${normalBg} ${flashClass} font-mono overflow-hidden shadow-sm`}
     >
-      {/* Left Column: Info part (30% width) */}
-      <div className="w-[30%] flex flex-col justify-between p-3 border-r border-slate-800 bg-slate-950/20">
-        {/* Top row: Name on left, 4-letter code on right */}
-        <div className="flex justify-between items-center w-full">
-          <span className="font-bold text-sm text-white truncate max-w-[70%]">{pair.name}</span>
-          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{stockId}</span>
+      {/* Left Part (30% width): Vertical Flex Box containing Header and Details */}
+      <div className="w-[30%] flex flex-col items-stretch h-full border-r border-slate-900">
+        {/* Top row (Header): Name on left, Code on right */}
+        <div className={`flex justify-between items-center w-full px-3 py-2.5 border-b border-slate-900 ${topBg}`}>
+          <span className="font-bold text-xs text-white truncate max-w-[65%]">{pair.name}</span>
+          <span className={`text-[9px] ${headerCodeClass} font-bold uppercase tracking-wider`}>{stockId}</span>
         </div>
 
-        {/* Middle row: Large Price and Today's K-bar next to it */}
-        <div className="flex justify-between items-center w-full my-0.5">
-          <span className={`text-xl font-black tracking-tight ${textClass}`}>
-            {pair.price.toFixed(2)}
-          </span>
-          <div className="scale-110 transform-gpu origin-right pr-1">
-            {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+        {/* Bottom section (Body): Price and Changes */}
+        <div className={`flex flex-col justify-between flex-1 p-3 pt-1.5 pb-2.5 ${bottomBg}`}>
+          {/* Middle row: Large Price and Today's K-bar next to it */}
+          <div className="flex justify-between items-center w-full my-0.5">
+            <span className={`text-xl font-black tracking-tight ${textClass}`}>
+              {pair.price.toFixed(2)}
+            </span>
+            <div className="scale-110 transform-gpu origin-right pr-1">
+              {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+            </div>
           </div>
-        </div>
 
-        {/* Bottom row: Up/Down arrow, absolute change, percentage change */}
-        <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
-          <span>{diff > 0 ? '▲' : diff < 0 ? '▼' : ''}</span>
-          <span>{diff !== 0 ? Math.abs(diff).toFixed(2) : '0.00'}</span>
-          <span>{Math.abs(changePercent).toFixed(2)}%</span>
+          {/* Bottom row: Up/Down arrow, absolute change, percentage change */}
+          <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
+            <span>{diff > 0 ? '▲' : diff < 0 ? '▼' : ''}</span>
+            <span>{diff !== 0 ? Math.abs(diff).toFixed(2) : '0.00'}</span>
+            <span>{Math.abs(changePercent).toFixed(2)}%</span>
+          </div>
         </div>
       </div>
 
-      <div className="w-[70%] bg-black p-2 flex flex-col justify-between select-none relative">
-        <div className="relative w-full h-[65px]">
+      {/* Right Column: Chart part (70% width) - 永遠為 bg-black 且拉高至與左半邊相同 */}
+      <div className="w-[70%] bg-black p-2 flex flex-col justify-between select-none relative h-full">
+        <div className="relative w-full h-[80px]">
           <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
             <defs>
               <linearGradient id={`area-gradient-red-${pair.id.toLowerCase()}`} x1="0" y1="0" x2="0" y2="1">
@@ -341,7 +350,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
               );
             })}
             
-            {/* Horizontal Baseline (灰色虛線) */}
+            {/* Horizontal Baseline (灰色實線) */}
             <line
               x1={0}
               y1={baselineY}
@@ -407,13 +416,18 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>('list');
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('teeteestock-lobby-view-mode');
-      if (saved === 'compact' || saved === 'grid' || saved === 'sparkline') return saved;
+  const [viewMode, setViewMode] = useState<ViewMode>('compact');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const saved = localStorage.getItem('teeteestock-lobby-view-mode');
+    if (saved === 'compact' || saved === 'grid' || saved === 'sparkline') {
+      setViewMode(saved);
     }
-    return 'compact';
-  });
+  }, []);
+
+  const currentViewMode = mounted ? viewMode : 'compact';
 
   const {
     balance,
@@ -482,33 +496,33 @@ function HomeContent() {
             <div className="bg-gray-950 p-1 rounded-xl border border-gray-900 flex select-none">
               <button
                 onClick={() => handleViewModeChange('compact')}
-                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${viewMode === 'compact' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${currentViewMode === 'compact' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
               >
                 📊 緊湊列表
               </button>
               <button
                 onClick={() => handleViewModeChange('grid')}
-                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${viewMode === 'grid' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${currentViewMode === 'grid' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
               >
                 ⏹️ 大字方塊
               </button>
               <button
                 onClick={() => handleViewModeChange('sparkline')}
-                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${viewMode === 'sparkline' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all duration-150 ${currentViewMode === 'sparkline' ? 'bg-gray-900 text-white border border-gray-800 shadow' : 'text-gray-500 hover:text-gray-300'}`}
               >
                 📈 分時走勢
               </button>
             </div>
 
             {/* Render selected view mode */}
-            {viewMode === 'compact' && (
+            {currentViewMode === 'compact' && (
               <div className="border border-slate-800 rounded-xl overflow-hidden bg-[#0a111a] shadow-xl">
                 {/* Table Header */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-[#121b26] text-gray-400 text-xs font-bold border-b border-slate-800 select-none">
-                  <div className="flex-1 pl-3">商品</div>
-                  <div className="w-24 text-right pr-2">成交</div>
-                  <div className="w-20 text-right pr-2">漲跌</div>
-                  <div className="w-20 text-right">幅度</div>
+                <div className="flex items-stretch justify-between h-10 bg-[#121b26] text-gray-400 text-xs font-bold border-b border-slate-800 select-none">
+                  <div className="flex-1 flex items-center pl-4 border-r border-slate-800/80">商品</div>
+                  <div className="w-24 flex items-center justify-center border-r border-slate-800/80">成交</div>
+                  <div className="w-20 flex items-center justify-center border-r border-slate-800/80">漲跌</div>
+                  <div className="w-20 flex items-center justify-center">幅度</div>
                 </div>
                 <div className="p-1.5 space-y-1">
                   {sortedMarketData.map((pair) => (
@@ -518,7 +532,7 @@ function HomeContent() {
               </div>
             )}
 
-            {viewMode === 'grid' && (
+            {currentViewMode === 'grid' && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {sortedMarketData.map((pair) => (
                   <TickerItem key={pair.id} pair={pair} viewMode="grid" />
@@ -526,7 +540,7 @@ function HomeContent() {
               </div>
             )}
 
-            {viewMode === 'sparkline' && (
+            {currentViewMode === 'sparkline' && (
               <div className="space-y-1">
                 {sortedMarketData.map((pair) => (
                   <TickerItem key={pair.id} pair={pair} viewMode="sparkline" />

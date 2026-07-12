@@ -88,7 +88,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     }, []);
 
     // Layout configuration matching TradingView dimensions
-    const paddingLeft = isTimeChart ? 0 : 40;
+    const paddingLeft = isTimeChart ? 20 : 40;
     const paddingRight = isTimeChart ? 32 : 60;
     const paddingTop = 25;
     const paddingBottom = 35;
@@ -446,7 +446,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                             const y = getY(price);
                             const isCenter = isTimeChart && i === 4;
                             
-                            const strokeColor = isCenter ? "#474D57" : "#2B2F36";
+                            const strokeColor = isCenter ? "#848E9C" : "#2B2F36";
                             const strokeW = isCenter ? 1.2 : 0.8;
                             const dashArray = isCenter ? undefined : "3,3";
                             const opacityVal = isCenter ? 0.8 : 0.35;
@@ -741,32 +741,34 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                     const isEdge = i === 0 || i === totalSteps;
                     const isCenter = isTimeChart && i === 4;
                     const percentY = (getY(price) / height) * 100;
+
+                    let labelClass = '';
+                    if (isTimeChart) {
+                      if (i === 8) {
+                        labelClass = 'bg-red-600 text-white font-bold px-1 py-0.5 rounded-sm shadow-sm';
+                      } else if (i === 0) {
+                        labelClass = 'bg-green-600 text-white font-bold px-1 py-0.5 rounded-sm shadow-sm';
+                      } else if (i > 4) {
+                        labelClass = 'text-red-500 font-bold';
+                      } else if (i < 4) {
+                        labelClass = 'text-green-500 font-bold';
+                      } else { // i === 4
+                        labelClass = 'text-[#848E9C] font-semibold';
+                      }
+                    } else {
+                      labelClass = isEdge ? 'font-semibold text-gray-300' : 'text-[#474D57]';
+                    }
+
                     return (
                         <span 
                             key={`y-label-${i}`}
-                            className={`absolute right-2 font-mono text-[9px] ${
-                                isEdge ? 'font-semibold text-gray-300' : 
-                                isCenter ? 'font-bold text-pink-400 shadow-sm' : 'text-[#474D57]'
-                            }`}
+                            className={`absolute right-2 font-mono text-[9px] ${labelClass}`}
                             style={{ top: `${percentY}%`, transform: 'translateY(-50%)' }}
                         >
                             {price.toFixed(2)}
                         </span>
                     );
                 })}
-
-                {/* 實時成交價 Tracker 游標 */}
-                <div 
-                    className="absolute right-0 left-0 text-white py-0.5 text-center font-bold font-mono text-[9px] z-30 shadow border-y"
-                    style={{ 
-                        top: `${(getY(currentPrice) / height) * 100}%`, 
-                        transform: 'translateY(-50%)',
-                        backgroundColor: currentPriceColor,
-                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                    }}
-                >
-                    {currentPrice.toFixed(2)}
-                </div>
             </div>
 
             {/* TradingView 十字準星 & 刻度懸浮浮標 (Snapped to Closest Node) */}
