@@ -195,7 +195,7 @@ export async function GET() {
       });
       const teeteeNews = dbNews.length > 0 ? dbNews : fallbackNews;
 
-      const todayVolume = p.trades.reduce((sum, t) => sum + t.volume, 0);
+      const todayVolume = p.klineHistory.reduce((sum, h) => sum + Number(h.volume), 0);
 
       return {
         id: p.id,

@@ -84,6 +84,7 @@ const renderMiniKBar = (open: number, close: number, high: number, low: number) 
 };
 
 function TickerItem({ pair, viewMode }: TickerItemProps) {
+  const router = useRouter();
   const [flashClass, setFlashClass] = useState("");
   const prevPriceRef = useRef(pair.price);
 
@@ -202,38 +203,47 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
 
   if (viewMode === 'compact') {
     return (
-      <Link
-        href={`/market/${pair.id}`}
-        className={`flex items-stretch justify-between h-11 border rounded-lg ${normalBorder} ${normalBg} ${flashClass} transition-all duration-150 font-mono select-none overflow-hidden`}
+      <tr
+        onClick={() => router.push(`/market/${pair.id}`)}
+        className={`hover:bg-[#121b26]/60 transition-all duration-150 font-mono select-none cursor-pointer h-11 border-b border-slate-800/50 last:border-b-0 ${flashClass}`}
       >
         {/* 商品 */}
-        <div className="flex-1 flex items-center gap-2 pl-4 border-r border-slate-800/80">
-          {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
-          <div>
-            <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
-            <span className="text-[9px] block text-gray-500">{pair.name}</span>
+        <td className="pl-4 border-r border-slate-800/80 py-1">
+          <div className="flex items-center gap-2">
+            {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+            <div>
+              <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
+              <span className="text-[9px] block text-gray-500">{pair.name}</span>
+            </div>
           </div>
-        </div>
+        </td>
         
         {/* 成交 (漲跌停時變色為矩形) */}
-        <div className={`w-24 flex items-center justify-center border-r border-slate-800/80 ${isLimitUp ? 'bg-red-600 text-white' : isLimitDown ? 'bg-green-600 text-white' : ''}`}>
+        <td className={`w-24 text-center border-r border-slate-800/80 py-1 ${isLimitUp ? 'bg-red-600 text-white' : isLimitDown ? 'bg-green-600 text-white' : ''}`}>
           <span className={`text-xs font-bold ${textClass}`}>{pair.price.toFixed(2)}</span>
-        </div>
+        </td>
 
         {/* 漲跌 */}
-        <div className="w-20 flex items-center justify-center border-r border-slate-800/80">
+        <td className="w-20 text-center border-r border-slate-800/80 py-1">
           <span className={`text-xs font-bold ${normalTextClass}`}>
             {diff > 0 ? '+' : ''}{diff.toFixed(2)}
           </span>
-        </div>
+        </td>
 
         {/* 幅度 */}
-        <div className="w-20 flex items-center justify-center">
+        <td className="w-20 text-center border-r border-slate-800/80 py-1">
           <span className={`text-xs font-bold ${normalTextClass}`}>
             {diff > 0 ? '+' : ''}{changePercent.toFixed(2)}%
           </span>
-        </div>
-      </Link>
+        </td>
+
+        {/* 成交量 */}
+        <td className="w-20 text-center py-1">
+          <span className="text-xs font-bold text-[#FFD700]">
+            {pair.todayVolume.toLocaleString()}
+          </span>
+        </td>
+      </tr>
     );
   }
 
@@ -514,21 +524,24 @@ function HomeContent() {
               </button>
             </div>
 
-            {/* Render selected view mode */}
             {currentViewMode === 'compact' && (
               <div className="border border-slate-800 rounded-xl overflow-hidden bg-[#0a111a] shadow-xl">
-                {/* Table Header */}
-                <div className="flex items-stretch justify-between h-10 bg-[#121b26] text-gray-400 text-xs font-bold border-b border-slate-800 select-none">
-                  <div className="flex-1 flex items-center pl-4 border-r border-slate-800/80">商品</div>
-                  <div className="w-24 flex items-center justify-center border-r border-slate-800/80">成交</div>
-                  <div className="w-20 flex items-center justify-center border-r border-slate-800/80">漲跌</div>
-                  <div className="w-20 flex items-center justify-center">幅度</div>
-                </div>
-                <div className="p-1.5 space-y-1">
-                  {sortedMarketData.map((pair) => (
-                    <TickerItem key={pair.id} pair={pair} viewMode="compact" />
-                  ))}
-                </div>
+                <table className="w-full border-collapse text-left text-sm text-gray-400">
+                  <thead className="bg-[#121b26] text-gray-400 text-xs font-bold border-b border-slate-800 select-none">
+                    <tr>
+                      <th className="py-2.5 pl-4 border-r border-slate-800/80 font-bold">商品</th>
+                      <th className="w-24 py-2.5 text-center border-r border-slate-800/80 font-bold">成交</th>
+                      <th className="w-20 py-2.5 text-center border-r border-slate-800/80 font-bold">漲跌</th>
+                      <th className="w-20 py-2.5 text-center border-r border-slate-800/80 font-bold">幅度</th>
+                      <th className="w-20 py-2.5 text-center font-bold">成交量</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {sortedMarketData.map((pair) => (
+                      <TickerItem key={pair.id} pair={pair} viewMode="compact" />
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 

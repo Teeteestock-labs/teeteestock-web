@@ -298,15 +298,53 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 </div>
                             </div>
                         </div>
-                        <div className="text-right whitespace-nowrap flex-shrink-0">
-                            <p className={`text-3xl sm:text-4xl font-mono font-black ${isUp ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
-                                {pair.price.toFixed(2)}
-                            </p>
-                            <p className={`text-xs sm:text-sm font-mono font-bold flex items-center justify-end gap-1.5 ${isUp ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
-                                <span>{isUp ? '▲' : '▼'} {Math.abs(priceDiff).toFixed(2)}</span>
-                                <span>({isUp ? '+' : ''}{pair.change24h.toFixed(2)}%)</span>
-                            </p>
-                        </div>
+                        {(() => {
+                            const isLimitUp = pair.price >= ceiling;
+                            const isLimitDown = pair.price <= floor;
+                            const isLimitState = isLimitUp || isLimitDown;
+
+                            let volumeContainerClass = "text-right whitespace-nowrap flex flex-col items-end justify-end font-mono text-[#FFD700] text-xs sm:text-sm font-bold";
+                            if (isLimitState) {
+                                volumeContainerClass += " py-2.5";
+                            }
+
+                            let containerClass = "text-right whitespace-nowrap flex-shrink-0 flex flex-col items-end justify-center";
+                            if (isLimitState) {
+                                const bgColor = isLimitUp ? "bg-red-600" : "bg-green-600";
+                                containerClass += ` ${bgColor} text-white px-4 py-2.5 rounded-lg shadow-lg`;
+                            }
+
+                            let priceClass = "font-mono font-black leading-none text-3xl sm:text-4xl";
+                            if (!isLimitState) {
+                                priceClass += isUp ? " text-[#FF3B3B]" : " text-[#00FFA3]";
+                            }
+
+                            let changeClass = "font-mono font-bold flex items-center justify-end gap-1.5 leading-none mt-1 text-xs sm:text-sm";
+                            if (!isLimitState) {
+                                changeClass += isUp ? " text-[#FF3B3B]" : " text-[#00FFA3]";
+                            }
+
+                            return (
+                                <div className="flex items-end gap-5 flex-shrink-0 select-none">
+                                    {/* 成交量區 */}
+                                    <div className={volumeContainerClass}>
+                                        <span className="leading-none">成交量</span>
+                                        <span className="leading-none mt-1">{pair.todayVolume.toLocaleString()}</span>
+                                    </div>
+
+                                    {/* 價格與漲跌區 */}
+                                    <div className={containerClass}>
+                                        <p className={priceClass}>
+                                            {pair.price.toFixed(2)}
+                                        </p>
+                                        <p className={changeClass}>
+                                            <span>{isUp ? '▲' : '▼'} {Math.abs(priceDiff).toFixed(2)}</span>
+                                            <span>({isUp ? '+' : ''}{pair.change24h.toFixed(2)}%)</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
 
 
