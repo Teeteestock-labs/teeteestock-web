@@ -5,6 +5,8 @@ export interface Trade {
     price: number;
     amount: number;
     isUp: boolean;
+    buyerId?: string;
+    sellerId?: string;
 }
 
 // CP組合的定義
@@ -18,7 +20,8 @@ export interface teeteePair {
     history: ChartDataPoint[]; // 價格歷史
     recentTrades: Trade[]; // 最新成交明細
     yesterdayPrice: number; // 昨天收盤價 (或是起始參考價)
-    openingPrice?: number;   // 本週開盤參考價
+    openingPrice?: number;   // 本週開盤參考價 (開盤基準價)
+    todayOpenPrice?: number | null; // 當日開盤價（當天開盤第一筆成交價）
     todayVolume: number;    // 今天總交易量
     teeteeNews?: TeeteeNewsItem[]; // 本週貼貼資訊
     status: 'NORMAL' | 'WARNING' | 'DELISTED'; // 組合狀態

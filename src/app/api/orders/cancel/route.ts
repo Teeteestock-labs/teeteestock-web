@@ -7,12 +7,6 @@ export async function POST(request: Request) {
     const now = new Date();
     const marketStatus = await checkAndTickMarketStatus(now);
 
-    if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING') {
-      return NextResponse.json(
-        { error: `交易所目前處於非營運清算狀態 (${marketStatus})，拒絕撤單操作。` },
-        { status: 403 }
-      );
-    }
     if (marketStatus === 'MAINTENANCE') {
       return NextResponse.json(
         { error: '系統維護中，全面禁止任何撤單操作。' },

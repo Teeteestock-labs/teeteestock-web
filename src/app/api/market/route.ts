@@ -146,7 +146,9 @@ export async function GET() {
           time,
           price: t.price,
           amount: t.volume,
-          isUp
+          isUp,
+          buyerId: t.buyerId,
+          sellerId: t.sellerId
         };
       });
 
@@ -197,11 +199,20 @@ export async function GET() {
 
       const todayVolume = p.klineHistory.reduce((sum, h) => sum + Number(h.volume), 0);
 
+      let todayOpenPrice = p.todayOpenPrice;
+      if (todayOpenPrice === null) {
+        const firstKLineWithVolume = p.klineHistory.find(h => Number(h.volume) > 0);
+        if (firstKLineWithVolume) {
+          todayOpenPrice = firstKLineWithVolume.close;
+        }
+      }
+
       return {
         id: p.id,
         name: p.name,
         price: p.currentPrice,
         openingPrice: p.openingPrice,
+        todayOpenPrice,
         yesterdayPrice: p.last_close_price,
         change24h: p.openingPrice !== 0 ? ((p.currentPrice - p.openingPrice) / p.openingPrice) * 100 : 0,
         netValue: p.netValue,

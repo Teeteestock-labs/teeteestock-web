@@ -298,12 +298,18 @@ export async function runDailyRolloverOrSettlement(options?: {
         // Expire all pending orders first
         await expireAndRefundOrders(tx, pair.id);
 
-        // Write closingPrice directly to last_close_price and next_open_price
+        // Delete all trades for this pair to clear the transaction history for the new day
+        await tx.trades.deleteMany({
+          where: { pairId: pair.id }
+        });
+
+        // Write closingPrice directly to last_close_price and next_open_price, and reset todayOpenPrice
         await tx.cpPairs.update({
           where: { id: pair.id },
           data: {
             last_close_price: closingPrice,
-            next_open_price: closingPrice
+            next_open_price: closingPrice,
+            todayOpenPrice: null
           }
         });
 
@@ -405,13 +411,19 @@ export async function runDailyRolloverOrSettlement(options?: {
         // 7. Expire all pending orders first (refunds to players)
         await expireAndRefundOrders(tx, latestPair.id);
 
-        // 8. Update CP Pair in database (write to last_close_price and next_open_price)
+        // Delete all trades for this pair to clear the transaction history for the new week
+        await tx.trades.deleteMany({
+          where: { pairId: latestPair.id }
+        });
+
+        // 8. Update CP Pair in database (write to last_close_price, next_open_price, and reset todayOpenPrice)
         const _updatedPair = await tx.cpPairs.update({
           where: { id: latestPair.id },
           data: {
             netValue: nextWeekNV,
             last_close_price: lastPrice,
             next_open_price: newPrice,
+            todayOpenPrice: null,
             status: statusAfter,
             warningWeeks: warningWeeks,
             adminAdjust: 0.0,
@@ -452,7 +464,7 @@ export async function runDailyRolloverOrSettlement(options?: {
           }
         }
 
-        // 10. Archive approved events and mark all settled events
+        // 10. Archive approved events
         for (const evt of approvedEvents) {
           const exists = await tx.archivedEvents.findUnique({
             where: {
@@ -472,6 +484,7 @@ export async function runDailyRolloverOrSettlement(options?: {
                 title: evt.title,
                 timestamp: evt.timestamp,
                 reporter: evt.reporter,
+                status: 'APPROVED',
                 createdAt: evt.createdAt,
                 reason: evt.reason || ""
               }
@@ -483,17 +496,44 @@ export async function runDailyRolloverOrSettlement(options?: {
           });
         }
 
-        // Mark rejected events as settled for Tuesday clean-up
-        await tx.teeteeEvents.updateMany({
+        // Archive unapplied events (PENDING & REJECTED)
+        const unappliedEvents = await tx.teeteeEvents.findMany({
           where: {
             pairId: latestPair.id,
-            status: ReviewStatus.REJECTED,
-            isSettled: false
-          },
-          data: {
-            isSettled: true
+            status: { in: [ReviewStatus.PENDING, ReviewStatus.REJECTED] }
           }
         });
+
+        for (const evt of unappliedEvents) {
+          const exists = await tx.archivedEvents.findUnique({
+            where: {
+              pairId_url: {
+                pairId: evt.pairId,
+                url: evt.url
+              }
+            }
+          });
+          if (!exists) {
+            await tx.archivedEvents.create({
+              data: {
+                id: evt.id,
+                pairId: evt.pairId,
+                url: evt.url,
+                type: evt.type,
+                title: evt.title,
+                timestamp: evt.timestamp,
+                reporter: evt.reporter,
+                status: evt.status, // Preserve PENDING or REJECTED
+                createdAt: evt.createdAt,
+                reason: evt.reason || ""
+              }
+            });
+          }
+
+          await tx.teeteeEvents.delete({
+            where: { id: evt.id }
+          });
+        }
 
         // 11. Record Settlement Log
         await tx.settlementLog.create({
@@ -581,104 +621,157 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   const tz = getTaipeiTime(now);
   const totalMinutes = tz.hour * 60 + tz.minute;
 
-  let clockStatus: 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' = 'CLOSED';
-  if (tz.dayOfWeek === 1 || (tz.dayOfWeek === 2 && totalMinutes < 1125)) {
-    clockStatus = 'SETTLING';
-  } else if (totalMinutes >= 1125 && totalMinutes < 1140) {
-    clockStatus = 'PRE_MARKET';
-  } else if (totalMinutes >= 1140 && totalMinutes < 1440) {
-    clockStatus = 'OPEN';
+  let clockStatus: 'CLOSED' | 'ROLLOVER' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' = 'CLOSED';
+  
+  if (tz.dayOfWeek === 1) {
+    // Monday: Holiday (SETTLING), but ROLLOVER occurs at 18:30 - 18:45
+    if (totalMinutes >= 1110 && totalMinutes < 1125) {
+      clockStatus = 'ROLLOVER';
+    } else {
+      clockStatus = 'SETTLING';
+    }
+  } else if (tz.dayOfWeek === 2) {
+    // Tuesday: SETTLING until 18:30, ROLLOVER at 18:30 - 18:45, PRE_MARKET at 18:45 - 19:00, OPEN at 19:00 - 24:00
+    if (totalMinutes < 1110) {
+      clockStatus = 'SETTLING';
+    } else if (totalMinutes >= 1110 && totalMinutes < 1125) {
+      clockStatus = 'ROLLOVER';
+    } else if (totalMinutes >= 1125 && totalMinutes < 1140) {
+      clockStatus = 'PRE_MARKET';
+    } else {
+      clockStatus = 'OPEN';
+    }
+  } else {
+    // Wednesday to Sunday: CLOSED until 18:30, ROLLOVER at 18:30 - 18:45, PRE_MARKET at 18:45 - 19:00, OPEN at 19:00 - 24:00
+    if (totalMinutes < 1110) {
+      clockStatus = 'CLOSED';
+    } else if (totalMinutes >= 1110 && totalMinutes < 1125) {
+      clockStatus = 'ROLLOVER';
+    } else if (totalMinutes >= 1125 && totalMinutes < 1140) {
+      clockStatus = 'PRE_MARKET';
+    } else {
+      clockStatus = 'OPEN';
+    }
   }
 
   const currentStatus = config.marketStatus || 'CLOSED';
 
-  // 1. Transition/Recovery from OPEN to CLOSED/SETTLING (Session end at 24:00)
+  // 1. Transition from OPEN to CLOSED/SETTLING (Session end at 24:00)
+  // We preserve all orders, trades, and board data until 18:30 rollover!
   if (currentStatus === 'OPEN' && (clockStatus === 'CLOSED' || clockStatus === 'SETTLING')) {
-    if (clockStatus === 'SETTLING') {
-      console.log(`[State Machine] Transitioning OPEN -> SETTLING at ${now.toISOString()}`);
-      // Atomic check-and-set to prevent concurrent transitions
-      const updatedSettling = await prisma.systemConfig.updateMany({
-        where: { id: 1, marketStatus: currentStatus },
-        data: { marketStatus: 'SETTLING' }
-      });
-      if (updatedSettling.count === 0) {
-        // Another request already handled this transition
-        return currentStatus;
-      }
+    const nextStatus = clockStatus === 'SETTLING' ? 'SETTLING' : 'CLOSED';
+    await prisma.systemConfig.updateMany({
+      where: { id: 1, marketStatus: currentStatus },
+      data: { marketStatus: nextStatus }
+    });
+    console.log(`[State Machine] Transitioning OPEN -> ${nextStatus} at 24:00 (Data preserved)`);
+    return nextStatus;
+  }
+
+  // 2. Transition from CLOSED/SETTLING to CLOSED_SETTLED (Daily Rollover / Weekly Settlement at 18:30)
+  if ((currentStatus === 'CLOSED' || currentStatus === 'SETTLING') && clockStatus === 'ROLLOVER') {
+    console.log(`[State Machine] Transitioning ${currentStatus} -> CLOSED_SETTLED (Executing Rollover/Settlement) at ${now.toISOString()}`);
+    
+    // Atomic check-and-set
+    const updatedSettled = await prisma.systemConfig.updateMany({
+      where: { id: 1, marketStatus: currentStatus },
+      data: { marketStatus: 'CLOSED_SETTLED' }
+    });
+    
+    if (updatedSettled.count > 0) {
       try {
-        await runDailyRolloverOrSettlement({ forceAction: 'settle', targetDate: now });
+        // Monday 18:30 triggers Weekly Sunday Settlement, other days trigger Daily Rollover
+        const action: 'settle' | 'rollover' = tz.dayOfWeek === 1 ? 'settle' : 'rollover';
+        await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
       } catch (err) {
-        console.error(err);
+        console.error('[Rollover/Settlement Error]:', err);
       }
-      return 'SETTLING';
-    } else {
-      console.log(`[State Machine] Transitioning OPEN -> CLOSED (Daily Rollover) at ${now.toISOString()}`);
-      // Atomic check-and-set to prevent concurrent transitions
-      const updatedClosed = await prisma.systemConfig.updateMany({
-        where: { id: 1, marketStatus: currentStatus },
-        data: { marketStatus: 'CLOSED' }
-      });
-      if (updatedClosed.count === 0) {
-        // Another request already handled this transition
-        return currentStatus;
-      }
-      try {
-        await runDailyRolloverOrSettlement({ forceAction: 'rollover', targetDate: now });
-      } catch (err) {
-        console.error(err);
-      }
-      return 'CLOSED';
+      return 'CLOSED_SETTLED';
     }
   }
 
-  // 2. Transition/Recovery from CLOSED/SETTLING to PRE_MARKET (18:45)
-  if ((currentStatus === 'CLOSED' || currentStatus === 'SETTLING') && clockStatus === 'PRE_MARKET') {
-    console.log(`[State Machine] Transitioning ${currentStatus} -> PRE_MARKET at ${now.toISOString()}`);
-    // Atomic check-and-set to prevent concurrent transitions
-    const updatedPreMarket = await prisma.systemConfig.updateMany({
+  // 3. Transition from CLOSED_SETTLED to PRE_MARKET (18:45)
+  if (currentStatus === 'CLOSED_SETTLED' && clockStatus === 'PRE_MARKET') {
+    console.log(`[State Machine] Transitioning CLOSED_SETTLED -> PRE_MARKET at ${now.toISOString()}`);
+    const updatedPre = await prisma.systemConfig.updateMany({
       where: { id: 1, marketStatus: currentStatus },
       data: { marketStatus: 'PRE_MARKET' }
     });
-    if (updatedPreMarket.count === 0) {
-      // Another request already handled this transition
-      return currentStatus;
+    if (updatedPre.count > 0) {
+      await runPreMarketMMDeployment(now);
     }
-    await runPreMarketMMDeployment(now);
     return 'PRE_MARKET';
   }
 
-  // 3. Transition/Recovery from PRE_MARKET to OPEN (19:00)
+  // 4. Transition from PRE_MARKET to OPEN (19:00)
   if (currentStatus === 'PRE_MARKET' && clockStatus === 'OPEN') {
     console.log(`[State Machine] Transitioning PRE_MARKET -> OPEN at ${now.toISOString()}`);
-    // Atomic check-and-set to prevent concurrent transitions
-    const updatedOpen = await prisma.systemConfig.updateMany({
+    await prisma.systemConfig.updateMany({
       where: { id: 1, marketStatus: currentStatus },
       data: { marketStatus: 'OPEN' }
     });
-    if (updatedOpen.count === 0) {
-      // Another request already handled this transition
-      return currentStatus;
-    }
     return 'OPEN';
   }
 
-  // 4. Recover missed transition if DB is CLOSED/SETTLING but clock is OPEN (e.g. server restarted during session)
-  if ((currentStatus === 'CLOSED' || currentStatus === 'SETTLING') && clockStatus === 'OPEN') {
-    console.log(`[State Machine] Recovering missed open transition. Running MM deployment & setting to OPEN.`);
-    // Atomic check-and-set to prevent concurrent transitions
-    const updatedRecoverPre = await prisma.systemConfig.updateMany({
+  // 5. Missed Transition Recovery logic
+  if (clockStatus === 'PRE_MARKET' && (currentStatus === 'CLOSED' || currentStatus === 'SETTLING')) {
+    // Rollover was missed
+    console.log(`[State Machine] Recovering missed Rollover at PRE_MARKET.`);
+    const updatedRecover = await prisma.systemConfig.updateMany({
       where: { id: 1, marketStatus: currentStatus },
-      data: { marketStatus: 'PRE_MARKET' }
+      data: { marketStatus: 'CLOSED_SETTLED' }
     });
-    if (updatedRecoverPre.count === 0) {
-      // Another request already handled this transition
-      return currentStatus;
+    if (updatedRecover.count > 0) {
+      try {
+        const action: 'settle' | 'rollover' = tz.dayOfWeek === 2 ? 'settle' : 'rollover'; // If Monday was missed, Tue 18:45 is Weekly Settlement
+        await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
+      } catch (err) {
+        console.error(err);
+      }
+      await prisma.systemConfig.updateMany({
+        where: { id: 1, marketStatus: 'CLOSED_SETTLED' },
+        data: { marketStatus: 'PRE_MARKET' }
+      });
+      await runPreMarketMMDeployment(now);
     }
-    await runPreMarketMMDeployment(now);
-    await prisma.systemConfig.updateMany({
-      where: { id: 1, marketStatus: 'PRE_MARKET' },
-      data: { marketStatus: 'OPEN' }
-    });
+    return 'PRE_MARKET';
+  }
+
+  if (clockStatus === 'OPEN' && (currentStatus === 'CLOSED' || currentStatus === 'SETTLING' || currentStatus === 'CLOSED_SETTLED' || currentStatus === 'PRE_MARKET')) {
+    console.log(`[State Machine] Recovering missed open transition.`);
+    let finalStatus = currentStatus;
+    if (finalStatus === 'CLOSED' || finalStatus === 'SETTLING') {
+      // Run missed rollover first
+      const updatedRecover = await prisma.systemConfig.updateMany({
+        where: { id: 1, marketStatus: finalStatus },
+        data: { marketStatus: 'CLOSED_SETTLED' }
+      });
+      if (updatedRecover.count > 0) {
+        try {
+          const action: 'settle' | 'rollover' = tz.dayOfWeek === 2 ? 'settle' : 'rollover';
+          await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
+        } catch (err) {
+          console.error(err);
+        }
+        finalStatus = 'CLOSED_SETTLED';
+      }
+    }
+    if (finalStatus === 'CLOSED_SETTLED') {
+      const updatedPre = await prisma.systemConfig.updateMany({
+        where: { id: 1, marketStatus: finalStatus },
+        data: { marketStatus: 'PRE_MARKET' }
+      });
+      if (updatedPre.count > 0) {
+        await runPreMarketMMDeployment(now);
+      }
+      finalStatus = 'PRE_MARKET';
+    }
+    if (finalStatus === 'PRE_MARKET') {
+      await prisma.systemConfig.updateMany({
+        where: { id: 1, marketStatus: finalStatus },
+        data: { marketStatus: 'OPEN' }
+      });
+    }
     return 'OPEN';
   }
 

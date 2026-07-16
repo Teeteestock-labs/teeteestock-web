@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const now = new Date();
     const marketStatus = await checkAndTickMarketStatus(now);
 
-    if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING') {
+    if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING' || marketStatus === 'CLOSED_SETTLED') {
       return NextResponse.json(
         { error: `交易所目前處於非營運清算狀態 (${marketStatus})，拒絕任何掛單寫入。` },
         { status: 403 }

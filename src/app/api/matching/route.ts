@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       const matchedPairsLog: any[] = [];
 
       for (const pair of pairs) {
-        // 2. 撈取特定 pairId 的所有未成交委託單 (此時已包含 17:45 時 MARKET_MAKER 部署的委託單)，依據 createdAt ASC 排序以執行時間優先原則
+        // 2. 撈取特定 pairId 的所有未成交委託單 (此時已包含 18:45 時 MARKET_MAKER 部署的委託單)，依據 createdAt ASC 排序以執行時間優先原則
         const dbOrders = await tx.orderBook.findMany({
           where: { pairId: pair.id },
           orderBy: {
@@ -334,10 +334,14 @@ export async function POST(request: Request) {
           }
         }
 
-        // 同步將 CpPairs.currentPrice 更新為 Final_CurrentPrice
+        // 同步將 CpPairs.currentPrice 更新為 Final_CurrentPrice，並在首筆成交時設定今日開盤價
+        const cpUpdateData: any = { currentPrice: finalPrice };
+        if (pair.todayOpenPrice === null) {
+          cpUpdateData.todayOpenPrice = finalPrice;
+        }
         await tx.cpPairs.update({
           where: { id: pair.id },
-          data: { currentPrice: finalPrice },
+          data: cpUpdateData,
         });
 
         // 4. 更新/插入 1分 K 線歷史數據 (KLineHistory)

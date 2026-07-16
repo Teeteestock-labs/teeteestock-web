@@ -552,8 +552,8 @@ if (isOnceMode) {
 
   console.log(`Cleanup cron scheduler started. Will run every Tuesday at 02:00 Taipei time. (Cron: ${cleanupCronExpression})`);
 
-  // Schedule daily rollover / settlement at exactly 17:45:00 Taipei time (45 17 * * *).
-  const settlementCronExpression = '45 17 * * *';
+  // Schedule daily rollover / settlement at exactly 18:30:00 Taipei time (30 18 * * *).
+  const settlementCronExpression = '30 18 * * *';
   cron.schedule(settlementCronExpression, async () => {
     console.log('[Daily Settle/Rollover Cron] Triggering daily rollover or weekly settlement...');
     try {
@@ -566,5 +566,5 @@ if (isOnceMode) {
     timezone: 'Asia/Taipei'
   });
 
-  console.log(`Daily Settle/Rollover cron scheduler started. Will run every day at 17:45 Taipei time. (Cron: ${settlementCronExpression})`);
+  console.log(`Daily Settle/Rollover cron scheduler started. Will run every day at 18:30 Taipei time. (Cron: ${settlementCronExpression})`);
 }

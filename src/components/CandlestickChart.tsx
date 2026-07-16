@@ -401,7 +401,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
             onTouchEnd={handleMouseLeave}
         >
             {/* 頂部 HUD 動態文字面板 */}
-            <div className="absolute top-1.5 left-2 z-30 font-mono text-[8px] sm:text-[9px] text-gray-400 pointer-events-none select-none flex flex-wrap items-center gap-x-1 sm:gap-x-1.5 gap-y-0.5 bg-[#131722]/80 px-2 py-0.5 rounded border border-[#2a2e39]/30">
+            <div className="absolute top-1.5 left-2 z-10 font-mono text-[8px] sm:text-[9px] text-gray-400 pointer-events-none select-none flex flex-wrap items-center gap-x-1 sm:gap-x-1.5 gap-y-0.5 bg-[#131722]/80 px-2 py-0.5 rounded border border-[#2a2e39]/30">
                 <span>時間: <span className="text-gray-100 font-semibold">{hudTime}</span></span>
                 <span className="text-[#2a2e39]">|</span>
                 <span>開: <span style={{ color: hudColor }} className="font-semibold">{hudOpen}</span></span>
@@ -727,7 +727,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
             </div>
 
             {/* Sticky 價格刻度面板 (固定在右側) */}
-            <div className={`absolute right-0 top-0 bottom-0 w-[60px] ${isTimeChart ? 'bg-transparent' : 'bg-[#131722] border-l border-[#2a2e39]'} pointer-events-none select-none z-20 font-mono text-[9px] text-[#848E9C]`}>
+            <div className={`absolute right-0 top-0 bottom-0 w-[60px] ${isTimeChart ? 'bg-transparent' : 'bg-[#131722] border-l border-[#2a2e39]'} pointer-events-none select-none z-10 font-mono text-[9px] text-[#848E9C]`}>
                 <div 
                     className={`absolute left-0 right-0 ${isTimeChart ? '' : 'border-t border-[#2a2e39]'}`} 
                     style={{ bottom: `${paddingBottom}px` }} 
@@ -773,7 +773,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
 
             {/* TradingView 十字準星 & 刻度懸浮浮標 (Snapped to Closest Node) */}
             {showCrosshair && (
-                <div className="absolute inset-0 pointer-events-none z-10">
+                <div className="absolute inset-0 pointer-events-none z-15">
                     {/* 十字虛線：垂直 */}
                     <div 
                         className="absolute top-0 bottom-0 border-l border-dashed border-[#848E9C]/35" 
@@ -788,7 +788,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
 
                     {/* Y 軸價格懸浮標籤 */}
                     <div 
-                        className="absolute right-0 bg-[#363a45] text-white px-1.5 py-0.5 rounded-l text-[8px] font-bold font-mono z-40 border-y border-[#848E9C]/30"
+                        className="absolute right-0 bg-[#363a45] text-white px-1.5 py-0.5 rounded-l text-[8px] font-bold font-mono z-15 border-y border-[#848E9C]/30"
                         style={{ top: `${snapY}px`, transform: 'translateY(-50%)' }}
                     >
                         {priceAtHover.toFixed(2)}
@@ -797,7 +797,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                     {/* X 軸時間懸浮標籤 */}
                     {closestPt && (
                         <div 
-                            className="absolute bg-[#363a45] text-white px-2 py-0.5 rounded text-[8px] font-bold font-mono z-40 border border-[#848E9C]/30"
+                            className="absolute bg-[#363a45] text-white px-2 py-0.5 rounded text-[8px] font-bold font-mono z-15 border border-[#848E9C]/30"
                             style={{ 
                                 left: `${snapX}px`, 
                                 bottom: `${paddingBottom - 23}px`,

@@ -390,7 +390,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
                 <path
                   d={linePathD}
                   stroke="#ef4444"
-                  strokeWidth="0.6"
+                  strokeWidth="0.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
@@ -399,7 +399,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
                 <path
                   d={linePathD}
                   stroke="#22c55e"
-                  strokeWidth="0.6"
+                  strokeWidth="0.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
@@ -472,6 +472,19 @@ function HomeContent() {
   }, 0);
 
   const netWorth = balance + totalStockValue;
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-[#020617] text-white flex flex-col justify-center items-center font-mono">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-pink-500/20 border-t-pink-500 rounded-full animate-spin" />
+          <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase animate-pulse">
+            正在安全對接交易所行情中...
+          </span>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white flex flex-col pb-20 font-mono">

@@ -126,8 +126,8 @@ export function getActiveTradingDay(date: Date = new Date()): TradingDayInfo {
     const isTradingDay = t.dayOfWeek !== 1; // Tue to Sun
     if (isTradingDay) {
       if (i === 0) {
-        const isPast1745 = t.hour > 17 || (t.hour === 17 && t.minute >= 45);
-        if (isPast1745) {
+        const isPast1830 = t.hour > 18 || (t.hour === 18 && t.minute >= 30);
+        if (isPast1830) {
           return { year: t.year, month: t.month, day: t.day, dateStr: `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` };
         }
       } else {
@@ -146,26 +146,31 @@ export function getTaipeiSessionRange(year: number, month: number, day: number) 
   return { startUTC, endUTC };
 }
 
-export function getPreviousSundayEndInTaipei(now: Date = new Date()): Date {
-  const tz = getTaipeiTime(now);
-  const tzDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-  const daysToSubtract = tz.dayOfWeek === 0 ? 6 : tz.dayOfWeek - 1;
-  tzDate.setDate(tzDate.getDate() - daysToSubtract);
-  const year = tzDate.getFullYear();
-  const month = tzDate.getMonth() + 1;
-  const day = tzDate.getDate();
-  const mondayStartStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00+08:00`;
-  return new Date(mondayStartStr);
-}
-
 export function getNextSettlementBoundary(now: Date = new Date()): Date {
   const tz = getTaipeiTime(now);
-  const daysToNextTuesday = (9 - tz.dayOfWeek) % 7 || 7;
   const tzDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-  tzDate.setDate(tzDate.getDate() + daysToNextTuesday - 1);
+  
+  // Calculate days until the next Monday (1)
+  let daysToNextMonday = (8 - tz.dayOfWeek) % 7;
+  if (tz.dayOfWeek === 1) {
+    const totalMinutes = tz.hour * 60 + tz.minute;
+    if (totalMinutes >= 1110) { // 18:30 is 1110 minutes
+      daysToNextMonday = 7; // Already past Monday 18:30, next is next Monday
+    } else {
+      daysToNextMonday = 0; // Today is Monday and before 18:30
+    }
+  }
+  
+  tzDate.setDate(tzDate.getDate() + daysToNextMonday);
   const year = tzDate.getFullYear();
   const month = tzDate.getMonth() + 1;
   const day = tzDate.getDate();
-  return new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00+08:00`);
+  return new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T18:30:00+08:00`);
+}
+
+export function getPreviousSundayEndInTaipei(now: Date = new Date()): Date {
+  const nextBoundary = getNextSettlementBoundary(now);
+  const prevBoundary = new Date(nextBoundary.getTime() - 7 * 24 * 60 * 60 * 1000);
+  return prevBoundary;
 }
 

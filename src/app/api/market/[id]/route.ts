@@ -22,6 +22,7 @@ export async function GET(
       name: pair.name,
       currentPrice: pair.currentPrice,
       openingPrice: pair.openingPrice,
+      todayOpenPrice: pair.todayOpenPrice,
       status: pair.status,
       warningWeeks: pair.warningWeeks
     });

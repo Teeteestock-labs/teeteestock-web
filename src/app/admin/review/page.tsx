@@ -1,18 +1,10 @@
 import { prisma } from '@/lib/prisma';
-import { 
-  approveEvent, 
-  rejectEvent, 
-  updateAdminAdjust, 
-  approveOneAndRejectOthers, 
-  rejectMultipleEvents
-} from '../actions';
 import { ReviewStatus, EventType } from '@/types/enums';
 import Link from 'next/link';
 import { getNextSettlementBoundary } from '@/utils/marketHours';
 import TriggerCrawlerButton from './TriggerCrawlerButton';
-import AdminAdjustForm from './AdminAdjustForm';
-import ProcessedEventEditor from './ProcessedEventEditor';
 import { INITIAL_PAIRS } from '@/app/constants/market';
+import ReviewPageClient from './ReviewPageClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +69,12 @@ export default async function AdminReviewPage() {
   // Fetch all events (including PENDING, APPROVED, REJECTED)
   const allEvents = await prisma.teeteeEvents.findMany({
     orderBy: { createdAt: 'desc' },
+  });
+
+  // Fetch recent archived events
+  const archivedEvents = await prisma.archivedEvents.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 50
   });
 
   const pairs = await prisma.cpPairs.findMany({
@@ -188,293 +186,67 @@ export default async function AdminReviewPage() {
             <h2 className="text-lg font-bold text-white tracking-tight">組合監控牆 (CP Monitoring Wall)</h2>
           </div>
 
-          <div className="space-y-3">
-            {previews.map((pair) => {
-              const pairEvents = allEvents.filter(e => e.pairId.toLowerCase() === pair.id.toLowerCase());
-              const pendingEvents = pairEvents.filter(e => e.status === ReviewStatus.PENDING);
-              const processedEvents = pairEvents.filter(e => e.status === ReviewStatus.APPROVED || e.status === ReviewStatus.REJECTED);
-              
-              const pendingCount = pendingEvents.length;
-              const hasEvents = pairEvents.length > 0;
-              
-              // Duplicate grouping logic for this CP
-              interface PendingEventGroup {
-                isDuplicateGroup: boolean;
-                events: typeof pendingEvents;
-              }
-              const cpGroups: PendingEventGroup[] = [];
-              const cpProcessedIds = new Set<string>();
+          <ReviewPageClient previews={previews} allEvents={allEvents} />
+        </section>
 
-              for (let i = 0; i < pendingEvents.length; i++) {
-                const evt = pendingEvents[i];
-                if (cpProcessedIds.has(evt.id)) continue;
+        {/* 歷史已歸檔情報牆 */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-3 border-b border-gray-850 pb-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+            <h2 className="text-lg font-bold text-white tracking-tight">歷史已歸檔情報牆 (Archived Events History)</h2>
+          </div>
 
-                const groupEvents = [evt];
-                cpProcessedIds.add(evt.id);
+          <div className="bg-gray-900/20 border border-gray-800 rounded-2xl p-6 backdrop-blur-md space-y-4">
+            {archivedEvents.length === 0 ? (
+              <div className="text-sm text-gray-500 text-center py-4">目前資料庫中尚無歸檔的歷史情報。</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-800 text-gray-500 font-bold">
+                      <th className="py-2.5 pb-3">歸檔時間</th>
+                      <th className="py-2.5 pb-3">商品</th>
+                      <th className="py-2.5 pb-3">情報標題</th>
+                      <th className="py-2.5 pb-3">來源</th>
+                      <th className="py-2.5 pb-3 text-center">結算狀態</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-900/60">
+                    {archivedEvents.map((evt) => {
+                      let statusBadge = "";
+                      if (evt.status === 'APPROVED') {
+                        statusBadge = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                      } else if (evt.status === 'REJECTED') {
+                        statusBadge = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                      } else {
+                        statusBadge = "bg-amber-500/10 text-amber-400 border-amber-500/20"; // PENDING / Unapplied
+                      }
 
-                for (let j = i + 1; j < pendingEvents.length; j++) {
-                  const other = pendingEvents[j];
-                  if (cpProcessedIds.has(other.id)) continue;
-
-                  const timeDiff = Math.abs(evt.createdAt.getTime() - other.createdAt.getTime());
-                  if (timeDiff < 12 * 60 * 60 * 1000) {
-                    const similarity = getTitleSimilarity(evt.title, other.title);
-                    const hasSharedLong = hasSharedLongToken(evt.title, other.title);
-                    if (similarity >= 0.15 || hasSharedLong) {
-                      groupEvents.push(other);
-                      cpProcessedIds.add(other.id);
-                    }
-                  }
-                }
-
-                cpGroups.push({
-                  isDuplicateGroup: groupEvents.length > 1,
-                  events: groupEvents
-                });
-              }
-
-              const initialPair = INITIAL_PAIRS.find(x => x.id.toLowerCase() === pair.id.toLowerCase());
-              const displayMembers = initialPair 
-                ? initialPair.members.map(m => MEMBER_JP_MAP[m] || m).join(' × ') 
-                : '';
-
-              return (
-                <div 
-                  key={pair.id} 
-                  className={`border rounded-xl overflow-hidden bg-gray-900/10 backdrop-blur-md transition-all duration-200 ${hasEvents ? 'border-gray-800' : 'border-gray-950 bg-gray-950/20'}`}
-                >
-                  {/* 外顯第一層：全知數據監控標頭 (完全外顯，不可摺疊) */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-900/60 border-b border-gray-800/80 gap-4">
-                    <div className="flex items-center gap-3 w-48 sm:w-64 md:w-72 lg:w-80 shrink-0 min-w-0">
-                      <span className="font-mono text-sm tracking-wider bg-gray-800 px-2 py-0.5 rounded text-gray-400 font-bold shrink-0">{pair.id.toUpperCase()}</span>
-                      <span className="text-sm font-bold text-white truncate">{displayMembers}</span>
-                    </div>
-                    
-                    <div className="flex-1 grid grid-cols-4 gap-2 text-center text-xs px-2 md:px-8">
-                      <div className="border-r border-gray-800/50">
-                        <span className="text-gray-500 block text-[9px]">隱藏淨值 (NV)</span>
-                        <span className="font-mono font-bold text-gray-200 text-xs sm:text-sm">{pair.currentNV.toFixed(2)}</span>
-                      </div>
-                      <div className="border-r border-gray-800/50">
-                        <span className="text-gray-500 block text-[9px]">累積加成</span>
-                        <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm">
-                          +{(pair.collabBonusSum * 100).toFixed(0)}% (+{pair.collabBonus.toFixed(2)})
-                        </span>
-                      </div>
-                      <div className="border-r border-gray-800/50">
-                        <span className="text-gray-500 block text-[9px]">預估下期淨值</span>
-                        <span className="font-mono font-bold text-pink-400 text-xs sm:text-sm">{pair.predictedNV.toFixed(2)}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block text-[9px]">預估下期狀態</span>
-                        <span className="font-bold text-xs sm:text-sm block mt-0.5">
-                          {pair.statusAfter === 'NORMAL' && <span className="text-emerald-400">NORMAL</span>}
-                          {pair.statusAfter === 'WARNING' && <span className="text-amber-400">WARNING</span>}
-                          {pair.statusAfter === 'DELISTED' && <span className="text-rose-400">DELISTED</span>}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 justify-end w-24 sm:w-28 md:w-32 shrink-0">
-                      {pendingCount > 0 ? (
-                        <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] rounded-full font-semibold whitespace-nowrap">
-                          [ {pendingCount} 筆待審 ]
-                        </span>
-                      ) : hasEvents ? (
-                        <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] rounded-full font-semibold whitespace-nowrap">
-                          [ 已全數審查 ]
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-gray-700 whitespace-nowrap">
-                          本週無情報
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 折疊隱藏第二層：行政干預與貼貼情報風箱 */}
-                  <details 
-                    name="cp-accordion" 
-                    className="group"
-                  >
-                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none bg-purple-950/25 hover:bg-purple-900/35 text-xs sm:text-sm text-purple-400 hover:text-purple-300 font-black border-b border-purple-900/40 list-none transition-all tracking-wide">
-                      <span className="flex items-center gap-2">
-                        <span className="inline-block animate-pulse text-purple-500">⚙️</span>
-                        <span>點擊展開行政干預與情報審查明細</span>
-                      </span>
-                      <span className="text-purple-500 group-open:rotate-180 transition-transform duration-200 text-[10px]">▼</span>
-                    </summary>
-
-                    <div className="p-4 bg-gray-950/40 space-y-6">
-
-                      {/* 【行政干預區】 */}
-                      <div className="space-y-2">
-                        <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                          行政干預微調 (Override)
-                        </h4>
-                        <AdminAdjustForm pairId={pair.id} />
-                      </div>
-
-                      {/* 【情報審查流水線】 */}
-                      <div className="space-y-4">
-                        <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                          情報審查 & 核可紀錄
-                        </h4>
-                        
-                        {/* Pending list */}
-                        <div className="space-y-3">
-                          <div className="text-[9px] text-gray-500 font-bold tracking-wider">待處理情報專區</div>
-                          {pendingCount === 0 ? (
-                            <div className="text-xs text-gray-600 py-1 bg-gray-950/20 px-3 rounded-lg border border-gray-900">本組合目前無待審查情報。</div>
-                          ) : (
-                            <div className="space-y-3">
-                              {cpGroups.map((group) => {
-                                if (group.isDuplicateGroup) {
-                                  const allIds = group.events.map(e => e.id);
-                                  const firstEvt = group.events[0];
-                                  return (
-                                    <div key={`group-${firstEvt.id}`} className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 space-y-4">
-                                      <div className="flex justify-between items-center border-b border-gray-800/60 pb-2">
-                                        <span className="text-amber-400 font-bold text-[10px]">⚠️ 偵測到重複開台/同日聯動 (Co-Stream Group)</span>
-                                        <form
-                                          action={async (formData: FormData) => {
-                                            'use server';
-                                            const reason = formData.get('rejectReason') as string;
-                                            await rejectMultipleEvents(allIds, reason);
-                                          }}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <input 
-                                            type="text" 
-                                            name="rejectReason" 
-                                            placeholder="整組拒絕理由 (選填)..." 
-                                            className="w-36 bg-gray-900 border border-gray-850 rounded px-2 py-0.5 text-xs focus:outline-none"
-                                          />
-                                          <button type="submit" className="text-[10px] font-bold bg-rose-950/80 hover:bg-rose-700 text-rose-400 hover:text-white px-2 py-1 rounded transition-colors">
-                                            整組拒絕
-                                          </button>
-                                        </form>
-                                      </div>
-
-                                      <div className="space-y-3">
-                                        {group.events.map((event) => {
-                                          const otherIds = group.events.filter(e => e.id !== event.id).map(e => e.id);
-                                          return (
-                                            <div key={event.id} className="bg-gray-900/40 p-3 rounded-lg border border-gray-850 flex flex-col sm:flex-row justify-between gap-3">
-                                              <div className="space-y-1">
-                                                <h3 className="font-semibold text-xs text-gray-200">{event.title}</h3>
-                                                <div className="text-[9px] text-gray-500 flex gap-3 font-mono">
-                                                  <span>來源: {event.reporter}</span>
-                                                  <a href={event.url} target="_blank" rel="noreferrer" className="text-purple-400 hover:underline">連結 ↗</a>
-                                                </div>
-                                              </div>
-
-                                              <form
-                                                action={async (formData: FormData) => {
-                                                  'use server';
-                                                  const reason = formData.get('reason') as string;
-                                                  const type = formData.get('type') as string;
-                                                  await approveOneAndRejectOthers(event.id, otherIds, type, reason, `此情報已在同日聯動中核可他案 (核可ID: ${event.id})`);
-                                                }}
-                                                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
-                                              >
-                                                <input
-                                                  type="text"
-                                                  name="reason"
-                                                  placeholder="核可理由 (選填)..."
-                                                  className="bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white focus:outline-none"
-                                                />
-                                                <div className="flex gap-1">
-                                                  <select name="type" className="bg-gray-900 border border-gray-800 rounded px-1.5 py-1 text-xs text-white">
-                                                    <option value={EventType.STREAM}>日常 (9%)</option>
-                                                    <option value={EventType.STREAM_3D}>3D/大型 (15%)</option>
-                                                    <option value={EventType.VIDEO}>影片 (30%)</option>
-                                                  </select>
-                                                  <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] px-2 py-1 rounded transition-all">
-                                                    核可此案/退他案
-                                                  </button>
-                                                </div>
-                                              </form>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                }
-
-                                const event = group.events[0];
-                                return (
-                                  <div key={event.id} className="bg-gray-900/20 p-4 rounded-xl border border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                    <div className="space-y-0.5 flex-1">
-                                      <h3 className="font-semibold text-xs text-gray-200">{event.title}</h3>
-                                      <div className="text-[9px] text-gray-500 flex gap-3 font-mono">
-                                        <span>來源: {event.reporter}</span>
-                                        <a href={event.url} target="_blank" rel="noreferrer" className="text-purple-400 hover:underline">連結 ↗</a>
-                                      </div>
-                                    </div>
-
-                                    <form
-                                      className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto"
-                                      action={async (formData: FormData) => {
-                                        'use server';
-                                        const actionType = formData.get('actionType') as string;
-                                        const reason = formData.get('reason') as string;
-                                        if (actionType === 'REJECT') {
-                                          await rejectEvent(event.id, reason);
-                                        } else {
-                                          await approveEvent(event.id, actionType, reason);
-                                        }
-                                      }}
-                                    >
-                                      <input
-                                        type="text"
-                                        name="reason"
-                                        placeholder="請輸入加成或拒絕理由 (選填)..."
-                                        className="bg-gray-900 border border-gray-800 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-pink-500 flex-1 sm:w-48"
-                                      />
-                                      <div className="flex gap-1">
-                                        <select name="actionType" className="bg-gray-900 border border-gray-800 rounded px-1.5 py-1 text-xs text-white">
-                                          <option value={EventType.STREAM}>日常 (9%)</option>
-                                          <option value={EventType.STREAM_3D}>3D/大型 (15%)</option>
-                                          <option value={EventType.VIDEO}>影片 (30%)</option>
-                                          <option value="REJECT">🔴 拒絕此案</option>
-                                        </select>
-                                        <button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-2.5 py-1 rounded transition-all active:scale-95">
-                                          送出
-                                        </button>
-                                      </div>
-                                    </form>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Processed list */}
-                        <div className="space-y-3">
-                          <div className="text-[9px] text-gray-500 font-bold tracking-wider">本週已覆核情報牆</div>
-                          {processedEvents.length === 0 ? (
-                            <div className="text-xs text-gray-650 bg-gray-950/10 px-3 py-1 rounded-lg border border-gray-900">本週目前無已處理情報。</div>
-                          ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {processedEvents.map((event) => (
-                                <ProcessedEventEditor key={event.id} event={event} />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                      </div>
-
-                    </div>
-                  </details>
-                </div>
-              );
-            })}
+                      return (
+                        <tr key={evt.id} className="text-gray-300 hover:bg-gray-900/10">
+                          <td className="py-2.5 font-mono text-[10px] text-gray-500">
+                            {new Date(evt.createdAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })}
+                          </td>
+                          <td className="py-2.5 font-mono font-bold text-gray-400">{evt.pairId.toUpperCase()}</td>
+                          <td className="py-2.5">
+                            <div className="font-semibold text-gray-200">{evt.title}</div>
+                            {evt.reason && <div className="text-[10px] text-gray-500 mt-0.5">理由: {evt.reason}</div>}
+                          </td>
+                          <td className="py-2.5 font-mono text-[10px] text-gray-500">{evt.reporter}</td>
+                          <td className="py-2.5 text-center">
+                            <span className={`px-2.5 py-0.5 border text-[10px] rounded-full font-bold inline-block ${statusBadge}`}>
+                              {evt.status === 'APPROVED' && '已套用'}
+                              {evt.status === 'REJECTED' && '已拒絕'}
+                              {evt.status === 'PENDING' && '未審查/過期'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
 

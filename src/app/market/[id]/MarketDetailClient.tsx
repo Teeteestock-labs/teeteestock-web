@@ -27,7 +27,8 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const [amount, setAmount] = useState<number>(0);
     const [orderPrice, setOrderPrice] = useState<number>(0);
     const [lastSeenPrice, setLastSeenPrice] = useState<number>(0);
-    const [activeTab, setActiveTab] = useState<'time' | 'k' | 'orders'>('k');
+    const [activeTab, setActiveTab] = useState<'time' | 'k'>('k');
+    const [orderSubTab, setOrderSubTab] = useState<'pending' | 'trades'>('pending');
     const [newsList, setNewsList] = useState<any[]>([]);
 
     const [reportTargetId, setReportTargetId] = useState<string>('');
@@ -266,18 +267,46 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const isUp = pair.change24h >= 0;
     const priceDiff = pair.price - (pair.yesterdayPrice || pair.price);
 
+    // Calculate today's high and low prices from history points
+    const historyPoints = pair.history || [];
+    const validKBarPoints = historyPoints.filter(pt => pt !== null);
+    const firstTradeIdx = validKBarPoints.findIndex(pt => pt.volume > 0);
+    const todayPoints = firstTradeIdx >= 0 ? validKBarPoints.slice(firstTradeIdx) : [];
+    
+    const openVal = todayPoints.length > 0 ? todayPoints[0].open : (pair.openingPrice ?? pair.price);
+    const closeVal = pair.price;
+    const highs = todayPoints.map(pt => pt.high);
+    const lows = todayPoints.map(pt => pt.low);
+    const highVal = highs.length > 0 ? Math.max(...highs, openVal, closeVal) : Math.max(openVal, closeVal);
+    const lowVal = lows.length > 0 ? Math.min(...lows, openVal, closeVal) : Math.min(openVal, closeVal);
+
+    const yesterdayPrice = pair.yesterdayPrice || pair.price;
+
+    // Amplitude: (最高 - 最低) / 昨收 * 100
+    const amplitude = yesterdayPrice > 0 ? ((highVal - lowVal) / yesterdayPrice) * 100 : 0;
+
+    // Average Price (VWAP) calculation
+    const todayTrades = pair.recentTrades || [];
+    const totalTradeVol = todayTrades.reduce((sum, t) => sum + t.amount, 0);
+    const totalTradeVal = todayTrades.reduce((sum, t) => sum + (t.price * t.amount), 0);
+    const avgPrice = totalTradeVol > 0 ? (totalTradeVal / totalTradeVol) : null;
+
+    // Helpers to compare against yesterday's close price
+    const getCompareColor = (val: number | null | undefined) => {
+        if (val === null || val === undefined) return 'text-gray-400';
+        if (val > yesterdayPrice) return 'text-[#FF3B3B]'; // Red
+        if (val < yesterdayPrice) return 'text-[#00FFA3]'; // Green
+        return 'text-white';
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col pb-20">
             <TickerTape />
-            <main className="flex-1 text-[#EAECEF] p-4 md:p-6 font-sans">
+            <main className="flex-1 text-[#EAECEF] pt-2 px-4 pb-4 md:pt-3 md:px-6 md:pb-6 font-sans">
             {/* 頂部導覽 */}
-            <div className="max-w-[1600px] w-full mx-auto mb-6 flex justify-between items-center border-b border-[#2B2F36] pb-4">
-                <Link href="/" className="text-[#848E9C] hover:text-white transition-colors text-xs flex items-center gap-2">
-                    <span className="text-lg">«</span> 返回報價列表
-                </Link>
-                <div className="text-[10px] text-[#848E9C] font-mono flex items-center gap-4">
-                    <div>MARKET: {marketStatus === 'OPEN' ? <span className="text-[#00FFA3]">OPEN</span> : <span className="text-[#FF3B3B]">CLOSED</span>}</div>
-                    <div className="text-[10px] text-gray-600">SERVER: <span className="text-[#FF69B4]">T01-TW</span></div>
+            <div className="max-w-[1600px] w-full mx-auto mb-3 flex justify-end items-center border-b border-[#2B2F36]/60 pb-1.5">
+                <div className="text-[10px] text-[#848E9C] font-mono">
+                    MARKET: {marketStatus === 'OPEN' ? <span className="text-[#00FFA3]">OPEN</span> : <span className="text-[#FF3B3B]">CLOSED</span>}
                 </div>
             </div>
 
@@ -289,7 +318,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
             <div className="max-w-[1600px] w-full mx-auto space-y-4">
                     {/* 標題卡片 - 仿看盤軟體頂部 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] p-5 rounded flex flex-row items-center justify-between gap-4">
+                    <div className="sticky top-0 z-30 bg-[#181A20]/95 backdrop-blur-sm border border-[#2B2F36] p-5 rounded flex flex-row items-center justify-between gap-4 shadow-xl">
                         <div className="flex items-center gap-4 min-w-0">
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2 whitespace-nowrap">
@@ -303,15 +332,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             const isLimitDown = pair.price <= floor;
                             const isLimitState = isLimitUp || isLimitDown;
 
-                            let volumeContainerClass = "text-right whitespace-nowrap flex flex-col items-end justify-end font-mono text-[#FFD700] text-xs sm:text-sm font-bold";
-                            if (isLimitState) {
-                                volumeContainerClass += " py-2.5";
-                            }
+                            let volumeContainerClass = "text-right whitespace-nowrap flex flex-col items-end justify-center font-mono text-[#FFD700] text-xs sm:text-sm font-bold py-2.5";
 
-                            let containerClass = "text-right whitespace-nowrap flex-shrink-0 flex flex-col items-end justify-center";
+                            let containerClass = "text-right whitespace-nowrap flex-shrink-0 flex flex-col items-end justify-center py-2.5 transition-all";
                             if (isLimitState) {
                                 const bgColor = isLimitUp ? "bg-red-600" : "bg-green-600";
-                                containerClass += ` ${bgColor} text-white px-4 py-2.5 rounded-lg shadow-lg`;
+                                containerClass += ` ${bgColor} text-white px-4 rounded-lg shadow-lg`;
                             }
 
                             let priceClass = "font-mono font-black leading-none text-3xl sm:text-4xl";
@@ -325,7 +351,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             }
 
                             return (
-                                <div className="flex items-end gap-5 flex-shrink-0 select-none">
+                                <div className="flex items-center gap-5 flex-shrink-0 select-none">
                                     {/* 成交量區 */}
                                     <div className={volumeContainerClass}>
                                         <span className="leading-none">成交量</span>
@@ -347,6 +373,50 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         })()}
                     </div>
 
+                    {/* 盤面即時統計數據欄 */}
+                    <div className="bg-[#181A20] border border-[#2B2F36] p-4 rounded grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4 text-xs font-mono select-none">
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">開盤</span>
+                            <span className={`font-bold text-sm ${getCompareColor(pair.todayOpenPrice)}`}>
+                                {pair.todayOpenPrice ? pair.todayOpenPrice.toFixed(2) : '未成交'}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">昨收</span>
+                            <span className="text-white font-bold text-sm">{yesterdayPrice.toFixed(2)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">最高</span>
+                            <span className={`font-bold text-sm ${getCompareColor(highVal)}`}>
+                                {highVal.toFixed(2)}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">最低</span>
+                            <span className={`font-bold text-sm ${getCompareColor(lowVal)}`}>
+                                {lowVal.toFixed(2)}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">漲停</span>
+                            <span className="text-white font-bold text-sm">{ceiling.toFixed(2)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">跌停</span>
+                            <span className="text-white font-bold text-sm">{floor.toFixed(2)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">振幅</span>
+                            <span className="text-white font-bold text-sm">{amplitude.toFixed(2)}%</span>
+                        </div>
+                        <div>
+                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">均價</span>
+                            <span className={`${avgPrice ? 'text-white' : 'text-gray-400'} font-bold text-sm`}>
+                                {avgPrice ? avgPrice.toFixed(2) : '未成交'}
+                            </span>
+                        </div>
+                    </div>
+
 
 
                     {/* 圖表區 */}
@@ -364,65 +434,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             >
                                 K線圖
                             </span>
-                            <span 
-                                onClick={() => setActiveTab('orders')}
-                                className={`pb-1 cursor-pointer transition-colors ${activeTab === 'orders' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                            >
-                                委託單
-                            </span>
                         </div>
                         <div className="flex-1 p-2 overflow-hidden">
                             {activeTab === 'k' && <CandlestickChart data={pair.history} yesterdayPrice={pair.yesterdayPrice} />}
                             {activeTab === 'time' && (
                                 <CandlestickChart data={pair.history} isTimeChart={true} yesterdayPrice={pair.yesterdayPrice} /> 
                             )}
-                            {activeTab === 'orders' && (() => {
-                                const myOrders = orders.filter(o => o.isUser && o.pairId === pair.id);
-                                return (
-                                <div className="h-full overflow-y-auto custom-scrollbar p-2">
-                                    <table className="w-full text-[10px] font-mono">
-                                        <thead>
-                                            <tr className="text-[#848E9C] border-b border-[#2B2F36] text-left">
-                                                <th className="py-2 px-2">類型</th>
-                                                <th className="py-2 px-2 text-right">價格</th>
-                                                <th className="py-2 px-2 text-right">數量</th>
-                                                <th className="py-2 px-2 text-right">操作</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#2B2F36]">
-                                            {myOrders.length === 0 ? (
-                                                <tr><td colSpan={4} className="text-center py-4 text-gray-500">無未成交委託單</td></tr>
-                                            ) : (
-                                                myOrders.map(o => (
-                                                <tr key={o.id} className="hover:bg-[#2B3139]">
-                                                    <td className={`py-2 px-2 font-bold ${o.type === 'buy' ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
-                                                        {o.type === 'buy' ? '買進' : '賣出'}
-                                                    </td>
-                                                    <td className="py-2 px-2 text-right text-white">{o.price.toLocaleString()}</td>
-                                                    <td className="py-2 px-2 text-right text-white">{o.amount}</td>
-                                                    <td className="py-2 px-2 text-right">
-                                                        <button 
-                                                            onClick={async () => {
-                                                                cancelledOrderIdsRef.current.add(o.id);
-                                                                const res = await cancelOrder(o.id);
-                                                                if (!res.success) {
-                                                                    cancelledOrderIdsRef.current.delete(o.id);
-                                                                    addNotification('failed', 0, 0, res.message || "撤單失敗");
-                                                                }
-                                                            }}
-                                                            disabled={isCancelling}
-                                                            className={`px-2 py-0.5 rounded transition-colors ${isCancelling ? 'bg-[#2B3139] text-[#474D57] cursor-not-allowed' : 'bg-[#2B3139] hover:bg-[#FF3B3B]/20 text-[#848E9C] hover:text-[#FF3B3B]'}`}
-                                                        >
-                                                            {isCancelling ? '撤銷中...' : '撤單'}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            )))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                );
-                            })()}
                         </div>
                     </div>
 
@@ -708,6 +725,123 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 提醒：本交易所為 VTuber 虛擬市場，所有交易皆為 $TEE 虛擬代幣。投資一定有風險，貼貼組合有漲有跌，申購前應詳閱成員互動。
                             </p>
                         </div>
+                    </div>
+                    {/* 我的交易回報 (My Order & Trade Returns) */}
+                    <div className="bg-[#181A20] border border-[#2B2F36] rounded p-4 space-y-3 shadow-xl">
+                        <div className="border-b border-[#2B2F36] pb-2 flex justify-between items-center">
+                            <div className="flex gap-4 text-xs font-bold select-none">
+                                <span 
+                                    onClick={() => setOrderSubTab('pending')}
+                                    className={`pb-1 cursor-pointer transition-colors ${orderSubTab === 'pending' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                >
+                                    委回
+                                </span>
+                                <span 
+                                    onClick={() => setOrderSubTab('trades')}
+                                    className={`pb-1 cursor-pointer transition-colors ${orderSubTab === 'trades' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                >
+                                    成回
+                                </span>
+                            </div>
+                        </div>
+
+                        {orderSubTab === 'pending' ? (() => {
+                            const myOrders = orders.filter(o => o.isUser && o.pairId === pair.id);
+                            return (
+                                <div className="overflow-x-auto overflow-y-auto max-h-[250px] custom-scrollbar">
+                                    <table className="w-full text-base font-mono">
+                                        <thead>
+                                            <tr className="text-[#848E9C] border-b border-[#2B2F36] text-[10px] font-bold text-right">
+                                                <th className="py-2 px-2 text-left font-bold">類型</th>
+                                                <th className="py-2 px-2 font-bold">價格</th>
+                                                <th className="py-2 px-2 font-bold">數量</th>
+                                                <th className="py-2 px-2 font-bold">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#2B2F36]/30">
+                                            {myOrders.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="text-center py-6 text-gray-500 text-sm">
+                                                        無未成交委託單
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                myOrders.map(o => (
+                                                    <tr key={o.id} className="hover:bg-[#2B3139] border-b border-[#2B2F36] transition-colors text-[11px] font-mono text-right">
+                                                        <td className={`py-2 px-2 text-left font-bold ${o.type === 'buy' ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
+                                                            {o.type === 'buy' ? '買進' : '賣出'}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-white font-bold">{o.price.toFixed(2)}</td>
+                                                        <td className="py-2 px-2 text-white">{o.amount.toLocaleString()}</td>
+                                                        <td className="py-2 px-2">
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    cancelledOrderIdsRef.current.add(o.id);
+                                                                    const res = await cancelOrder(o.id);
+                                                                    if (!res.success) {
+                                                                        cancelledOrderIdsRef.current.delete(o.id);
+                                                                        addNotification('failed', 0, 0, res.message || "撤單失敗");
+                                                                    }
+                                                                }}
+                                                                disabled={isCancelling}
+                                                                className={`px-2 py-0.5 rounded transition-colors ${isCancelling ? 'bg-[#2B3139] text-[#474D57] cursor-not-allowed' : 'bg-[#2B3139] hover:bg-[#FF3B3B]/20 text-[#848E9C] hover:text-[#FF3B3B]'} text-[10px]`}
+                                                            >
+                                                                {isCancelling ? '撤銷中...' : '撤單'}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            );
+                        })() : (() => {
+                            const myTrades = (pair.recentTrades || []).filter(
+                                t => t.buyerId === 'default_player' || t.sellerId === 'default_player'
+                            );
+                            return (
+                                <div className="overflow-x-auto overflow-y-auto max-h-[250px] custom-scrollbar">
+                                    <table className="w-full text-base font-mono">
+                                        <thead>
+                                            <tr className="text-[#848E9C] border-b border-[#2B2F36] text-[10px] font-bold text-right">
+                                                <th className="py-2 px-2 text-left font-bold">時間</th>
+                                                <th className="py-2 px-2 font-bold text-center">類型</th>
+                                                <th className="py-2 px-2 font-bold">成交價</th>
+                                                <th className="py-2 px-2 font-bold">成交量</th>
+                                                <th className="py-2 px-2 font-bold">成交額</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#2B2F36]/30">
+                                            {myTrades.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} className="text-center py-6 text-gray-500 text-sm">
+                                                        今日尚無成交明細
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                myTrades.map((t, idx) => {
+                                                    const isBuy = t.buyerId === 'default_player';
+                                                    const sideText = isBuy ? '買進' : '賣出';
+                                                    const sideColor = isBuy ? 'text-[#FF3B3B]' : 'text-[#00FFA3]';
+                                                    const totalVal = t.price * t.amount;
+                                                    
+                                                    return (
+                                                        <tr key={`my-trade-${idx}`} className="hover:bg-[#2B3139] border-b border-[#2B2F36] transition-colors text-[11px] font-mono text-right">
+                                                            <td className="py-2 px-2 text-left text-gray-400">{t.time}</td>
+                                                            <td className={`py-2 px-2 text-center font-bold ${sideColor}`}>{sideText}</td>
+                                                            <td className="py-2 px-2 text-white font-bold">{t.price.toFixed(2)}</td>
+                                                            <td className="py-2 px-2 text-white">{t.amount.toLocaleString()}</td>
+                                                            <td className="py-2 px-2 text-white font-bold">{totalVal.toFixed(2)}</td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* 即時成交明細 */}

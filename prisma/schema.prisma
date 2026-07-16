@@ -14,7 +14,8 @@ model CpPairs {
   name          String         // 顯示名稱
   netValue      Float          @default(100.0) // 當前淨值
   currentPrice  Float          @default(100.0) // 最後成交價
-  openingPrice  Float          @default(100.0) // 本週開盤參考價
+  openingPrice  Float          @default(100.0) // 本週開盤基準價
+  todayOpenPrice Float?                        // 當日開盤價（當天開盤第一筆成交價）
   last_close_price Float       @default(100.0) // 昨日收盤價
   next_open_price  Float       @default(100.0) // 隔日開盤參考價
   total_shares  BigInt         @default(1000000) // 總股本
@@ -60,6 +61,7 @@ model ArchivedEvents {
   title      String
   timestamp  String?
   reporter   String
+  status     String   @default("APPROVED")
   createdAt  DateTime @default(now())
   reason     String   @default("")
 
