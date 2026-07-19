@@ -13,6 +13,9 @@ export async function GET() {
     const { startUTC, endUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);
 
     const pairs = await prisma.cpPairs.findMany({
+      where: {
+        id: { not: 'hololive' }
+      },
       include: {
         klineHistory: {
           where: {

@@ -7,7 +7,8 @@ import {
   approveEvent, 
   rejectEvent, 
   approveOneAndRejectOthers, 
-  rejectMultipleEvents 
+  rejectMultipleEvents,
+  dispatchEventToCP 
 } from '../actions';
 import AdminAdjustForm from './AdminAdjustForm';
 import ProcessedEventEditor from './ProcessedEventEditor';
@@ -171,7 +172,7 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
             const isDelisted = pair.statusBefore === 'DELISTED';
             const cpPendingCount = allEvents.filter(e => e.pairId.toLowerCase() === pair.id.toLowerCase() && e.status === ReviewStatus.PENDING).length;
 
-            let btnClass = "flex flex-col items-start gap-1 p-2.5 rounded-lg border text-left font-mono transition-all duration-150 cursor-pointer min-w-[130px] lg:min-w-0 flex-shrink-0 ";
+            let btnClass = "flex flex-row items-center justify-between gap-2 py-1.5 px-3 rounded-lg border text-left font-mono transition-all duration-150 cursor-pointer min-w-[120px] lg:min-w-0 flex-shrink-0 ";
 
             if (isSelected) {
               if (isWarning) {
@@ -191,24 +192,41 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
               }
             }
 
-            return (
-              <div 
-                key={pair.id} 
-                onClick={() => setSelectedId(pair.id)}
-                className={btnClass}
-              >
-                <div className="flex justify-between items-center w-full">
-                  <span className="text-xs font-bold tracking-wider">{pair.id.toUpperCase()}</span>
+            if (pair.id === 'hololive') {
+              let hololiveBtnClass = "flex flex-row items-center justify-between gap-2 py-1.5 px-3 rounded-lg border text-left font-mono transition-all duration-150 cursor-pointer min-w-[120px] lg:min-w-0 flex-shrink-0 ";
+              if (isSelected) {
+                hololiveBtnClass += "bg-sky-600/10 border-sky-500 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.15)]";
+              } else {
+                hololiveBtnClass += "bg-gray-900/10 border-gray-950 text-gray-400 hover:bg-gray-900/30";
+              }
+              return (
+                <div 
+                  key={pair.id} 
+                  onClick={() => setSelectedId(pair.id)}
+                  className={hololiveBtnClass}
+                >
+                  <span className="text-xs font-bold tracking-wider">HOLOLIVE</span>
                   {cpPendingCount > 0 && (
                     <span className="text-[9px] px-1.5 py-0.2 bg-amber-500 text-slate-950 font-black rounded-full scale-90">
                       {cpPendingCount}
                     </span>
                   )}
                 </div>
-                <div className="flex justify-between items-baseline w-full text-[10px]">
-                  <span className="text-gray-500 block text-[8px]">淨值:</span>
-                  <span className="font-bold">{pair.currentNV.toFixed(2)}</span>
-                </div>
+              );
+            }
+
+            return (
+              <div 
+                key={pair.id} 
+                onClick={() => setSelectedId(pair.id)}
+                className={btnClass}
+              >
+                <span className="text-xs font-bold tracking-wider">{pair.id.toUpperCase()}</span>
+                {cpPendingCount > 0 && (
+                  <span className="text-[9px] px-1.5 py-0.2 bg-amber-500 text-slate-950 font-black rounded-full scale-90">
+                    {cpPendingCount}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -219,48 +237,54 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
       <div className="flex-1 space-y-6">
         <div className="border border-gray-800 rounded-2xl bg-gray-900/10 backdrop-blur-md overflow-hidden p-6 space-y-6">
           {/* 標頭與資料區 */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-850 pb-4 gap-4">
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-sm tracking-wider bg-gray-800 px-2.5 py-1 rounded text-gray-300 font-bold shrink-0">
-                {selectedPair.id.toUpperCase()}
-              </span>
-              <span className="text-lg font-black text-white">{displayMembers}</span>
-            </div>
-            
-            <div className="grid grid-cols-4 gap-3 text-center text-xs w-full md:w-auto md:min-w-[450px]">
-              <div className="border-r border-gray-850/60">
-                <span className="text-gray-500 block text-[9px]">隱藏淨值 (NV)</span>
-                <span className="font-mono font-bold text-gray-200 text-xs sm:text-sm">{selectedPair.currentNV.toFixed(2)}</span>
-              </div>
-              <div className="border-r border-gray-850/60">
-                <span className="text-gray-500 block text-[9px]">累積加成</span>
-                <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm">
-                  +{(selectedPair.collabBonusSum * 100).toFixed(0)}% (+{selectedPair.collabBonus.toFixed(2)})
+          {selectedPair.id === 'hololive' ? (
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-850 pb-4 gap-4">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-sm tracking-wider bg-sky-950/60 border border-sky-500/30 px-2.5 py-1 rounded text-sky-400 font-bold shrink-0">
+                  HOLOLIVE
                 </span>
+                <span className="text-lg font-black text-white">官方頻道影片採集池</span>
               </div>
-              <div className="border-r border-gray-850/60">
-                <span className="text-gray-500 block text-[9px]">預估下期淨值</span>
-                <span className="font-mono font-bold text-pink-400 text-xs sm:text-sm">{selectedPair.predictedNV.toFixed(2)}</span>
-              </div>
-              <div>
-                <span className="text-gray-500 block text-[9px]">預估下期狀態</span>
-                <span className="font-bold text-xs sm:text-sm block mt-0.5">
-                  {selectedPair.statusAfter === 'NORMAL' && <span className="text-emerald-400">NORMAL</span>}
-                  {selectedPair.statusAfter === 'WARNING' && <span className="text-amber-400">WARNING</span>}
-                  {selectedPair.statusAfter === 'DELISTED' && <span className="text-rose-400">DELISTED</span>}
-                </span>
+              <div className="text-xs text-gray-500 font-mono">
+                偵測頻道: UCJFZiqLMntJufDCHc6bQixg (hololive ホロライブ - 官方YouTube)
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-850 pb-4 gap-4">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-sm tracking-wider bg-gray-800 px-2.5 py-1 rounded text-gray-300 font-bold shrink-0">
+                  {selectedPair.id.toUpperCase()}
+                </span>
+                <span className="text-lg font-black text-white">{displayMembers}</span>
+              </div>
+              
+              <div className="grid grid-cols-4 gap-3 text-center text-xs w-full md:w-auto md:min-w-[450px]">
+                <div className="border-r border-gray-850/60">
+                  <span className="text-gray-500 block text-[9px]">隱藏淨值 (NV)</span>
+                  <span className="font-mono font-bold text-gray-200 text-xs sm:text-sm">{selectedPair.currentNV.toFixed(2)}</span>
+                </div>
+                <div className="border-r border-gray-850/60">
+                  <span className="text-gray-500 block text-[9px]">累積加成</span>
+                  <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm">
+                    +{(selectedPair.collabBonusSum * 100).toFixed(0)}% (+{selectedPair.collabBonus.toFixed(2)})
+                  </span>
+                </div>
+                <div className="border-r border-gray-850/60">
+                  <span className="text-gray-500 block text-[9px]">預估下期淨值</span>
+                  <span className="font-mono font-bold text-pink-400 text-xs sm:text-sm">{selectedPair.predictedNV.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[9px]">預估下期狀態</span>
+                  <span className="font-bold text-xs sm:text-sm block mt-0.5">
+                    {selectedPair.statusAfter === 'NORMAL' && <span className="text-emerald-400">NORMAL</span>}
+                    {selectedPair.statusAfter === 'WARNING' && <span className="text-amber-400">WARNING</span>}
+                    {selectedPair.statusAfter === 'DELISTED' && <span className="text-rose-400">DELISTED</span>}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* 1. 行政干預微調區 (完全展開) */}
-          <div className="space-y-2">
-            <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-              行政干預微調 (Override)
-            </h4>
-            <AdminAdjustForm pairId={selectedPair.id} />
-          </div>
 
           {/* 2. 待處理情報審查區 (完全展開) */}
           <div className="space-y-4">
@@ -272,6 +296,69 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
             {pendingCount === 0 ? (
               <div className="text-xs text-gray-600 py-3 bg-gray-950/20 px-4 rounded-lg border border-gray-900">
                 該組合目前無待審查情報。
+              </div>
+            ) : selectedPair.id === 'hololive' ? (
+              <div className="space-y-3">
+                {pendingEvents.map((event) => (
+                  <div key={event.id} className="bg-gray-900/20 p-4 rounded-xl border border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="space-y-0.5 flex-1">
+                      <h3 className="font-semibold text-xs text-gray-200">{event.title}</h3>
+                      <div className="text-[9px] text-gray-500 flex gap-3 font-mono">
+                        <span>來源: {event.reporter}</span>
+                        <a href={event.url} target="_blank" rel="noreferrer" className="text-purple-400 hover:underline">連結 ↗</a>
+                      </div>
+                    </div>
+
+                    <form
+                      className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (actionLoading) return;
+                        const formData = new FormData(e.currentTarget);
+                        const targetPairId = formData.get('targetPairId') as string;
+                        const actionType = formData.get('actionType') as string;
+                        setActionLoading(event.id);
+                        try {
+                          if (actionType === 'REJECT') {
+                            await rejectEvent(event.id, '非本站追蹤CP之連動內容');
+                          } else {
+                            await dispatchEventToCP(event.id, targetPairId);
+                          }
+                          router.refresh();
+                        } finally {
+                          setActionLoading(null);
+                        }
+                      }}
+                    >
+                      <div className="flex gap-1.5 w-full sm:w-auto">
+                        <select name="actionType" className="bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white focus:outline-none" defaultValue="DISPATCH">
+                          <option value="DISPATCH">分流至CP ➔</option>
+                          <option value="REJECT">🔴 拒絕/忽略此案</option>
+                        </select>
+                        
+                        <select name="targetPairId" className="bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white focus:outline-none">
+                          <option value="AZIR">AZIR (AZIro)</option>
+                          <option value="FBMO">FBMO (FubuMio)</option>
+                          <option value="MCMT">MCMT (miComet)</option>
+                          <option value="NEFL">NEFL (NoeFure)</option>
+                          <option value="OKKR">OKKR (OkaKoro)</option>
+                          <option value="PKMR">PKMR (PekoMarin)</option>
+                          <option value="SSWT">SSWT (ShishiWata)</option>
+                          <option value="SRAZ">SRAZ (SorAZ)</option>
+                          <option value="SBRN">SBRN (SubaRuna)</option>
+                        </select>
+
+                        <button 
+                          type="submit" 
+                          disabled={actionLoading !== null}
+                          className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-3 py-1 rounded transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
+                        >
+                          {actionLoading === event.id ? '處理中...' : '確定'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="space-y-3">
@@ -441,24 +528,37 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
             )}
           </div>
 
+          {/* 1. 行政干預微調區 (完全展開) */}
+          {selectedPair.id !== 'hololive' && (
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                行政干預微調 (Override)
+              </h4>
+              <AdminAdjustForm pairId={selectedPair.id} />
+            </div>
+          )}
+
           {/* 3. 已覆核情報區 (完全展開) */}
-          <div className="space-y-3">
-            <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-              本週已覆核情報牆 (Processed events)
-            </h4>
-            {processedEvents.length === 0 ? (
-              <div className="text-xs text-gray-655 bg-gray-950/10 px-3 py-2 rounded-lg border border-gray-900">
-                本週目前無已處理情報。
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {processedEvents.map((event) => (
-                  <ProcessedEventEditor key={event.id} event={event} />
-                ))}
-              </div>
-            )}
-          </div>
+          {selectedPair.id !== 'hololive' && (
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                本週已覆核情報牆 (Processed events)
+              </h4>
+              {processedEvents.length === 0 ? (
+                <div className="text-xs text-gray-655 bg-gray-950/10 px-3 py-2 rounded-lg border border-gray-900">
+                  本週目前無已處理情報。
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {processedEvents.map((event) => (
+                    <ProcessedEventEditor key={event.id} event={event} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

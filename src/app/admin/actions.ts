@@ -266,3 +266,16 @@ export async function deleteProcessedEvent(id: string) {
   safeRevalidatePath('/admin/review');
 }
 
+export async function dispatchEventToCP(eventId: string, targetPairId: string) {
+  await prisma.teeteeEvents.update({
+    where: { id: eventId },
+    data: {
+      pairId: targetPairId,
+      status: ReviewStatus.PENDING
+    }
+  });
+
+  safeRevalidatePath('/admin');
+  safeRevalidatePath('/admin/review');
+}
+

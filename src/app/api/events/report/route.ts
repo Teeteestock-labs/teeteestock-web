@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const pair = await prisma.cpPairs.findUnique({
       where: { id: dbPairId }
     });
-    if (!pair) {
+    if (!pair || dbPairId === 'hololive') {
       return NextResponse.json({ error: 'Invalid CP Pair ID' }, { status: 400 });
     }
 

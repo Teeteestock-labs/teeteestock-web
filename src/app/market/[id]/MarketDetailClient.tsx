@@ -1001,7 +1001,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             <div className="space-y-1">
                                 <label className="text-[10px] text-[#848E9C] font-semibold flex justify-between">
                                     <span>互動網址 (URL)</span>
-                                    <span className="text-[9px] text-[#474D57]">(限 X / YouTube)</span>
+                                    <span className="text-[9px] text-[#474D57]">(限 YouTube)</span>
                                 </label>
                                 <input 
                                     type="text" 

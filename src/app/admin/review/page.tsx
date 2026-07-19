@@ -77,8 +77,28 @@ export default async function AdminReviewPage() {
     take: 50
   });
 
+  // Ensure special 'hololive' system pair exists in the database
+  await prisma.cpPairs.upsert({
+    where: { id: 'hololive' },
+    update: {},
+    create: {
+      id: 'hololive',
+      name: 'hololive',
+      netValue: 100.0,
+      currentPrice: 100.0,
+      openingPrice: 100.0,
+      last_close_price: 100.0,
+      next_open_price: 100.0,
+      total_shares: BigInt(1000000),
+      status: 'SYSTEM',
+    }
+  });
+
   const pairs = await prisma.cpPairs.findMany({
-    where: { status: { not: 'DELISTED' } },
+    where: { 
+      status: { not: 'DELISTED' },
+      id: { not: 'hololive' }
+    },
     orderBy: { name: 'asc' }
   });
 
@@ -154,6 +174,25 @@ export default async function AdminReviewPage() {
       premiumDiscount
     });
   }
+
+  // Append 'hololive' special preview
+  previews.push({
+    id: 'hololive',
+    name: 'hololive',
+    currentNV: 100.0,
+    collabBonusSum: 0,
+    collabBonus: 0,
+    decay: 0,
+    adminAdjust: 0,
+    adminAdjustReason: '',
+    adminAdjustUrl: '',
+    predictedNV: 100.0,
+    statusBefore: 'SYSTEM',
+    statusAfter: 'SYSTEM',
+    wasDelisted: false,
+    currentPrice: 100.0,
+    premiumDiscount: 0
+  });
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8 font-sans select-none selection:bg-pink-500/30 selection:text-pink-200">

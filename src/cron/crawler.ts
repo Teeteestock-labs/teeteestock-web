@@ -170,6 +170,17 @@ const CP_CONFIGS: CPConfig[] = [
         targetKeywords: [/スバル/i, /Subaru/i, /大空/i, /Subaru-senpai/i]
       }
     ]
+  },
+  {
+    pairId: 'hololive',
+    generalKeywords: [],
+    channels: [
+      {
+        channelId: 'UCJFZiqLMntJufDCHc6bQixg',
+        name: 'hololive',
+        targetKeywords: []
+      }
+    ]
   }
 ];
 
@@ -387,6 +398,23 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function runPoll(options?: { targetDate?: Date }) {
   const executionDate = options?.targetDate || new Date();
   console.log(`[${new Date().toLocaleString()}] Starting Yesterday Fact-Based YouTube Crawler job...`);
+
+  // Ensure special 'hololive' system pair exists in the database
+  await prisma.cpPairs.upsert({
+    where: { id: 'hololive' },
+    update: {},
+    create: {
+      id: 'hololive',
+      name: 'hololive',
+      netValue: 100.0,
+      currentPrice: 100.0,
+      openingPrice: 100.0,
+      last_close_price: 100.0,
+      next_open_price: 100.0,
+      total_shares: BigInt(1000000),
+      status: 'SYSTEM',
+    }
+  });
   
   const cache = loadCache();
   const newProcessedCacheKeys: string[] = [];

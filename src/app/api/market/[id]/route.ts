@@ -13,7 +13,7 @@ export async function GET(
       where: { id: dbId }
     });
 
-    if (!pair) {
+    if (!pair || dbId === 'HOLOLIVE') {
       return NextResponse.json({ error: 'Pair not found' }, { status: 404 });
     }
 
