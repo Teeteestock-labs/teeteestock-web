@@ -184,8 +184,8 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const estimatedTotal = amount * (orderPrice || pair.price);
 
     const handleAction = async (type: 'buy' | 'sell') => {
-        if (marketStatus === 'CLOSED') {
-            addNotification('failed', 0, 0, "交易所目前處於非營運時段，開盤時間為 18:00 - 24:00。");
+        if (marketStatus !== 'OPEN' && marketStatus !== 'PRE_MARKET') {
+            addNotification('failed', 0, 0, "交易所目前處於非營運時段，開盤時間為週二至週日 19:00 - 24:00 (18:45 開放盤前掛單)。");
             return;
         }
         if (amount <= 0 || orderPrice <= 0) {
@@ -310,9 +310,9 @@ export default function MarketDetailClient({ id }: { id: string }) {
                 </div>
             </div>
 
-            {marketStatus === 'CLOSED' && (
+            {marketStatus !== 'OPEN' && marketStatus !== 'PRE_MARKET' && marketStatus !== 'MAINTENANCE' && (
                 <div className="max-w-[1600px] w-full mx-auto mb-6 bg-red-500/20 text-red-500 text-center py-2 text-sm font-bold animate-pulse rounded border border-red-500/50">
-                    ⚠️ 交易所目前處於非營運時段，開盤時間為 19:00 - 24:00。 ⚠️
+                    ⚠️ 交易所目前處於非營運時段，開盤時間為週二至週日 19:00 - 24:00 (18:45 開放盤前掛單)。 ⚠️
                 </div>
             )}
 

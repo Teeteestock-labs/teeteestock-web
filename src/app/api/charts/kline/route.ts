@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTaipeiTime, getTaipeiDateString } from '@/utils/marketHours';
+import { getTaipeiTime, getTaipeiDateString, getActiveTradingDay, getTaipeiSessionRange } from '@/utils/marketHours';
 
 export async function GET(request: Request) {
   try {
@@ -14,18 +14,28 @@ export async function GET(request: Request) {
 
     const pairId = id.toUpperCase();
 
-    // Query all 1-minute K-lines for this pair ordered by timestamp ascending
+    // Determine query condition based on period
+    const whereClause: any = { pairId };
+    if (period === '1m' || period === '5m') {
+      const activeTrading = getActiveTradingDay(new Date());
+      const { startUTC, endUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);
+      whereClause.timestamp = {
+        gte: startUTC,
+        lte: endUTC
+      };
+    }
+
+    // Query K-lines
     const records = await prisma.kLineHistory.findMany({
-      where: { pairId },
+      where: whereClause,
       orderBy: { timestamp: 'asc' }
     });
 
     const filteredRecords = records.filter(r => {
       const tz = getTaipeiTime(r.timestamp);
-      if (tz.hour === 18 && tz.minute >= 45) {
-        return false;
-      }
-      return true;
+      // Valid trading hours for K-lines are 19:00 - 24:00 (19:00 - 23:59 and exactly 00:00)
+      const isValid = (tz.hour >= 19 && tz.hour <= 23) || (tz.hour === 0 && tz.minute === 0);
+      return isValid;
     });
 
     const pts = filteredRecords.map(r => ({

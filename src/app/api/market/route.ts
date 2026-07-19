@@ -54,8 +54,8 @@ export async function GET() {
         let currentMinutes = 0;
         if (today.hour >= 19) {
           currentMinutes = (today.hour - 19) * 60 + today.minute;
-        } else if (today.hour < 19) {
-          currentMinutes = (today.hour + 5) * 60 + today.minute;
+        } else {
+          currentMinutes = 0;
         }
         maxAllowedIndex = Math.min(299, Math.max(0, currentMinutes));
       }
@@ -79,6 +79,9 @@ export async function GET() {
         const minute = parseInt(parts.find(x => x.type === 'minute')?.value || '0', 10);
 
         if (hour === 24) hour = 0;
+        if (hour < 19 && hour !== 0) {
+          return; // Ignore K-lines outside 19:00 - 24:00 Taipei time
+        }
         
         let minutesSince1900 = -1;
         if (hour >= 19) {

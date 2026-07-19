@@ -87,8 +87,8 @@ export default function ProcessedEventEditor({ event }: Props) {
 
   if (!editing) {
     const isApproved = event.status === 'APPROVED';
-    const cardBorderClass = isApproved ? 'border-red-500/50 bg-red-950/5' : 'border-emerald-500/50 bg-emerald-950/5';
-    const tagColorClass = isApproved ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    const cardBorderClass = isApproved ? 'border-emerald-500/50 bg-emerald-950/5' : 'border-red-500/50 bg-red-950/5';
+    const tagColorClass = isApproved ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30';
     const badgeLabel = isApproved ? '[已核可]' : '[已拒絕]';
     
     let bonusLabel = "";

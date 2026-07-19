@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { MarketStatus, OrderSide, UserChoice } from '@/types/enums';
 import { alignToTick } from '@/utils/validatePrice';
-import { getActiveTradingDay, getTaipeiSessionRange } from '@/utils/marketHours';
+import { getActiveTradingDay, getTaipeiSessionRange, getTaipeiTime } from '@/utils/marketHours';
 import { checkAndTickMarketStatus } from '@/services/settlementService';
 
 // Helper to recursively serialize BigInt values to Numbers/Strings for JSON safety
@@ -25,11 +25,14 @@ export async function POST(request: Request) {
     const now = new Date();
     const marketStatus = await checkAndTickMarketStatus(now);
 
-    if (marketStatus !== 'OPEN') {
+    const tz = getTaipeiTime(now);
+    const isTradingHours = (tz.dayOfWeek !== 1) && (tz.hour >= 19 && tz.hour <= 23);
+
+    if (marketStatus !== 'OPEN' || !isTradingHours) {
       return NextResponse.json({
         success: false,
         error: '撮合引擎保持凍結，僅在開盤狀態開放。',
-        details: `當前市場狀態為 ${marketStatus}，必須為 OPEN 才能執行撮合。`
+        details: `當前市場狀態為 ${marketStatus}，時間為台北時間 ${String(tz.hour).padStart(2, '0')}:${String(tz.minute).padStart(2, '0')}，必須在交易時間 (週二至週日 19:00 - 24:00) 內才能執行撮合。`
       }, { status: 200 });
     }
 

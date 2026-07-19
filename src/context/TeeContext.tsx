@@ -17,7 +17,7 @@ interface TeeContextType {
     holdings: UserHolding[];
     marketData: teeteePair[];
     orders: Order[];
-    marketStatus: 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE';
+    marketStatus: 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE' | 'CLOSED_SETTLED';
     isSubmitting: boolean;
     isCancelling: boolean;
     getOrderBook: (pairId: string) => OrderBook;
@@ -107,7 +107,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [bots, setBots] = useState<Bot[]>([]);
     
-    const [marketStatus, setMarketStatus] = useState<'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE'>('CLOSED');
+    const [marketStatus, setMarketStatus] = useState<'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE' | 'CLOSED_SETTLED'>('CLOSED');
     const [isInitialized, setIsInitialized] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -372,7 +372,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     // 提交委託單 (向後端資料庫送出訂單，等待確認後才更新 UI)
     const submitOrder = async (pairId: string, type: 'buy' | 'sell', amount: number, price: number): Promise<{ success: boolean, message?: string }> => {
-        if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING') {
+        if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING' || marketStatus === 'CLOSED_SETTLED') {
             return { success: false, message: `交易所目前處於非營運清算狀態 (${marketStatus})，拒絕任何掛單寫入。` };
         }
         if (marketStatus === 'MAINTENANCE') {
@@ -441,8 +441,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     // 取消委託單 (等待 API 確認後才更新 UI)
     const cancelOrder = async (orderId: string): Promise<{ success: boolean, message?: string }> => {
-        if (marketStatus === 'CLOSED' || marketStatus === 'SETTLING' || marketStatus === 'MAINTENANCE') {
-            return { success: false, message: `目前交易所狀態為 ${marketStatus}，無法撤單！` };
+        if (marketStatus === 'MAINTENANCE') {
+            return { success: false, message: "系統維護中，全面禁止任何撤單操作。" };
         }
 
         const order = orders.find(o => o.id === orderId);
