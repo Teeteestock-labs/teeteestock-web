@@ -10,7 +10,13 @@ function BottomNavContent() {
   const router = useRouter();
 
   // Keep track of the last visited stock ID (default to MCMT)
-  const [lastStockId, setLastStockId] = useState("MCMT");
+  // Use lazy initializer to read from localStorage without triggering cascading renders
+  const [lastStockId, setLastStockId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("last_visited_stock") || "MCMT";
+    }
+    return "MCMT";
+  });
 
   useEffect(() => {
     if (pathname?.startsWith("/market/")) {
@@ -23,13 +29,6 @@ function BottomNavContent() {
       }
     }
   }, [pathname]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("last_visited_stock");
-    if (saved) {
-      setLastStockId(saved);
-    }
-  }, []);
 
   // Determine active tab
   let activeTab: 'lobby' | 'stock' | 'asset' = 'lobby';

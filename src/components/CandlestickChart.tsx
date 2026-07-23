@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ChartDataPoint } from '@/app/types';
+import { alignToTick } from '@/utils/validatePrice';
 
 interface Props {
     data: ChartDataPoint[];
@@ -99,11 +100,12 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
         if (!isTimeChart) return data;
         return data.filter(d => {
             if (!d.time) return false;
+            if (d.time.includes('/') || d.time.includes('-') || d.time.includes(' ')) return true;
             const parts = d.time.split(':');
             const h = parseInt(parts[0], 10);
             const m = parseInt(parts[1], 10);
-            // 僅允許交易時間：19:00 至 24:00 (含 00:00)
-            const isTradeTime = (h >= 19 && h <= 23) || (h === 0 && m === 0);
+            // 僅允許交易時間：19:00 至 24:00 (含 00:00~00:04 收盤緩衝)
+            const isTradeTime = (h >= 19 && h <= 23) || (h === 0 && m <= 4);
             return isTradeTime;
         });
     }, [data, isTimeChart]);
@@ -111,6 +113,12 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const chartData = React.useMemo(() => {
         return isTimeChart ? tradingData : data;
     }, [isTimeChart, tradingData, data]);
+
+    const isMultiDay = React.useMemo(() => {
+        if (chartData.length === 0) return false;
+        const firstTime = chartData[0]?.time || "";
+        return firstTime.includes('/') || firstTime.includes('-') || firstTime.includes(' ');
+    }, [chartData]);
 
     const isScrollableKLine = !isTimeChart && chartData.length > 80;
     const candleSpacing = 11;
@@ -146,11 +154,11 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     }, [chartData.length, chartWidth]);
 
     const getX = React.useCallback((index: number, timeStr?: string) => {
-        if (!isTimeChart) {
+        if (!isTimeChart || isMultiDay) {
             return getXByIndex(index);
         }
         return getXByTime(timeStr || chartData[index]?.time || "");
-    }, [isTimeChart, getXByIndex, getXByTime, chartData]);
+    }, [isTimeChart, isMultiDay, getXByIndex, getXByTime, chartData]);
 
     const getClosestPointIndex = React.useCallback((canvasX: number) => {
         if (chartData.length === 0) return -1;
@@ -271,7 +279,14 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
         minPrice = Math.min(...prices);
     }
     
-    if (isTimeChart) {
+    // For single-day chart, ensure the reference price (yesterday's close) is visible
+    if (!isMultiDay) {
+        maxPrice = Math.max(maxPrice, refPrice);
+        minPrice = Math.min(minPrice, refPrice);
+    }
+
+    if (isTimeChart && !isMultiDay) {
+        // 分時圖固定 Y 軸到 ±20% 漲跌停區間，確保基準線在正中央
         maxPrice = refPrice * 1.20;
         minPrice = refPrice * 0.80;
     } else {
@@ -309,12 +324,6 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const currentPriceColor = isCurrentUp ? colorUp : '#089981';
 
     const maxVolume = Math.max(...visibleData.map(d => d.volume || 0), 1);
-
-    const pathD = isTimeChart
-        ? chartData.map((d, i) => `${i === 0 ? 'M' : 'L'}${getX(i, d.time).toFixed(1)} ${getY(d.close).toFixed(1)}`).join(' ')
-        : '';
-
-    const areaGradientId = isCurrentUp ? 'area-gradient-up' : 'area-gradient-down';
 
     // 計算滑鼠/觸控位置對應的最接近數據節點以鎖定 Crosshair
     const actualWidth = hoverCoords ? hoverCoords.containerWidth : 1;
@@ -389,7 +398,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const hudVol = displayPt ? displayPt.volume.toLocaleString() : '--';
     
     const isHudUp = displayPt ? displayPt.close >= displayPt.open : true;
-    const hudColor = isHudUp ? colorUp : colorDown;
+    const hudColor = (isTimeChart && isMultiDay) ? "#F3BA2F" : (isHudUp ? colorUp : colorDown);
 
     return (
         <div 
@@ -430,6 +439,10 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                                 <stop offset="0%" stopColor={colorDown} stopOpacity="0.0"/>
                                 <stop offset="100%" stopColor={colorDown} stopOpacity="0.3"/>
                             </linearGradient>
+                            <linearGradient id="area-gradient-yellow" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#F3BA2F" stopOpacity="0.25"/>
+                                <stop offset="100%" stopColor="#F3BA2F" stopOpacity="0.0"/>
+                            </linearGradient>
                             <clipPath id="clip-above">
                                 <rect x="0" y="0" width={width} height={yRef} />
                             </clipPath>
@@ -442,9 +455,9 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                         {Array.from({ length: isTimeChart ? 9 : 8 }).map((_, i) => {
                             const totalSteps = isTimeChart ? 8 : 7;
                             const ratio = i / totalSteps;
-                            const price = minPrice + range * ratio;
+                            const price = alignToTick(minPrice + range * ratio);
                             const y = getY(price);
-                            const isCenter = isTimeChart && i === 4;
+                            const isCenter = isTimeChart && !isMultiDay && i === 4;
                             
                             const strokeColor = isCenter ? "#848E9C" : "#2B2F36";
                             const strokeW = isCenter ? 1.2 : 0.8;
@@ -505,6 +518,33 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                                     const linePathD = chartData.map((d, i) => 
                                         `${i === 0 ? 'M' : 'L'}${getX(i, d.time).toFixed(1)} ${getY(d.close).toFixed(1)}`
                                     ).join(' ');
+
+                                    if (isMultiDay) {
+                                        const yellowPoints = `${x0},${(paddingTop + chartHeight).toFixed(1)} ` +
+                                            chartData.map((d, i) => 
+                                                `${getX(i, d.time).toFixed(1)},${getY(d.close).toFixed(1)}`
+                                            ).join(' ') + 
+                                            ` ${xn},${(paddingTop + chartHeight).toFixed(1)}`;
+                                        
+                                        return (
+                                            <>
+                                                {/* 黃色漸層區 */}
+                                                <polygon 
+                                                    points={yellowPoints} 
+                                                    fill="url(#area-gradient-yellow)"
+                                                />
+                                                {/* 黃色單色折線 */}
+                                                <path 
+                                                    d={linePathD} 
+                                                    stroke="#F3BA2F" 
+                                                    strokeWidth="1.5" 
+                                                    strokeLinecap="round" 
+                                                    strokeLinejoin="round" 
+                                                    fill="none" 
+                                                />
+                                            </>
+                                        );
+                                    }
 
                                     // 2. 紅色漸層區多邊形 (基準線之上，低於基準線的值強制限幅在 yRef)
                                     const redPoints = `${x0},${yRefStr} ` + 
@@ -665,7 +705,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                         })}
 
                         {/* SVG 刻度分時標籤 */}
-                        {isTimeChart ? (
+                        {isTimeChart && !isMultiDay ? (
                             [
                                 { label: '19:00', ratio: 0.0 },
                                 { label: '20:00', ratio: 0.2 },
@@ -737,27 +777,16 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                 {Array.from({ length: isTimeChart ? 9 : 8 }).map((_, i) => {
                     const totalSteps = isTimeChart ? 8 : 7;
                     const ratio = i / totalSteps;
-                    const price = minPrice + range * ratio;
+                    const price = alignToTick(minPrice + range * ratio);
                     const isEdge = i === 0 || i === totalSteps;
-                    const isCenter = isTimeChart && i === 4;
+                    const isCenter = isTimeChart && !isMultiDay && i === 4;
                     const percentY = (getY(price) / height) * 100;
 
-                    let labelClass = '';
-                    if (isTimeChart) {
-                      if (i === 8) {
-                        labelClass = 'bg-red-600 text-white font-bold px-1 py-0.5 rounded-sm shadow-sm';
-                      } else if (i === 0) {
-                        labelClass = 'bg-green-600 text-white font-bold px-1 py-0.5 rounded-sm shadow-sm';
-                      } else if (i > 4) {
-                        labelClass = 'text-red-500 font-bold';
-                      } else if (i < 4) {
-                        labelClass = 'text-green-500 font-bold';
-                      } else { // i === 4
-                        labelClass = 'text-[#848E9C] font-semibold';
-                      }
-                    } else {
-                      labelClass = isEdge ? 'font-semibold text-gray-300' : 'text-[#474D57]';
-                    }
+                    const labelClass = isCenter
+                        ? 'font-bold text-pink-400 shadow-sm'
+                        : isEdge
+                            ? 'font-semibold text-gray-300'
+                            : 'text-[#848E9C] font-semibold';
 
                     return (
                         <span 
@@ -769,6 +798,19 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                         </span>
                     );
                 })}
+
+                {/* 實時成交價 Tracker 游標 */}
+                <div 
+                    className="absolute right-0 left-0 text-white py-0.5 text-center font-bold font-mono text-[9px] z-30 shadow border-y"
+                    style={{ 
+                        top: `${(getY(currentPrice) / height) * 100}%`, 
+                        transform: 'translateY(-50%)',
+                        backgroundColor: currentPriceColor,
+                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                    }}
+                >
+                    {currentPrice.toFixed(2)}
+                </div>
             </div>
 
             {/* TradingView 十字準星 & 刻度懸浮浮標 (Snapped to Closest Node) */}

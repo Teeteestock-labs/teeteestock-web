@@ -23,11 +23,15 @@ const PAIR_ID_MAP: Record<string, string> = {
 };
 
 export default function MarketDetailClient({ id }: { id: string }) {
-    const { balance, submitOrder, holdings, marketData, orders, reportInteraction, cancelOrder, marketStatus, submitTeeteeReport, getOrderBook, isSubmitting, isCancelling } = useTee();
+    const { balance, availableBalance, submitOrder, holdings, marketData, orders, reportInteraction, cancelOrder, marketStatus, submitTeeteeReport, getOrderBook, isSubmitting, isCancelling } = useTee();
     const [amount, setAmount] = useState<number>(0);
     const [orderPrice, setOrderPrice] = useState<number>(0);
     const [lastSeenPrice, setLastSeenPrice] = useState<number>(0);
-    const [activeTab, setActiveTab] = useState<'time' | 'k'>('k');
+    const [activeTab, setActiveTab] = useState<'time' | 'k' | 'detail'>('time');
+    const [chartRange, setChartRange] = useState<'1D' | '1W' | '1M' | '6M' | 'YTD' | '1Y' | '5Y'>('1D');
+    const [klinePeriod, setKlinePeriod] = useState<'1m' | '5m' | '1D' | '1W' | '1M'>('1m');
+    const [chartData, setChartData] = useState<any[]>([]);
+    const [loadingChart, setLoadingChart] = useState(false);
     const [orderSubTab, setOrderSubTab] = useState<'pending' | 'trades'>('pending');
     const [newsList, setNewsList] = useState<any[]>([]);
 
@@ -41,16 +45,52 @@ export default function MarketDetailClient({ id }: { id: string }) {
     ); 
 
     useEffect(() => {
-        if (pair && !reportTargetId) {
+        if (pair) {
             setReportTargetId(pair.id);
+            setChartRange('1D');
+            setKlinePeriod('1m');
+            setChartData([]);
+            setOrderPrice(pair.openingPrice ?? 100);
         }
-    }, [pair, reportTargetId]); 
+    }, [pair?.id]);
 
-    // 當選擇的交易對價格更新時，動態帶入最新價格
-    if (pair && pair.price !== lastSeenPrice) {
-        setLastSeenPrice(pair.price);
-        setOrderPrice(pair.price);
-    }
+    useEffect(() => {
+        if (!pair) return;
+        
+        if (activeTab === 'time') {
+            if (chartRange === '1D') {
+                setLoadingChart(false);
+                return;
+            }
+            setLoadingChart(true);
+            fetch(`/api/charts/kline?id=${pair.id}&range=${chartRange}`)
+                .then(res => res.json())
+                .then(resData => {
+                    if (resData.success && resData.data) {
+                        setChartData(resData.data);
+                    }
+                })
+                .catch(err => console.error("Error loading chart data:", err))
+                .finally(() => setLoadingChart(false));
+        } else if (activeTab === 'k') {
+            setLoadingChart(true);
+            fetch(`/api/charts/kline?id=${pair.id}&period=${klinePeriod}`)
+                .then(res => res.json())
+                .then(resData => {
+                    if (resData.success && resData.data) {
+                        setChartData(resData.data);
+                    }
+                })
+                .catch(err => console.error("Error loading chart data:", err))
+                .finally(() => setLoadingChart(false));
+        }
+    }, [pair?.id, pair?.price, activeTab, chartRange, klinePeriod]);
+
+    const displayData = activeTab === 'time' && chartRange === '1D'
+        ? (pair?.history || [])
+        : chartData; 
+
+
 
     if(!pair){
         return(
@@ -156,7 +196,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const refPrice = pair.openingPrice ?? pair.yesterdayPrice ?? pair.price;
     const ceiling = alignToTick(refPrice * 1.20);
     const floor = alignToTick(refPrice * 0.80);
-    const myHolding = holdingInfo?.shares || 0;
+    const totalHolding = holdingInfo?.shares || 0;
+    const pendingSellVolume = (orders || [])
+        .filter(o => (o.isUser || !o.botId) && o.pairId.toLowerCase() === pair.id.toLowerCase() && (o.type === 'sell' || (o as any).side === 'SELL'))
+        .reduce((sum, o) => sum + o.amount, 0);
+    const availableShares = Math.max(0, totalHolding - pendingSellVolume);
+    const myHolding = availableShares;
     const avgCost = holdingInfo?.avgCost || 0;
 
     const handleDecrement = () => {
@@ -179,7 +224,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const totalAskVol = paddedAsks.reduce((acc, a) => acc + (a?.amount || 0), 0);
     const bidRatio = totalBidVol + totalAskVol > 0 ? (totalBidVol / (totalBidVol + totalAskVol)) * 100 : 50;
 
-    const profitLoss = (pair.price - avgCost) * myHolding;
+    const profitLoss = (pair.price - avgCost) * totalHolding;
     const profitPercentage = avgCost > 0 ? ((pair.price - avgCost) / avgCost) * 100 : 0;
     const estimatedTotal = amount * (orderPrice || pair.price);
 
@@ -373,72 +418,133 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         })()}
                     </div>
 
-                    {/* 盤面即時統計數據欄 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] p-4 rounded grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-4 text-xs font-mono select-none">
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">開盤</span>
-                            <span className={`font-bold text-sm ${getCompareColor(pair.todayOpenPrice)}`}>
-                                {pair.todayOpenPrice ? pair.todayOpenPrice.toFixed(2) : '未成交'}
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">昨收</span>
-                            <span className="text-white font-bold text-sm">{yesterdayPrice.toFixed(2)}</span>
-                        </div>
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">最高</span>
-                            <span className={`font-bold text-sm ${getCompareColor(highVal)}`}>
-                                {highVal.toFixed(2)}
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">最低</span>
-                            <span className={`font-bold text-sm ${getCompareColor(lowVal)}`}>
-                                {lowVal.toFixed(2)}
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">漲停</span>
-                            <span className="text-white font-bold text-sm">{ceiling.toFixed(2)}</span>
-                        </div>
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">跌停</span>
-                            <span className="text-white font-bold text-sm">{floor.toFixed(2)}</span>
-                        </div>
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">振幅</span>
-                            <span className="text-white font-bold text-sm">{amplitude.toFixed(2)}%</span>
-                        </div>
-                        <div>
-                            <span className="text-[#848E9C] block text-[9px] font-bold mb-1">均價</span>
-                            <span className={`${avgPrice ? 'text-white' : 'text-gray-400'} font-bold text-sm`}>
-                                {avgPrice ? avgPrice.toFixed(2) : '未成交'}
-                            </span>
-                        </div>
-                    </div>
-
-
-
                     {/* 圖表區 */}
                     <div className="bg-[#181A20] border border-[#2B2F36] rounded h-96 flex flex-col overflow-hidden">
-                        <div className="border-b border-[#2B2F36] p-3 flex gap-4 text-[10px] font-bold bg-[#1E2329]">
-                            <span 
-                                onClick={() => setActiveTab('time')}
-                                className={`pb-1 cursor-pointer transition-colors ${activeTab === 'time' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                            >
-                                分時圖
-                            </span>
-                            <span 
-                                onClick={() => setActiveTab('k')}
-                                className={`pb-1 cursor-pointer transition-colors ${activeTab === 'k' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                            >
-                                K線圖
-                            </span>
+                        <div className="border-b border-[#2B2F36] p-3 flex justify-between items-center text-[10px] font-bold bg-[#1E2329] select-none">
+                            <div className="flex gap-4">
+                                <span 
+                                    onClick={() => setActiveTab('time')}
+                                    className={`pb-1 cursor-pointer transition-colors ${activeTab === 'time' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                >
+                                    分時圖
+                                </span>
+                                <span 
+                                    onClick={() => setActiveTab('k')}
+                                    className={`pb-1 cursor-pointer transition-colors ${activeTab === 'k' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                >
+                                    K線圖
+                                </span>
+                                <span 
+                                    onClick={() => setActiveTab('detail')}
+                                    className={`pb-1 cursor-pointer transition-colors ${activeTab === 'detail' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                >
+                                    詳細
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex-1 p-2 overflow-hidden">
-                            {activeTab === 'k' && <CandlestickChart data={pair.history} yesterdayPrice={pair.yesterdayPrice} />}
+
+                        {activeTab !== 'detail' && (
+                            <div className="border-b border-[#2B2F36] px-3 py-1.5 flex gap-2 text-[9px] font-normal text-[#848E9C] bg-[#1E2329]/50 select-none">
+                                {activeTab === 'time' ? (
+                                    // 分時圖區間按鈕
+                                    (['1D', '1W', '1M', '6M', 'YTD', '1Y', '5Y'] as const).map((r) => {
+                                        const labelMap = {
+                                            '1D': '當日',
+                                            '1W': '1周',
+                                            '1M': '1個月',
+                                            '6M': '6月',
+                                            'YTD': '本年迄今',
+                                            '1Y': '1年',
+                                            '5Y': '5年'
+                                        };
+                                        return (
+                                            <span 
+                                                key={r}
+                                                onClick={() => setChartRange(r)}
+                                                className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${chartRange === r ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
+                                            >
+                                                {labelMap[r]}
+                                            </span>
+                                        );
+                                    })
+                                ) : (
+                                    // K線圖週期按鈕
+                                    (['1m', '5m', '1D', '1W', '1M'] as const).map((p) => {
+                                        const labelMap = {
+                                            '1m': '1分k',
+                                            '5m': '5分k',
+                                            '1D': '日k',
+                                            '1W': '周k',
+                                            '1M': '月k'
+                                        };
+                                        return (
+                                            <span 
+                                                key={p}
+                                                onClick={() => setKlinePeriod(p)}
+                                                className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${klinePeriod === p ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
+                                            >
+                                                {labelMap[p]}
+                                            </span>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        )}
+                        <div className="flex-1 p-2 overflow-hidden relative">
+                            {loadingChart && activeTab !== 'detail' && (
+                                <div className="absolute inset-0 bg-[#181A20]/60 backdrop-blur-[1px] flex items-center justify-center z-20 text-xs text-[#FF69B4] font-bold font-mono">
+                                    載入數據中...
+                                </div>
+                            )}
+                            {activeTab === 'k' && <CandlestickChart data={displayData} yesterdayPrice={pair.yesterdayPrice} pairId={pair.id} />}
                             {activeTab === 'time' && (
-                                <CandlestickChart data={pair.history} isTimeChart={true} yesterdayPrice={pair.yesterdayPrice} /> 
+                                <CandlestickChart data={displayData} isTimeChart={true} yesterdayPrice={pair.yesterdayPrice} pairId={pair.id} /> 
+                            )}
+                            {activeTab === 'detail' && (
+                                <div className="h-full flex items-center justify-center p-4">
+                                    <div className="w-full max-w-lg grid grid-cols-2 gap-4 text-xs font-mono select-none">
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">開盤</span>
+                                            <span className={`font-bold text-sm ${getCompareColor(pair.todayOpenPrice)}`}>
+                                                {pair.todayOpenPrice ? pair.todayOpenPrice.toFixed(2) : '未成交'}
+                                            </span>
+                                        </div>
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">昨收</span>
+                                            <span className="text-white font-bold text-sm">{yesterdayPrice.toFixed(2)}</span>
+                                        </div>
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">最高</span>
+                                            <span className={`font-bold text-sm ${getCompareColor(highVal)}`}>
+                                                {highVal.toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">最低</span>
+                                            <span className={`font-bold text-sm ${getCompareColor(lowVal)}`}>
+                                                {lowVal.toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">漲停</span>
+                                            <span className="text-white font-bold text-sm">{ceiling.toFixed(2)}</span>
+                                        </div>
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">跌停</span>
+                                            <span className="text-white font-bold text-sm">{floor.toFixed(2)}</span>
+                                        </div>
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">振幅</span>
+                                            <span className="text-white font-bold text-sm">{amplitude.toFixed(2)}%</span>
+                                        </div>
+                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
+                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">均價</span>
+                                            <span className={`${avgPrice ? 'text-white' : 'text-gray-400'} font-bold text-sm`}>
+                                                {avgPrice ? avgPrice.toFixed(2) : '未成交'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -502,13 +608,13 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
                                 {/* 右側帳戶餘額/庫存資訊 */}
                                 <div className="col-span-5 text-[10px] font-bold text-right flex flex-col justify-center h-[40px] pl-2 border-l border-[#2B2F36]/50 leading-tight">
-                                    <div className="text-white font-mono truncate">可用: {balance.toLocaleString()}</div>
+                                    <div className="text-white font-mono truncate">可用: {availableBalance.toLocaleString()}</div>
                                     <div className="text-[#848E9C] font-mono truncate">
                                         庫存: <span className="text-white">{myHolding.toLocaleString()}</span> 股
                                     </div>
                                     {myHolding > 0 && (
                                         <div className="text-[9px] font-mono truncate flex items-center justify-end gap-1">
-                                            <span className="text-gray-400">均價: {Math.round(avgCost)}</span>
+                                            <span className="text-gray-400">均價: {avgCost.toFixed(1)}</span>
                                             <span className="text-gray-600">|</span>
                                             <span className={profitLoss >= 0 ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}>
                                                 {profitLoss >= 0 ? '▲' : '▼'}{Math.abs(Math.round(profitLoss))} ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
@@ -561,7 +667,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                     onClick={() => {
                                         const price = orderPrice || pair.price;
                                         if (price > 0) {
-                                            setAmount(Math.floor(balance / price));
+                                            setAmount(Math.floor(availableBalance / price));
                                         }
                                     }}
                                     className="text-[#FF3B3B] hover:underline cursor-pointer focus:outline-none bg-transparent border-0 p-0"
@@ -849,7 +955,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         <h3 className="text-sm font-bold text-[#FF69B4] flex items-center gap-2 border-b border-[#2B2F36] pb-2">
                             <span className="w-2 h-2 bg-[#FF69B4] rounded-full animate-pulse" /> 即時成交明細 (Recent Trades)
                         </h3>
-                        <div className="overflow-x-auto overflow-y-auto max-h-[300px] custom-scrollbar">
+                        <div className="overflow-x-auto overflow-y-auto max-h-[302px] custom-scrollbar">
                             <table className="w-full text-base font-mono">
                                 <thead>
                                     <tr className="text-[#848E9C] border-b border-[#2B2F36] text-[10px] font-bold text-right">

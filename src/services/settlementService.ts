@@ -255,8 +255,8 @@ export async function runDailyRolloverOrSettlement(options?: {
     }
   }
 
-  // Guard against duplicate settlement
-  if (action === 'settle') {
+  // Guard against duplicate settlement (only for automatic background runs when forceAction is not provided)
+  if (action === 'settle' && !options?.forceAction) {
     const anyPair = await prisma.cpPairs.findFirst({
       where: { lastSettledAt: { not: null } },
       orderBy: { lastSettledAt: 'desc' }
@@ -496,15 +496,15 @@ export async function runDailyRolloverOrSettlement(options?: {
           });
         }
 
-        // Archive unapplied events (PENDING & REJECTED)
-        const unappliedEvents = await tx.teeteeEvents.findMany({
+        // Archive rejected events (already reviewed as REJECTED). PENDING events remain intact in teeteeEvents for future review.
+        const rejectedEvents = await tx.teeteeEvents.findMany({
           where: {
             pairId: latestPair.id,
-            status: { in: [ReviewStatus.PENDING, ReviewStatus.REJECTED] }
+            status: ReviewStatus.REJECTED
           }
         });
 
-        for (const evt of unappliedEvents) {
+        for (const evt of rejectedEvents) {
           const exists = await tx.archivedEvents.findUnique({
             where: {
               pairId_url: {
@@ -523,7 +523,7 @@ export async function runDailyRolloverOrSettlement(options?: {
                 title: evt.title,
                 timestamp: evt.timestamp,
                 reporter: evt.reporter,
-                status: evt.status, // Preserve PENDING or REJECTED
+                status: ReviewStatus.REJECTED,
                 createdAt: evt.createdAt,
                 reason: evt.reason || ""
               }
@@ -624,8 +624,8 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   let clockStatus: 'CLOSED' | 'ROLLOVER' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' = 'CLOSED';
   
   if (tz.dayOfWeek === 1) {
-    // Monday: Holiday (SETTLING), but ROLLOVER occurs at 18:30 - 18:45
-    if (totalMinutes >= 1110 && totalMinutes < 1125) {
+    // Monday: Holiday (SETTLING), Weekly Dividend Settlement occurs at Monday 23:59
+    if (totalMinutes >= 1439) {
       clockStatus = 'ROLLOVER';
     } else {
       clockStatus = 'SETTLING';
@@ -680,8 +680,18 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
     
     if (updatedSettled.count > 0) {
       try {
-        // Monday 18:30 triggers Weekly Sunday Settlement, other days trigger Daily Rollover
-        const action: 'settle' | 'rollover' = tz.dayOfWeek === 1 ? 'settle' : 'rollover';
+        // Check if weekly settlement has been performed in the last 48 hours
+        const anySettledPair = await prisma.cpPairs.findFirst({
+          where: { lastSettledAt: { not: null } },
+          orderBy: { lastSettledAt: 'desc' }
+        });
+        const hoursSinceLastSettle = anySettledPair?.lastSettledAt
+          ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
+          : 999;
+
+        // If today is Monday or Tuesday, and weekly settlement hasn't run in 48h, run 'settle'
+        const isWeeklyWindow = (tz.dayOfWeek === 1 || tz.dayOfWeek === 2);
+        const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
         await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
       } catch (err) {
         console.error('[Rollover/Settlement Error]:', err);
@@ -723,7 +733,14 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
     });
     if (updatedRecover.count > 0) {
       try {
-        const action: 'settle' | 'rollover' = tz.dayOfWeek === 2 ? 'settle' : 'rollover'; // If Monday was missed, Tue 18:45 is Weekly Settlement
+        const anySettledPair = await prisma.cpPairs.findFirst({
+          where: { lastSettledAt: { not: null } },
+          orderBy: { lastSettledAt: 'desc' }
+        });
+        const hoursSinceLastSettle = anySettledPair?.lastSettledAt
+          ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
+          : 999;
+        const action: 'settle' | 'rollover' = ((tz.dayOfWeek === 1 || tz.dayOfWeek === 2) && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
         await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
       } catch (err) {
         console.error(err);
@@ -748,7 +765,14 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
       });
       if (updatedRecover.count > 0) {
         try {
-          const action: 'settle' | 'rollover' = tz.dayOfWeek === 2 ? 'settle' : 'rollover';
+          const anySettledPair = await prisma.cpPairs.findFirst({
+            where: { lastSettledAt: { not: null } },
+            orderBy: { lastSettledAt: 'desc' }
+          });
+          const hoursSinceLastSettle = anySettledPair?.lastSettledAt
+            ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
+            : 999;
+          const action: 'settle' | 'rollover' = ((tz.dayOfWeek === 1 || tz.dayOfWeek === 2) && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
           await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
         } catch (err) {
           console.error(err);

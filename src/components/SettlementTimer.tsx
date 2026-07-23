@@ -16,20 +16,20 @@ export default function SettlementTimer(){
             const day = taipei.dayOfWeek; // 0 = 週日, 1-6為週一至週六
             const hour = taipei.hour;
 
-            // 半段是否處於結算時間 : 週一且09:00之前
-            const isMondayMorning = (day === 1 && hour < 9);
+            // 判斷是否處於結算時間 : 週一 23:59
+            const isMondaySettling = (day === 1 && hour === 23 && taipei.minute === 59);
 
-            if (isMondayMorning){
+            if (isMondaySettling){
                 setIssettling(true);
                 setIsFinalHour(false);
-                setTimeLeft("稱號與股利分派處理中");
+                setTimeLeft("除息結算與股利發放處理中...");
             } else {
                 setIssettling(false);
 
-                // 計算台北時間當前的 totalMinutes，用來推算距離下週一 00:00 的差值
+                // 計算台北時間當前的 totalMinutes，用來推算距離週一 23:59 的差值
                 const currentTotalMinutes = day * 24 * 60 + hour * 60 + taipei.minute;
-                // 下週一 00:00:00 = dayOfWeek=1, hour=0, minute=0
-                const targetTotalMinutes = 1 * 24 * 60; // Monday 00:00
+                // 週一 23:59:00 = dayOfWeek=1, hour=23, minute=59
+                const targetTotalMinutes = 1 * 24 * 60 + 23 * 60 + 59;
                 let diffMinutes = targetTotalMinutes - currentTotalMinutes;
                 if (diffMinutes <= 0) diffMinutes += 7 * 24 * 60; // wrap to next week
 
@@ -42,7 +42,7 @@ export default function SettlementTimer(){
 
                 setIsFinalHour(h === 0);
 
-                setTimeLeft(`距離本週結算時間剩餘 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+                setTimeLeft(`距離除息發放剩餘 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
             }
         };
 

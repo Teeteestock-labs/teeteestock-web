@@ -8,8 +8,9 @@ import SettlementTimer from "@/components/SettlementTimer";
 import TickerTape from "@/components/TickerTape";
 import BottomNav from "@/components/BottomNav";
 import GlobalStats from "@/components/GlobalStats";
+import AssetHistoryChart from "@/components/AssetHistoryChart";
 import { alignToTick } from "@/utils/validatePrice";
-import { teeteePair } from "@/app/types";
+import { teeteePair, UserHolding } from "@/app/types";
 
 const PAIR_ID_MAP: Record<string, string> = {
   'micomet': 'MCMT',
@@ -170,7 +171,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
     const parts = pt.time.split(':');
     const h = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10);
-    const isTradeTime = (h >= 19 && h <= 23) || (h === 0 && m === 0);
+    const isTradeTime = (h >= 19 && h <= 23) || (h === 0 && m <= 4);
     if (!isTradeTime) return null;
 
     const x = getXByTime(pt.time);
@@ -422,6 +423,154 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
   );
 }
 
+// ── Asset Donut Chart Component ──
+const SLICE_COLORS = [
+  '#FF69B4', // Hot Pink
+  '#FFD700', // Gold
+  '#00BFFF', // Sky Blue
+  '#A855F7', // Purple
+  '#FF7F50', // Coral / Orange
+  '#3B82F6', // Royal Blue
+  '#EC4899', // Rose Pink
+  '#F59E0B', // Amber
+  '#8B5CF6', // Violet
+];
+
+interface DonutSlice {
+  pairId: string;
+  stockId: string;
+  name: string;
+  shares: number;
+  color: string;
+  percentage: number;
+}
+
+function AssetDonutChart({ 
+  holdings, 
+  marketData, 
+  totalROI 
+}: { 
+  holdings: UserHolding[]; 
+  marketData: teeteePair[]; 
+  totalROI: number; 
+}) {
+  const [hoveredSlice, setHoveredSlice] = useState<DonutSlice | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const activeHoldings = holdings.filter(h => h.shares > 0);
+  const totalShares = activeHoldings.reduce((sum, h) => sum + h.shares, 0);
+
+  const slices: DonutSlice[] = activeHoldings.map((h, idx) => {
+    const pair = marketData.find(p => p.id === h.pairId);
+    const stockId = PAIR_ID_MAP[h.pairId.toLowerCase()] || h.pairId.toUpperCase();
+    const pct = totalShares > 0 ? (h.shares / totalShares) * 100 : 0;
+    return {
+      pairId: h.pairId,
+      stockId,
+      name: pair?.name || h.pairId,
+      shares: h.shares,
+      color: SLICE_COLORS[idx % SLICE_COLORS.length],
+      percentage: pct,
+    };
+  });
+
+  const radius = 38;
+  const strokeWidth = 12;
+  const circumference = 2 * Math.PI * radius;
+
+  let cumulativePercent = 0;
+  const roiColor = totalROI > 0 ? "text-[#FF3B3B]" : totalROI < 0 ? "text-[#00FFA3]" : "text-gray-400";
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setMousePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredSlice(null);
+    setMousePos(null);
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative flex items-center justify-center select-none"
+    >
+      <div className="relative w-28 h-28 flex items-center justify-center">
+        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+          {totalShares === 0 || slices.length === 0 ? (
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              fill="transparent"
+              stroke="#2B2F36"
+              strokeWidth={strokeWidth}
+            />
+          ) : (
+            slices.map((slice) => {
+              const strokeDasharray = `${(slice.percentage / 100) * circumference} ${circumference}`;
+              const strokeDashoffset = -((cumulativePercent / 100) * circumference);
+              cumulativePercent += slice.percentage;
+
+              const isHovered = hoveredSlice?.pairId === slice.pairId;
+
+              return (
+                <circle
+                  key={slice.pairId}
+                  cx="50"
+                  cy="50"
+                  r={radius}
+                  fill="transparent"
+                  stroke={slice.color}
+                  strokeWidth={isHovered ? strokeWidth + 3 : strokeWidth}
+                  strokeDasharray={strokeDasharray}
+                  strokeDashoffset={strokeDashoffset}
+                  className="transition-all duration-150 cursor-pointer origin-center opacity-90 hover:opacity-100"
+                  onMouseEnter={() => setHoveredSlice(slice)}
+                />
+              );
+            })
+          )}
+        </svg>
+
+        {/* 圓餅圖中間：總報酬率 (換行後實際報酬率) */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none p-1">
+          <span className="text-[9px] text-gray-400 font-bold leading-tight">總報酬率：</span>
+          <span className={`text-[11px] font-black leading-tight mt-0.5 ${roiColor}`}>
+            {totalROI > 0 ? '+' : ''}{totalROI.toFixed(2)}%
+          </span>
+        </div>
+      </div>
+
+      {/* 滑鼠移動到顯示並動態跟隨滑鼠標籤 " 股數（百分比）" */}
+      {hoveredSlice && mousePos && (
+        <div 
+          style={{
+            left: `${mousePos.x}px`,
+            top: `${mousePos.y - 12}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+          className="absolute bg-[#0B0E11]/95 text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-[#FF69B4]/50 shadow-2xl whitespace-nowrap z-50 pointer-events-none flex items-center gap-1.5 backdrop-blur-md transition-all duration-75 ease-out"
+        >
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hoveredSlice.color }} />
+          <span>{hoveredSlice.stockId}：</span>
+          <span className="font-mono text-[#FFD700]">{hoveredSlice.shares.toLocaleString()} 股</span>
+          <span className="font-mono text-gray-400">({hoveredSlice.percentage.toFixed(1)}%)</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -441,8 +590,10 @@ function HomeContent() {
 
   const {
     balance,
+    availableBalance,
     holdings,
     marketData,
+    orders,
     marketStatus,
     simulateMarketMove,
     executeWeeklySettlement
@@ -470,6 +621,10 @@ function HomeContent() {
     const pair = marketData.find(p => p.id === h.pairId);
     return sum + (h.shares * (pair?.price || 0));
   }, 0);
+
+  const totalCost = holdings.reduce((sum, h) => sum + (h.shares * h.avgCost), 0);
+  const totalProfit = totalStockValue - totalCost;
+  const totalROI = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
   const netWorth = balance + totalStockValue;
 
@@ -579,14 +734,22 @@ function HomeContent() {
         {mode === 'asset' && (
           <div className="p-4 space-y-4">
             <div className="bg-[#181a20]/40 p-4 rounded-xl border border-[#2b2f36] flex justify-between items-center bg-gray-950/20">
-              <div>
-                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">總資產估值</p>
-                <p className="text-xl font-black text-white mt-1">{netWorth.toLocaleString()} $TEE</p>
+              <div className="flex flex-col justify-center space-y-3">
+                <div>
+                  <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">總資產估值</p>
+                  <p className="text-lg font-black text-white mt-0.5">{netWorth.toLocaleString()} $TEE</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">可用資產</p>
+                  <p className="text-base font-bold text-[#00FFA3] mt-0.5">{availableBalance.toLocaleString()} $TEE</p>
+                  {balance > availableBalance && (
+                    <p className="text-[9px] text-[#848E9C] font-mono mt-0.5">(委託買單保留: {(balance - availableBalance).toLocaleString()})</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">可用餘額</p>
-                <p className="text-xl font-black text-green-500 mt-1">{balance.toLocaleString()} $TEE</p>
-              </div>
+
+              {/* 右側：中空甜甜圈圖 (總報酬率在中間，Hover 顯示股數與百分比) */}
+              <AssetDonutChart holdings={holdings} marketData={marketData} totalROI={totalROI} />
             </div>
 
             <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden">
@@ -601,7 +764,7 @@ function HomeContent() {
                     <thead>
                       <tr className="bg-gray-950 text-gray-500 text-[10px] font-bold border-b border-[#2b2f36] uppercase tracking-wider select-none">
                         <th className="px-3 py-2">商品</th>
-                        <th className="px-3 py-2 text-right">股數 / 均價</th>
+                        <th className="px-3 py-2 text-right">即可委託股數 / 均價</th>
                         <th className="px-3 py-2 text-right">現價 / 市值</th>
                         <th className="px-3 py-2 text-right">未實現損益 / ROI</th>
                       </tr>
@@ -610,6 +773,11 @@ function HomeContent() {
                       {holdings.map((h) => {
                         const pair = marketData.find(p => p.id === h.pairId);
                         if (!pair) return null;
+                        const pendingSellVolume = (orders || [])
+                          .filter(o => (o.isUser || !o.botId) && o.pairId.toLowerCase() === h.pairId.toLowerCase() && (o.type === 'sell' || (o as any).side === 'SELL'))
+                          .reduce((sum, o) => sum + o.amount, 0);
+                        const availableShares = Math.max(0, h.shares - pendingSellVolume);
+
                         const value = h.shares * pair.price;
                         const profit = (pair.price - h.avgCost) * h.shares;
                         const roi = h.avgCost > 0 ? ((pair.price - h.avgCost) / h.avgCost) * 100 : 0;
@@ -626,7 +794,10 @@ function HomeContent() {
                               <div className="text-[9px] text-gray-500 truncate max-w-[80px]">{pair.name}</div>
                             </td>
                             <td className="px-3 py-3 text-right">
-                              <div className="text-xs font-bold text-white">{h.shares.toLocaleString()}</div>
+                              <div className="text-xs font-bold text-white">{availableShares.toLocaleString()}</div>
+                              {pendingSellVolume > 0 && (
+                                <div className="text-[9px] text-[#848E9C] font-normal">(總庫存: {h.shares.toLocaleString()})</div>
+                              )}
                               <div className="text-[10px] text-gray-500">{h.avgCost.toFixed(1)}</div>
                             </td>
                             <td className="px-3 py-3 text-right">
@@ -649,6 +820,14 @@ function HomeContent() {
                 </div>
               )}
             </div>
+
+            {/* 最下方總資產歷史變化分時圖 (1M, 3M, 6M, 1Y, MAX) */}
+            <AssetHistoryChart
+              holdings={holdings}
+              marketData={marketData}
+              balance={balance}
+              netWorth={netWorth}
+            />
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const id = url.searchParams.get('id') || url.searchParams.get('pairId');
     const period = url.searchParams.get('period') || '1m';
+    const range = url.searchParams.get('range');
 
     if (!id) {
       return NextResponse.json({ error: 'Missing pair id parameter' }, { status: 400 });
@@ -14,15 +15,43 @@ export async function GET(request: Request) {
 
     const pairId = id.toUpperCase();
 
-    // Determine query condition based on period
+    // Determine query condition
     const whereClause: any = { pairId };
-    if (period === '1m' || period === '5m') {
-      const activeTrading = getActiveTradingDay(new Date());
-      const { startUTC, endUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);
+    
+    if (range) {
+      const now = new Date();
+      let startDate = new Date();
+      
+      if (range === '1D') {
+        const activeTrading = getActiveTradingDay(now);
+        const { startUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);
+        startDate = startUTC;
+      } else if (range === '1W') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (range === '1M') {
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else if (range === '6M') {
+        startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+      } else if (range === 'YTD') {
+        const tz = getTaipeiTime(now);
+        // Jan 1st of current year in Taipei time
+        startDate = new Date(Date.parse(`${tz.year}-01-01T00:00:00+08:00`));
+      } else if (range === '1Y') {
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      } else if (range === '5Y') {
+        startDate = new Date(now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000);
+      }
+      
       whereClause.timestamp = {
-        gte: startUTC,
-        lte: endUTC
+        gte: startDate,
+        lte: now
       };
+    } else {
+      if (period === '1m' || period === '5m') {
+        whereClause.timestamp = {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        };
+      }
     }
 
     // Query K-lines
@@ -52,13 +81,79 @@ export async function GET(request: Request) {
     }
 
     let aggregated: any[] = [];
+    
+    if (range) {
+      if (pts.length <= 300) {
+        aggregated = pts.map(p => {
+          const tz = getTaipeiTime(p.time);
+          let timeLabel = '';
+          if (range === '1D') {
+            timeLabel = `${String(tz.hour).padStart(2, '0')}:${String(tz.minute).padStart(2, '0')}`;
+          } else {
+            timeLabel = `${String(tz.month).padStart(2, '0')}/${String(tz.day).padStart(2, '0')} ${String(tz.hour).padStart(2, '0')}:${String(tz.minute).padStart(2, '0')}`;
+          }
+          return {
+            time: timeLabel,
+            open: p.open,
+            high: p.high,
+            low: p.low,
+            close: p.close,
+            volume: p.volume
+          };
+        });
+      } else {
+        // Aggregate into exactly 300 buckets
+        const bucketSize = pts.length / 300;
+        for (let i = 0; i < 300; i++) {
+          const startIdx = Math.floor(i * bucketSize);
+          const endIdx = Math.min(pts.length, Math.floor((i + 1) * bucketSize));
+          const group = pts.slice(startIdx, endIdx);
+          if (group.length === 0) continue;
+          
+          const first = group[0];
+          const last = group[group.length - 1];
+          const open = first.open;
+          const close = last.close;
+          const high = Math.max(...group.map(x => x.high));
+          const low = Math.min(...group.map(x => x.low));
+          const volume = group.reduce((sum, x) => sum + x.volume, 0);
+          
+          const midPoint = group[Math.floor(group.length / 2)];
+          const tz = getTaipeiTime(midPoint.time);
+          
+          let timeLabel = '';
+          if (range === '1D') {
+            timeLabel = `${String(tz.hour).padStart(2, '0')}:${String(tz.minute).padStart(2, '0')}`;
+          } else if (range === '1W' || range === '1M') {
+            timeLabel = `${String(tz.month).padStart(2, '0')}/${String(tz.day).padStart(2, '0')} ${String(tz.hour).padStart(2, '0')}:${String(tz.minute).padStart(2, '0')}`;
+          } else {
+            timeLabel = `${String(tz.year).substring(2)}/${String(tz.month).padStart(2, '0')}/${String(tz.day).padStart(2, '0')}`;
+          }
+          
+          aggregated.push({
+            time: timeLabel,
+            open,
+            high,
+            low,
+            close,
+            volume
+          });
+        }
+      }
+      return NextResponse.json({ success: true, data: aggregated });
+    }
+
+    const today = getTaipeiTime(new Date());
+    const todayDateStr = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
 
     if (period === '1m') {
       aggregated = pts.map(p => {
         const tz = getTaipeiTime(p.time);
+        const dateStr = `${tz.year}-${String(tz.month).padStart(2, '0')}-${String(tz.day).padStart(2, '0')}`;
         const timeStr = `${String(tz.hour).padStart(2, '0')}:${String(tz.minute).padStart(2, '0')}`;
+        const timeLabel = dateStr === todayDateStr ? timeStr : `${String(tz.month).padStart(2, '0')}/${String(tz.day).padStart(2, '0')} ${timeStr}`;
         return {
-          time: timeStr,
+          time: timeLabel,
           open: p.open,
           high: p.high,
           low: p.low,
@@ -78,6 +173,7 @@ export async function GET(request: Request) {
 
       aggregated = Array.from(grouped.entries()).map(([key, group]) => {
         const parts = key.split(' ');
+        const dateStr = parts[0];
         const timeLabel = parts[1]; // HH:MM
         
         const open = group[0].open;
@@ -86,8 +182,10 @@ export async function GET(request: Request) {
         const low = Math.min(...group.map(x => x.low));
         const volume = group.reduce((sum, x) => sum + x.volume, 0);
 
+        const label = dateStr === todayDateStr ? timeLabel : `${dateStr.substring(5).replace('-', '/')} ${timeLabel}`;
+
         return {
-          time: timeLabel,
+          time: label,
           open,
           high,
           low,

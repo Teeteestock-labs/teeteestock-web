@@ -14,6 +14,7 @@ export interface OrderBook {
 
 interface TeeContextType {
     balance: number;
+    availableBalance: number;
     holdings: UserHolding[];
     marketData: teeteePair[];
     orders: Order[];
@@ -112,6 +113,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [settlementReport, setSettlementReport] = useState<string | null>(null);
 
     // 同步後端行情與玩家狀態
     const fetchLatestMarketAndPlayer = async () => {
@@ -302,14 +304,14 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
             setTimeout(() => {
                 fetchLatestMarketAndPlayer();
-                alert(reportMsg);
+                setSettlementReport(reportMsg);
             }, 3000);
 
         } catch (error) {
             console.error('Settlement error:', error);
             setTimeout(() => {
                 fetchLatestMarketAndPlayer();
-                alert(`結算過程發生錯誤：${error instanceof Error ? error.message : '未知錯誤'}`);
+                setSettlementReport(`結算過程發生錯誤：${error instanceof Error ? error.message : '未知錯誤'}`);
             }, 3000);
         }
     };
@@ -334,6 +336,13 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             setIsInitialized(true);
         });
     }, []);
+
+    // 計算活躍買單總凍結資金與可用餘額
+    const pendingBuyCost = (orders || [])
+        .filter(o => (o.isUser || !o.botId) && (o.type === 'buy' || (o as any).side === 'BUY'))
+        .reduce((sum, o) => sum + o.price * o.amount, 0);
+
+    const availableBalance = Math.max(0, balance - pendingBuyCost);
 
     // 當資料變動時，同步到 LocalStorage
     useEffect(() => {
@@ -403,10 +412,14 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         // 本地預先檢查，避免無意義請求
         if (type === 'buy') {
             const totalCost = amount * price;
-            if (balance < totalCost) return { success: false, message: "餘額不足" };
+            if (availableBalance < totalCost) return { success: false, message: "可用餘額不足（已扣除其他委託中買單）" };
         } else {
             const existing = holdings.find(h => h.pairId === pairId);
-            if (!existing || existing.shares < amount) return { success: false, message: "庫存不足" };
+            const pendingSellVolume = orders
+                .filter(o => (o.isUser || !o.botId) && o.pairId.toLowerCase() === pairId.toLowerCase() && (o.type === 'sell' || (o as any).side === 'SELL'))
+                .reduce((sum, o) => sum + o.amount, 0);
+            const availableShares = Math.max(0, (existing?.shares || 0) - pendingSellVolume);
+            if (availableShares < amount) return { success: false, message: "可賣庫存不足（已扣除其他委託中賣單）" };
         }
 
         setIsSubmitting(true);
@@ -560,8 +573,38 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     };
 
     return (
-        <TeeContext.Provider value={{ balance, holdings, marketData, orders, marketStatus, isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
+        <TeeContext.Provider value={{ balance, availableBalance, holdings, marketData, orders, marketStatus, isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
             {children}
+            {settlementReport && (
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 select-none">
+                    <style>{`
+                        @keyframes scaleIn {
+                            from { transform: scale(0.95); opacity: 0; }
+                            to { transform: scale(1); opacity: 1; }
+                        }
+                        .animate-scale-in {
+                            animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                        }
+                    `}</style>
+                    <div className="bg-[#181A20] border-2 border-[#FF69B4]/30 rounded-xl p-6 shadow-2xl max-w-sm w-full flex flex-col space-y-4 animate-scale-in">
+                        <div className="flex items-center gap-3 border-b border-[#2B2F36] pb-3">
+                            <span className="w-3 h-3 bg-[#FF69B4] rounded-full animate-pulse" />
+                            <h3 className="text-[#FF69B4] text-base font-extrabold tracking-wider font-mono">
+                                結算與除息股利報告
+                            </h3>
+                        </div>
+                        <div className="bg-[#1E2329]/70 rounded p-4 text-[11px] text-[#EAECEF] font-mono whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto custom-scrollbar">
+                            {settlementReport}
+                        </div>
+                        <button
+                            onClick={() => setSettlementReport(null)}
+                            className="w-full py-2.5 px-4 rounded bg-gradient-to-r from-[#FF69B4] to-[#C71585] text-white text-xs font-black tracking-widest hover:opacity-90 active:scale-[0.98] transition-transform shadow-lg shadow-[#FF69B4]/20"
+                        >
+                            我知道了 (點擊關閉)
+                        </button>
+                    </div>
+                </div>
+            )}
         </TeeContext.Provider>
     );
 }

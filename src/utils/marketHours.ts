@@ -154,10 +154,10 @@ export function getNextSettlementBoundary(now: Date = new Date()): Date {
   let daysToNextMonday = (8 - tz.dayOfWeek) % 7;
   if (tz.dayOfWeek === 1) {
     const totalMinutes = tz.hour * 60 + tz.minute;
-    if (totalMinutes >= 1110) { // 18:30 is 1110 minutes
-      daysToNextMonday = 7; // Already past Monday 18:30, next is next Monday
+    if (totalMinutes >= 1439) { // 23:59 is 1439 minutes
+      daysToNextMonday = 7; // Already past Monday 23:59, next is next Monday
     } else {
-      daysToNextMonday = 0; // Today is Monday and before 18:30
+      daysToNextMonday = 0; // Today is Monday and before 23:59
     }
   }
   
@@ -165,7 +165,7 @@ export function getNextSettlementBoundary(now: Date = new Date()): Date {
   const year = tzDate.getFullYear();
   const month = tzDate.getMonth() + 1;
   const day = tzDate.getDate();
-  return new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T18:30:00+08:00`);
+  return new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T23:59:00+08:00`);
 }
 
 export function getPreviousSundayEndInTaipei(now: Date = new Date()): Date {

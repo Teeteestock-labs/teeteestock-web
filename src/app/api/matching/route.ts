@@ -39,7 +39,10 @@ export async function POST(request: Request) {
     const results = await prisma.$transaction(async (tx) => {
       // 1. 撈取目前所有未下市的 CP 組合
       const pairs = await tx.cpPairs.findMany({
-        where: { status: { not: MarketStatus.DELISTED } },
+        where: {
+          status: { not: MarketStatus.DELISTED },
+          id: { not: 'hololive' }
+        },
       });
 
       const matchedPairsLog: any[] = [];
@@ -394,15 +397,16 @@ export async function POST(request: Request) {
           });
 
           const prevClose = todayKLinesCount === 0 ? pair.openingPrice : (lastKLine ? lastKLine.close : pair.currentPrice);
+          const openPrice = actualTradedVolume > 0 ? finalPrice : prevClose;
 
           await tx.kLineHistory.create({
             data: {
               pairId: pair.id,
               timestamp: timestamp,
-              open: prevClose,
-              high: actualTradedVolume > 0 ? Math.max(prevClose, finalPrice) : prevClose,
-              low: actualTradedVolume > 0 ? Math.min(prevClose, finalPrice) : prevClose,
-              close: actualTradedVolume > 0 ? finalPrice : prevClose,
+              open: openPrice,
+              high: actualTradedVolume > 0 ? Math.max(openPrice, finalPrice) : openPrice,
+              low: actualTradedVolume > 0 ? Math.min(openPrice, finalPrice) : openPrice,
+              close: actualTradedVolume > 0 ? finalPrice : openPrice,
               volume: BigInt(actualTradedVolume)
             }
           });

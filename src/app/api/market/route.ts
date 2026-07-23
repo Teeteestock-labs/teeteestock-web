@@ -29,10 +29,14 @@ export async function GET() {
           }
         },
         trades: {
+          where: {
+            createdAt: {
+              gte: startUTC
+            }
+          },
           orderBy: {
             createdAt: 'desc'
-          },
-          take: 50
+          }
         },
         events: {
           where: {

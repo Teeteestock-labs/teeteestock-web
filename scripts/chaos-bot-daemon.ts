@@ -55,7 +55,8 @@ async function runChaosIteration() {
     // Fetch active stocks (exclude delisted ones)
     const activePairs = await prisma.cpPairs.findMany({
       where: {
-        status: { not: 'DELISTED' }
+        status: { not: 'DELISTED' },
+        id: { not: 'hololive' }
       }
     });
 
