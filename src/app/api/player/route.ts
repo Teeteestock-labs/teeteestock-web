@@ -26,6 +26,10 @@ export async function GET() {
       where: { userId: DEFAULT_PLAYER_ID },
     });
 
+    const settlementLogs = await prisma.settlementLog.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+
     return NextResponse.json({
       player: {
         id: account.userId,
@@ -37,6 +41,13 @@ export async function GET() {
           avgCost: h.average_cost,
         })),
       },
+      settlementLogs: settlementLogs.map(l => ({
+        id: l.id,
+        pairId: l.pairId,
+        dividendPerShare: l.dividendPerShare,
+        newNV: l.newNV,
+        createdAt: l.createdAt.toISOString()
+      }))
     });
   } catch (error) {
     console.error('Error fetching player:', error);

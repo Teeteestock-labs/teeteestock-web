@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTee } from "@/context/TeeContext";
@@ -571,6 +571,198 @@ function AssetDonutChart({
   );
 }
 
+// ── 股息紀錄折疊卡片組件 (Dividend History Section Component) ──
+function DividendHistorySection({ 
+  settlementLogs, 
+  holdings, 
+  marketData, 
+  router 
+}: { 
+  settlementLogs: any[]; 
+  holdings: UserHolding[]; 
+  marketData: teeteePair[]; 
+  router: any; 
+}) {
+  // 按配息日期 (YYYY/MM/DD) 分組 SettlementLog
+  const dateGroups = useMemo(() => {
+    const groups: { [dateStr: string]: { date: Date; logs: any[] } } = {};
+    (settlementLogs || []).forEach(log => {
+      const d = new Date(log.createdAt);
+      const dateStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+      if (!groups[dateStr]) {
+        groups[dateStr] = { date: d, logs: [] };
+      }
+      groups[dateStr].logs.push(log);
+    });
+    return Object.entries(groups)
+      .sort((a, b) => b[1].date.getTime() - a[1].date.getTime());
+  }, [settlementLogs]);
+
+  // 預設配息日期折疊狀態 (預設第一期最新日期展開，其餘折疊)
+  const [collapsedDates, setCollapsedDates] = useState<Record<string, boolean>>({});
+
+  const toggleDate = (dateStr: string) => {
+    setCollapsedDates(prev => ({
+      ...prev,
+      [dateStr]: !prev[dateStr]
+    }));
+  };
+
+  // 計算玩家歷史總受領股息金額
+  const totalEarnedOverall = useMemo(() => {
+    let total = 0;
+    dateGroups.forEach(([_, group]) => {
+      group.logs.forEach(log => {
+        const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
+        if (holding && holding.shares > 0) {
+          total += holding.shares * (log.dividendPerShare || 0);
+        }
+      });
+    });
+    return total;
+  }, [dateGroups, holdings]);
+
+  return (
+    <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden shadow-xl">
+      {/* 1. 統一風格標題列：配息相關資訊 */}
+      <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center select-none">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF69B4] animate-pulse shadow-[0_0_8px_#FF69B4]" />
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider">配息相關資訊</h3>
+        </div>
+        <div className="flex items-center gap-3 font-mono">
+          <span className="text-xs font-bold text-white">
+            累計領取 +${totalEarnedOverall.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <span className="text-[10px] text-gray-400 border-l border-gray-800 pl-3">
+            共 {dateGroups.length} 期配息
+          </span>
+        </div>
+      </div>
+
+      {/* 2. 依配息日期折疊區域 (Collapsible Groups by Date) */}
+      {dateGroups.length === 0 ? (
+        <div className="p-8 text-center text-gray-500 text-xs font-bold font-mono">
+          目前尚無歷史配息紀錄
+        </div>
+      ) : (
+        <div className="divide-y divide-[#21262C] max-h-[320px] overflow-y-auto custom-scrollbar">
+          {dateGroups.map(([dateStr, group], index) => {
+            const isCollapsed = collapsedDates[dateStr] ?? (index !== 0);
+
+            let dateTotalEarned = 0;
+            // 過濾僅保留基準日有持股 (shares > 0) 的商品
+            const items = group.logs
+              .map(log => {
+                const pair = marketData.find(p => p.id.toLowerCase() === log.pairId.toLowerCase());
+                const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
+                const shares = holding ? holding.shares : 0;
+                const payout = shares * (log.dividendPerShare || 0);
+
+                if (shares > 0) {
+                  dateTotalEarned += payout;
+                }
+
+                return {
+                  log,
+                  pair,
+                  shares,
+                  payout,
+                  stockId: PAIR_ID_MAP[log.pairId.toLowerCase()] || log.pairId.toUpperCase(),
+                  name: pair?.name || log.pairId
+                };
+              })
+              .filter(item => item.shares > 0);
+
+            const participatingCount = items.length;
+
+            return (
+              <div key={dateStr} className="bg-gray-950/30">
+                {/* 配息日期折疊標題列 */}
+                <button
+                  onClick={() => toggleDate(dateStr)}
+                  className="w-full px-4 py-2.5 bg-[#131722]/80 hover:bg-gray-900/80 transition-colors border-b border-[#2b2f36]/40 flex justify-between items-center text-left select-none"
+                >
+                  <div className="flex items-center gap-3 font-mono">
+                    <span className="text-xs font-bold text-white">
+                      {dateStr}
+                    </span>
+                    <span className="text-[11px] text-gray-400">
+                      ({participatingCount} 檔配息)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4 font-mono">
+                    <div className="text-right">
+                      <span className="text-[10px] text-gray-400 block">本期配息金額</span>
+                      <span className="text-xs font-bold text-white">
+                        +${dateTotalEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <span className="text-gray-400 text-xs transition-transform duration-200">
+                      {isCollapsed ? '▼' : '▲'}
+                    </span>
+                  </div>
+                </button>
+
+                {/* 折疊內容：個股領息明細表 (縮小列高與緊密化) */}
+                {!isCollapsed && (
+                  <div className="overflow-x-auto custom-scrollbar bg-black/20">
+                    {items.length === 0 ? (
+                      <div className="py-4 text-center text-gray-500 text-[11px] font-mono">
+                        基準日無持有配息商品
+                      </div>
+                    ) : (
+                      <table className="w-full text-left border-collapse font-mono">
+                        <thead>
+                          <tr className="bg-gray-950/80 text-gray-500 text-[10px] font-bold border-b border-[#2b2f36] uppercase tracking-wider select-none whitespace-nowrap leading-tight">
+                            <th className="px-4 py-1.5 border-r border-[#2b2f36]/60">商品</th>
+                            <th className="px-4 py-1.5 text-right border-r border-[#2b2f36]/60">每股配息</th>
+                            <th className="px-4 py-1.5 text-right border-r border-[#2b2f36]/60">基準日持有股數</th>
+                            <th className="px-4 py-1.5 text-right">本期配息金額</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#21262C]/60 text-xs">
+                          {items.map(item => (
+                            <tr
+                              key={item.log.id}
+                              className="hover:bg-gray-900/30 transition-colors"
+                            >
+                              {/* 1. 商品 (僅顯示股號) */}
+                              <td className="px-4 py-1.5 border-r border-[#2b2f36]/60">
+                                <div className="font-bold text-xs text-gray-200 uppercase tracking-wider">{item.stockId}</div>
+                              </td>
+
+                              {/* 2. 每股配息 (不使用亮色) */}
+                              <td className="px-4 py-1.5 text-right border-r border-[#2b2f36]/60 text-gray-300">
+                                ${item.log.dividendPerShare.toFixed(2)}
+                              </td>
+
+                              {/* 3. 基準日持有股數 (不使用亮色) */}
+                              <td className="px-4 py-1.5 text-right border-r border-[#2b2f36]/60 text-gray-300">
+                                {item.shares.toLocaleString(undefined, { maximumFractionDigits: 0 })} 股
+                              </td>
+
+                              {/* 4. 本期配息金額 (亮白色) */}
+                              <td className="px-4 py-1.5 text-right font-bold text-white">
+                                +${item.payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -598,7 +790,8 @@ function HomeContent() {
     isCancelling,
     marketStatus,
     simulateMarketMove,
-    executeWeeklySettlement
+    executeWeeklySettlement,
+    settlementLogs
   } = useTee();
 
   const sortedMarketData = [...marketData].sort((a, b) => a.id.localeCompare(b.id));
@@ -941,6 +1134,14 @@ function HomeContent() {
                 </div>
               );
             })()}
+
+            {/* 已領股息總額資訊卡 (Collapsible Dividend Section by Date) */}
+            <DividendHistorySection
+              settlementLogs={settlementLogs}
+              holdings={holdings}
+              marketData={marketData}
+              router={router}
+            />
 
             {/* 最下方總資產歷史變化分時圖 (1M, 3M, 6M, 1Y, MAX) */}
             <AssetHistoryChart

@@ -53,107 +53,59 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
   const isAlertMode = alertPairIds.includes(pair.id);
 
   if (isAlertMode) {
-    // ── 進入 警戒模式：【現金全壓 ── 鋼鐵護城河佈單】 ──
-    const alertPrice = pair.netValue * 0.08;
-    console.log(`[🚨 AlertMode] ${pair.id} 觸發警戒模式！限價防線 Alert_Price: ${alertPrice.toFixed(2)}`);
+    // ── 進入 國家隊（Alert Mode 警戒模式）：【遵守漲停限制 ── 漲停板向下 5 檔階梯式佈單】 ──
+    const dividendAmount = parseFloat((pair.netValue * 0.08).toFixed(2));
+    // 計算漲停價 (+10% limit up) 並對齊 Tick Size
+    const limitUpPrice = alignToTick(openingPrice * 1.10);
 
-    // 取得造市商的可用現金
+    console.log(`[🚨 國家隊 AlertMode] ${pair.id} 股價/跌停低於除息金額 ${dividendAmount.toFixed(2)}，啟動國家隊強勢拉抬護盤！開盤基準價: ${openingPrice.toFixed(2)}，漲停上限 LimitUp: ${limitUpPrice.toFixed(2)}`);
+
+    // 取得國家隊（造市商）可用資金
     const mmAccount = await tx.userAccount.findUnique({
       where: { userId: 'MARKET_MAKER' }
     });
     const totalMMCash = mmAccount ? Number(mmAccount.balance) : 999999999.0;
     
-    // 依據進入警戒模式的交易對總數，平均分配可用現金
+    // 依據觸發國家隊護盤的交易對總數，平均分配可用護盤資金
     const alertCount = Math.max(1, alertPairIds.length);
     const allocatedCash = totalMMCash / alertCount;
 
-    // 產生 [Alert_Price - 2檔] 至 [Alert_Price + 8檔] 之間的價格檔位
-    const centerPrice = alignToTick(alertPrice);
-    
-    // 往下找 2 檔
-    let currentPrice = centerPrice;
-    const priceListDown: number[] = [];
-    for (let i = 0; i < 2; i++) {
-      const tickSize = getTickSize(currentPrice);
-      currentPrice = alignToTick(currentPrice - tickSize);
-      priceListDown.push(currentPrice);
-    }
-    priceListDown.reverse();
+    // 計算漲停價 ($P_1$) 以及漲停價向下延伸的 4 檔價格 ($P_2, P_3, P_4, P_5$)
+    const prices: number[] = [];
+    let currentP = limitUpPrice;
+    prices.push(currentP);
 
-    // 往上找 8 檔
-    currentPrice = centerPrice;
-    const priceListUp: number[] = [];
-    for (let i = 0; i < 8; i++) {
-      const tickSize = getTickSize(currentPrice);
-      currentPrice = alignToTick(currentPrice + tickSize);
-      priceListUp.push(currentPrice);
+    for (let i = 0; i < 4; i++) {
+      const tick = getTickSize(currentP);
+      currentP = alignToTick(Math.max(0.01, currentP - tick));
+      prices.push(currentP);
     }
 
-    const targetPrices = [...priceListDown, centerPrice, ...priceListUp];
+    // 資金分配比例：漲停價 ($P_1$) 佈最多 (80% 資金)，其餘 4 檔各佈約 5% 資金 (合計 20%)
+    const ratios = [0.80, 0.05, 0.05, 0.05, 0.05];
 
-    // 分組 (使用精準的模數運算，避免 toFixed(1) 四捨五入造成判定失準)
-    const dotZeroPrices = targetPrices.filter(p => Math.abs(p % 1) < 1e-9);
-    const dotFivePrices = targetPrices.filter(p => Math.abs(p % 1 - 0.5) < 1e-9);
-    const otherPrices = targetPrices.filter(p => Math.abs(p % 1) >= 1e-9 && Math.abs(p % 1 - 0.5) >= 1e-9);
+    let deployedCount = 0;
+    for (let i = 0; i < prices.length; i++) {
+      const targetPrice = prices[i];
+      const targetRatio = ratios[i];
+      const cashForPrice = allocatedCash * targetRatio;
+      const vol = Math.floor(cashForPrice / targetPrice);
 
-    // 分配權重籌碼
-    let dotZeroCash = 0;
-    let dotFiveCash = 0;
-    let otherCash = 0;
-
-    if (dotZeroPrices.length > 0) {
-      dotZeroCash = allocatedCash * 0.537;
-    }
-    if (dotFivePrices.length > 0) {
-      dotFiveCash = allocatedCash * 0.267;
-    }
-    otherCash = allocatedCash - (dotZeroPrices.length > 0 ? dotZeroCash : 0) - (dotFivePrices.length > 0 ? dotFiveCash : 0);
-
-    // 開始掛買單
-    // 1. 尾數為 .0 的主要主力價位 (53.7% 現金)
-    if (dotZeroPrices.length > 0) {
-      const cashPerPrice = dotZeroCash / dotZeroPrices.length;
-      for (const p of dotZeroPrices) {
-        const vol = Math.floor(cashPerPrice / p);
-        if (vol > 0) {
-          await tx.orderBook.create({
-            data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: p, volume: vol }
-          });
-        }
+      if (vol > 0) {
+        await tx.orderBook.create({
+          data: {
+            userId: 'MARKET_MAKER',
+            pairId: pair.id,
+            side: OrderSide.BUY,
+            price: targetPrice,
+            volume: vol
+          }
+        });
+        deployedCount++;
       }
     }
 
-    // 2. 尾數為 .5 的次要防線價位 (26.7% 現金)
-    if (dotFivePrices.length > 0) {
-      const cashPerPrice = dotFiveCash / dotFivePrices.length;
-      for (const p of dotFivePrices) {
-        const vol = Math.floor(cashPerPrice / p);
-        if (vol > 0) {
-          await tx.orderBook.create({
-            data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: p, volume: vol }
-          });
-        }
-      }
-    }
-
-    // 3. 其他尾數的價位 (19.6% 現金，隨機打散分配)
-    if (otherPrices.length > 0) {
-      const weights = otherPrices.map(() => Math.random());
-      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-      
-      for (let i = 0; i < otherPrices.length; i++) {
-        const p = otherPrices[i];
-        const cashForPrice = (weights[i] / totalWeight) * otherCash;
-        const vol = Math.floor(cashForPrice / p);
-        if (vol > 0) {
-          await tx.orderBook.create({
-            data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: p, volume: vol }
-          });
-        }
-      }
-    }
-
-    console.log(`[🤖 MarketMaker] ${pair.id} 成功部署【警戒模式 ALERT】鋼鐵護城河防線，共掛入 ${targetPrices.length} 檔限價買單。`);
+    console.log(`[🤖 國家隊 MarketMaker] ${pair.id} 成功部署漲停限制防線：漲停價 ${limitUpPrice.toFixed(2)} 佈最多 (80% 資金)，向下 4 檔各佈約 5% 資金，共掛入 ${deployedCount} 檔護盤買單。`);
     return;
   }
 
@@ -597,9 +549,9 @@ export async function runPreMarketMMDeployment(_now: Date = new Date()) {
 
     const alertPairIds: string[] = [];
     for (const p of updatedPairs) {
-      const alertPrice = p.netValue * 0.08;
+      const dividendAmount = parseFloat((p.netValue * 0.08).toFixed(2));
       const limitDownPrice = p.currentPrice * 0.80;
-      if (limitDownPrice < alertPrice) {
+      if (p.currentPrice <= dividendAmount || p.openingPrice <= dividendAmount || limitDownPrice < dividendAmount) {
         alertPairIds.push(p.id);
       }
     }

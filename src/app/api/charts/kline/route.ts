@@ -154,6 +154,7 @@ export async function GET(request: Request) {
         const timeLabel = dateStr === todayDateStr ? timeStr : `${String(tz.month).padStart(2, '0')}/${String(tz.day).padStart(2, '0')} ${timeStr}`;
         return {
           time: timeLabel,
+          rawTimestamp: p.time,
           open: p.open,
           high: p.high,
           low: p.low,
@@ -186,6 +187,7 @@ export async function GET(request: Request) {
 
         return {
           time: label,
+          rawTimestamp: group[0].time,
           open,
           high,
           low,
@@ -214,6 +216,7 @@ export async function GET(request: Request) {
 
         return {
           time: timeLabel,
+          rawTimestamp: group[0].time,
           open,
           high,
           low,
@@ -249,6 +252,7 @@ export async function GET(request: Request) {
 
         return {
           time: timeLabel,
+          rawTimestamp: group[0].time,
           open,
           high,
           low,
@@ -277,6 +281,7 @@ export async function GET(request: Request) {
 
         return {
           time: timeLabel,
+          rawTimestamp: group[0].time,
           open,
           high,
           low,
@@ -286,10 +291,23 @@ export async function GET(request: Request) {
       });
     }
 
+    // Fetch settlement dividend logs for adjusted K-line calculation
+    const settlementLogs = await prisma.settlementLog.findMany({
+      where: { pairId },
+      select: { createdAt: true, dividendPerShare: true }
+    });
+
     // Limit to the most recent 300 points to ensure snappy UI loading
     const sliced = aggregated.slice(-300);
 
-    return NextResponse.json({ success: true, data: sliced });
+    return NextResponse.json({
+      success: true,
+      data: sliced,
+      dividends: settlementLogs.map(l => ({
+        timestamp: new Date(l.createdAt).getTime(),
+        dividendPerShare: l.dividendPerShare
+      }))
+    });
   } catch (error) {
     console.error('Error in kline history aggregation:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

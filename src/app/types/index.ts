@@ -15,6 +15,7 @@ export interface teeteePair {
     name: string;
     members: string[];
     price: number;   // 當前市場價格
+    netValue?: number; // 組合淨值
     change24h: number;      // 24小時漲跌
     ceoTitle: string;       // 預留稱號欄位
     history: ChartDataPoint[]; // 價格歷史

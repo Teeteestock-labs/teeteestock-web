@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { teeteePair } from "@/app/types";
 import { useTee } from "@/context/TeeContext";
@@ -30,6 +30,8 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const [activeTab, setActiveTab] = useState<'time' | 'k' | 'detail'>('time');
     const [chartRange, setChartRange] = useState<'1D' | '1W' | '1M' | '6M' | 'YTD' | '1Y' | '5Y'>('1D');
     const [klinePeriod, setKlinePeriod] = useState<'1m' | '5m' | '1D' | '1W' | '1M'>('1m');
+    const [isAdjustedKline, setIsAdjustedKline] = useState<boolean>(false);
+    const [dividends, setDividends] = useState<any[]>([]);
     const [chartData, setChartData] = useState<any[]>([]);
     const [loadingChart, setLoadingChart] = useState(false);
     const [orderSubTab, setOrderSubTab] = useState<'pending' | 'trades'>('pending');
@@ -50,6 +52,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
             setChartRange('1D');
             setKlinePeriod('1m');
             setChartData([]);
+            setDividends([]);
             setOrderPrice(pair.openingPrice ?? 100);
         }
     }, [pair?.id]);
@@ -68,6 +71,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                 .then(resData => {
                     if (resData.success && resData.data) {
                         setChartData(resData.data);
+                        if (resData.dividends) setDividends(resData.dividends);
                     }
                 })
                 .catch(err => console.error("Error loading chart data:", err))
@@ -79,6 +83,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                 .then(resData => {
                     if (resData.success && resData.data) {
                         setChartData(resData.data);
+                        if (resData.dividends) setDividends(resData.dividends);
                     }
                 })
                 .catch(err => console.error("Error loading chart data:", err))
@@ -86,9 +91,32 @@ export default function MarketDetailClient({ id }: { id: string }) {
         }
     }, [pair?.id, pair?.price, activeTab, chartRange, klinePeriod]);
 
-    const displayData = activeTab === 'time' && chartRange === '1D'
+    const rawDisplayData = activeTab === 'time' && chartRange === '1D'
         ? (pair?.history || [])
-        : chartData; 
+        : chartData;
+
+    const displayData = useMemo(() => {
+        if (!isAdjustedKline || !dividends.length || activeTab !== 'k') {
+            return rawDisplayData;
+        }
+
+        return rawDisplayData.map(pt => {
+            const ptTime = pt.rawTimestamp ? new Date(pt.rawTimestamp).getTime() : 0;
+            const addBack = dividends
+                .filter(d => d.timestamp > ptTime)
+                .reduce((sum, d) => sum + (d.dividendPerShare || 0), 0);
+
+            if (addBack <= 0) return pt;
+
+            return {
+                ...pt,
+                open: parseFloat(Math.max(0.1, pt.open - addBack).toFixed(2)),
+                high: parseFloat(Math.max(0.1, pt.high - addBack).toFixed(2)),
+                low: parseFloat(Math.max(0.1, pt.low - addBack).toFixed(2)),
+                close: parseFloat(Math.max(0.1, pt.close - addBack).toFixed(2)),
+            };
+        });
+    }, [rawDisplayData, isAdjustedKline, dividends, activeTab]); 
 
 
 
@@ -448,49 +476,66 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         </div>
 
                         {activeTab !== 'detail' && (
-                            <div className="border-b border-[#2B2F36] px-3 py-1.5 flex gap-2 text-[9px] font-normal text-[#848E9C] bg-[#1E2329]/50 select-none">
-                                {activeTab === 'time' ? (
-                                    // 分時圖區間按鈕
-                                    (['1D', '1W', '1M', '6M', 'YTD', '1Y', '5Y'] as const).map((r) => {
-                                        const labelMap = {
-                                            '1D': '當日',
-                                            '1W': '1周',
-                                            '1M': '1個月',
-                                            '6M': '6月',
-                                            'YTD': '本年迄今',
-                                            '1Y': '1年',
-                                            '5Y': '5年'
-                                        };
-                                        return (
-                                            <span 
-                                                key={r}
-                                                onClick={() => setChartRange(r)}
-                                                className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${chartRange === r ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
-                                            >
-                                                {labelMap[r]}
-                                            </span>
-                                        );
-                                    })
-                                ) : (
-                                    // K線圖週期按鈕
-                                    (['1m', '5m', '1D', '1W', '1M'] as const).map((p) => {
-                                        const labelMap = {
-                                            '1m': '1分k',
-                                            '5m': '5分k',
-                                            '1D': '日k',
-                                            '1W': '周k',
-                                            '1M': '月k'
-                                        };
-                                        return (
-                                            <span 
-                                                key={p}
-                                                onClick={() => setKlinePeriod(p)}
-                                                className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${klinePeriod === p ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
-                                            >
-                                                {labelMap[p]}
-                                            </span>
-                                        );
-                                    })
+                            <div className="border-b border-[#2B2F36] px-3 py-1.5 flex items-center justify-between text-[9px] font-normal text-[#848E9C] bg-[#1E2329]/50 select-none">
+                                <div className="flex gap-2 items-center">
+                                    {activeTab === 'time' ? (
+                                        // 分時圖區間按鈕
+                                        (['1D', '1W', '1M', '6M', 'YTD', '1Y', '5Y'] as const).map((r) => {
+                                            const labelMap = {
+                                                '1D': '當日',
+                                                '1W': '1周',
+                                                '1M': '1個月',
+                                                '6M': '6月',
+                                                'YTD': '本年迄今',
+                                                '1Y': '1年',
+                                                '5Y': '5年'
+                                            };
+                                            return (
+                                                <span 
+                                                    key={r}
+                                                    onClick={() => setChartRange(r)}
+                                                    className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${chartRange === r ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
+                                                >
+                                                    {labelMap[r]}
+                                                </span>
+                                            );
+                                        })
+                                    ) : (
+                                        // K線圖週期按鈕
+                                        (['1m', '5m', '1D', '1W', '1M'] as const).map((p) => {
+                                            const labelMap = {
+                                                '1m': isAdjustedKline ? '還原1分' : '1分k',
+                                                '5m': isAdjustedKline ? '還原5分' : '5分k',
+                                                '1D': isAdjustedKline ? '還原日' : '日k',
+                                                '1W': isAdjustedKline ? '還原周' : '周k',
+                                                '1M': isAdjustedKline ? '還原月' : '月k'
+                                            };
+                                            return (
+                                                <span 
+                                                    key={p}
+                                                    onClick={() => setKlinePeriod(p)}
+                                                    className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${klinePeriod === p ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
+                                                >
+                                                    {labelMap[p]}
+                                                </span>
+                                            );
+                                        })
+                                    )}
+                                </div>
+
+                                {/* K線圖專用：右側還原/原始切換按鈕 */}
+                                {activeTab === 'k' && (
+                                    <button
+                                        onClick={() => setIsAdjustedKline(!isAdjustedKline)}
+                                        className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all flex items-center gap-1 select-none border ${
+                                            isAdjustedKline
+                                                ? 'bg-[#FF69B4]/20 text-[#FF69B4] border-[#FF69B4]/50 shadow-[0_0_8px_rgba(255,105,180,0.3)] font-black'
+                                                : 'bg-[#2B2F36]/60 text-[#848E9C] border-transparent hover:text-white hover:bg-[#2B2F36]'
+                                        }`}
+                                        title="加回歷史除息金額（還原 K 線走勢）"
+                                    >
+                                        <span>{isAdjustedKline ? '✨ 還原k線' : '🔄 原始k線'}</span>
+                                    </button>
                                 )}
                             </div>
                         )}

@@ -27,6 +27,7 @@ interface TeeContextType {
     simulateMarketMove: () => void;
     reportInteraction: (pairId: string, type: 'liveCollab' | 'largeEvent' | 'newSong') => void;
     executeWeeklySettlement: () => void;
+    settlementLogs: any[];
     submitTeeteeReport: (pairId: string, type: string, url: string) => void;
     refreshPlayerState: () => Promise<void>;
 }
@@ -114,6 +115,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
     const [settlementReport, setSettlementReport] = useState<string | null>(null);
+    const [settlementLogs, setSettlementLogs] = useState<any[]>([]);
 
     // 同步後端行情與玩家狀態
     const fetchLatestMarketAndPlayer = async () => {
@@ -153,6 +155,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                 if (data && data.player) {
                     setBalance(data.player.balance);
                     setHoldings(data.player.holdings);
+                    if (data.settlementLogs) setSettlementLogs(data.settlementLogs);
                     localStorage.setItem('tee_balance', data.player.balance.toString());
                     localStorage.setItem('tee_holdings', JSON.stringify(data.player.holdings));
                     localStorage.setItem('tee_last_db_balance', data.player.balance.toString());
@@ -573,7 +576,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     };
 
     return (
-        <TeeContext.Provider value={{ balance, availableBalance, holdings, marketData, orders, marketStatus, isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
+        <TeeContext.Provider value={{ balance, availableBalance, holdings, marketData, orders, marketStatus, isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, settlementLogs, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
             {children}
             {settlementReport && (
                 <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 select-none">
