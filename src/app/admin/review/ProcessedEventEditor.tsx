@@ -86,13 +86,30 @@ export default function ProcessedEventEditor({ event }: Props) {
   };
 
   if (!editing) {
+    const isTransferred = event.reason && event.reason.includes('已轉移至');
+    const isRejected = event.status === 'REJECTED';
     const isApproved = event.status === 'APPROVED';
-    const cardBorderClass = isApproved ? 'border-emerald-500/50 bg-emerald-950/5' : 'border-red-500/50 bg-red-950/5';
-    const tagColorClass = isApproved ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30';
-    const badgeLabel = isApproved ? '[已核可]' : '[已拒絕]';
-    
+
+    let cardBorderClass = 'border-gray-800 bg-gray-900/40';
+    let tagColorClass = 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    let badgeLabel = '[待審查]';
     let bonusLabel = "";
-    if (isApproved) {
+
+    if (isTransferred) {
+      const match = event.reason.match(/已轉移至\s+[A-Z0-9]+/);
+      const transferTag = match ? match[0] : '已轉移';
+      cardBorderClass = 'border-white/20 bg-white/5';
+      tagColorClass = 'bg-white/10 text-white border border-white/30 font-bold';
+      badgeLabel = transferTag;
+    } else if (isRejected) {
+      cardBorderClass = 'border-rose-500/30 bg-rose-950/10';
+      tagColorClass = 'bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold';
+      badgeLabel = '已拒絕';
+    } else if (isApproved) {
+      cardBorderClass = 'border-emerald-500/30 bg-emerald-950/10';
+      tagColorClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold';
+      badgeLabel = '已核可';
+
       if (event.type === 'STREAM') bonusLabel = "(9%)";
       else if (event.type === 'STREAM_3D') bonusLabel = "(15%)";
       else if (event.type === 'VIDEO') bonusLabel = "(30%)";

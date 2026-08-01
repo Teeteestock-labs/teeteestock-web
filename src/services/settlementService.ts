@@ -303,10 +303,12 @@ export async function runDailyRolloverOrSettlement(options?: {
           where: { pairId: pair.id }
         });
 
-        // Write closingPrice directly to last_close_price and next_open_price, and reset todayOpenPrice
+        // Write closingPrice directly to currentPrice, openingPrice, last_close_price and next_open_price, and reset todayOpenPrice
         await tx.cpPairs.update({
           where: { id: pair.id },
           data: {
+            currentPrice: closingPrice,
+            openingPrice: closingPrice,
             last_close_price: closingPrice,
             next_open_price: closingPrice,
             todayOpenPrice: null
@@ -416,11 +418,13 @@ export async function runDailyRolloverOrSettlement(options?: {
           where: { pairId: latestPair.id }
         });
 
-        // 8. Update CP Pair in database (write to last_close_price, next_open_price, and reset todayOpenPrice)
+        // 8. Update CP Pair in database (write currentPrice, openingPrice, last_close_price, next_open_price, and reset todayOpenPrice)
         const _updatedPair = await tx.cpPairs.update({
           where: { id: latestPair.id },
           data: {
             netValue: nextWeekNV,
+            currentPrice: newPrice,
+            openingPrice: newPrice,
             last_close_price: lastPrice,
             next_open_price: newPrice,
             todayOpenPrice: null,

@@ -267,11 +267,20 @@ export async function deleteProcessedEvent(id: string) {
 }
 
 export async function dispatchEventToCP(eventId: string, targetPairId: string) {
+  const current = await prisma.teeteeEvents.findUnique({ where: { id: eventId } });
+  const existingReason = current?.reason ? current.reason : '';
+  const targetUpper = targetPairId.toUpperCase();
+  const transferTag = `已轉移至 ${targetUpper}`;
+  const finalReason = existingReason && !existingReason.includes('已轉移至') 
+    ? `${transferTag} (${existingReason})` 
+    : transferTag;
+
   await prisma.teeteeEvents.update({
     where: { id: eventId },
     data: {
       pairId: targetPairId,
-      status: ReviewStatus.PENDING
+      status: ReviewStatus.PENDING,
+      reason: finalReason
     }
   });
 

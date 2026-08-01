@@ -20,7 +20,9 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
         x: number; 
         y: number; 
         containerWidth: number; 
-        containerHeight: number; 
+        containerHeight: number;
+        offsetX: number;
+        offsetY: number;
     } | null>(null);
 
     const [markers, setMarkers] = React.useState<{
@@ -55,14 +57,17 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
 
     const handleMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const outerRect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - containerRect.left;
+            const y = e.clientY - containerRect.top;
             setHoverCoords({ 
                 x, 
                 y,
-                containerWidth: rect.width,
-                containerHeight: rect.height
+                containerWidth: containerRect.width,
+                containerHeight: containerRect.height,
+                offsetX: containerRect.left - outerRect.left,
+                offsetY: containerRect.top - outerRect.top
             });
         }
     }, []);
@@ -71,15 +76,18 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
         if (containerRef.current && e.touches.length > 0) {
             // Prevent default page scroll to ensure smooth touch crosshair experience
             if (e.cancelable) e.preventDefault();
-            const rect = containerRef.current.getBoundingClientRect();
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const outerRect = e.currentTarget.getBoundingClientRect();
             const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
+            const x = touch.clientX - containerRect.left;
+            const y = touch.clientY - containerRect.top;
             setHoverCoords({ 
                 x, 
                 y,
-                containerWidth: rect.width,
-                containerHeight: rect.height
+                containerWidth: containerRect.width,
+                containerHeight: containerRect.height,
+                offsetX: containerRect.left - outerRect.left,
+                offsetY: containerRect.top - outerRect.top
             });
         }
     }, []);
@@ -320,17 +328,22 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const lastPt = chartData.length > 0 ? chartData[chartData.length - 1] : null;
     const currentPrice = lastPt ? lastPt.close : refPrice;
     const isCurrentUp = currentPrice >= refPrice;
-    // 當為跌（綠色）時，使用對比度更柔和的翡翠綠 (#089981) 代替高亮綠 (#00FF00)，確保白字可讀性
-    const currentPriceColor = isCurrentUp ? colorUp : '#089981';
+    // 統一半透明背景顏色 (0.75 透明度深灰色)，不因漲跌變色，且使背景勉強能看到後方 Y 軸標籤
+    const currentPriceColor = 'rgba(37, 41, 48, 0.75)';
 
     const maxVolume = Math.max(...visibleData.map(d => d.volume || 0), 1);
 
     // 計算滑鼠/觸控位置對應的最接近數據節點以鎖定 Crosshair
-    const actualWidth = hoverCoords ? hoverCoords.containerWidth : 1;
+    // 注意：K 線圖的 containerRef 帶有 pr-[60px]，SVG 實際渲染寬度 = containerWidth - 60
+    // 但 viewBox 寬度 = scrollState.clientWidth (含 padding)，需要修正座標映射
+    const containerW = hoverCoords ? hoverCoords.containerWidth : 1;
+    const stickyPanelPx = isTimeChart ? 0 : 60;
+    const svgRenderedWidth = isScrollableKLine ? width : Math.max(1, containerW - stickyPanelPx);
+
     const virtualX = hoverCoords
         ? (isScrollableKLine 
             ? hoverCoords.x 
-            : (hoverCoords.x / actualWidth) * width)
+            : (hoverCoords.x / svgRenderedWidth) * width)
         : 0;
 
     const canvasHoverX = hoverCoords 
@@ -367,18 +380,20 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     };
 
     if (hoverCoords && closestPt && closestPtIdx !== -1) {
-        const ratioX = getX(closestPtIdx) / width;
+        // viewBox X → 螢幕像素 X：使用 SVG 實際渲染寬度，並加上 container 相對於外層 div 的偏移量
+        const oX = hoverCoords.offsetX;
+        const oY = hoverCoords.offsetY;
         snapX = (isScrollableKLine 
             ? getX(closestPtIdx) - scrollState.scrollLeft
-            : ratioX * hoverCoords.containerWidth);
+            : (getX(closestPtIdx) / width) * svgRenderedWidth) + oX;
 
-        // 準星 Y 軸跟隨滑鼠移動，提供平滑且無分時差距的看盤體驗 (比照 TradingView)
-        snapY = hoverCoords.y;
+        // 準星 Y 軸跟隨滑鼠移動，加上垂直偏移以對齊外層 div 的座標系
+        snapY = hoverCoords.y + oY;
         priceAtHover = getPriceFromY(hoverCoords.y);
     }
 
     const showCrosshair = hoverCoords && closestPt && 
-        snapX >= paddingLeft && snapX <= (hoverCoords.containerWidth - paddingRight) && 
+        snapX >= 0 && snapX <= svgRenderedWidth && 
         snapY >= paddingTop && snapY <= (hoverCoords.containerHeight - paddingBottom);
 
     const maxPt = maxVisibleIdx !== -1 ? chartData[maxVisibleIdx] : null;
@@ -420,8 +435,6 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                 <span>低: <span style={{ color: hudColor }} className="font-semibold">{hudLow}</span></span>
                 <span className="text-[#2a2e39]">|</span>
                 <span>收: <span style={{ color: hudColor }} className="font-semibold">{hudClose}</span></span>
-                <span className="text-[#2a2e39]">|</span>
-                <span>幅: <span style={{ color: hudColor }} className="font-semibold">{hudChange}%</span></span>
                 <span className="text-[#2a2e39]">|</span>
                 <span>量: <span className="text-gray-100 font-semibold">{hudVol}股</span></span>
             </div>
@@ -799,14 +812,14 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                     );
                 })}
 
-                {/* 實時成交價 Tracker 游標 */}
+                {/* 實時成交價 Tracker 游標 (半透明背景以利看見背後 Y 軸刻度) */}
                 <div 
-                    className="absolute right-0 left-0 text-white py-0.5 text-center font-bold font-mono text-[9px] z-30 shadow border-y"
+                    className="absolute right-0 left-0 text-white py-0.5 text-center font-bold font-mono text-[9px] z-30 shadow border-y backdrop-blur-[1px]"
                     style={{ 
                         top: `${(getY(currentPrice) / height) * 100}%`, 
                         transform: 'translateY(-50%)',
                         backgroundColor: currentPriceColor,
-                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                        borderColor: 'rgba(255, 255, 255, 0.25)'
                     }}
                 >
                     {currentPrice.toFixed(2)}

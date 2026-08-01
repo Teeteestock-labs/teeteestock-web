@@ -594,6 +594,8 @@ function HomeContent() {
     holdings,
     marketData,
     orders,
+    cancelOrder,
+    isCancelling,
     marketStatus,
     simulateMarketMove,
     executeWeeklySettlement
@@ -753,20 +755,39 @@ function HomeContent() {
             </div>
 
             <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden">
-              <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center">
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">持有部位</h3>
+              <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center select-none">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#00FFA3] animate-pulse shadow-[0_0_8px_#00FFA3]" />
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">當前持有部位</h3>
+                </div>
+                <span className="text-[10px] font-mono text-gray-400">
+                  共 {holdings.length} 檔
+                </span>
               </div>
               {holdings.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 text-xs font-bold">目前無持股</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse font-mono">
                     <thead>
-                      <tr className="bg-gray-950 text-gray-500 text-[10px] font-bold border-b border-[#2b2f36] uppercase tracking-wider select-none">
-                        <th className="px-3 py-2">商品</th>
-                        <th className="px-3 py-2 text-right">即可委託股數 / 均價</th>
-                        <th className="px-3 py-2 text-right">現價 / 市值</th>
-                        <th className="px-3 py-2 text-right">未實現損益 / ROI</th>
+                      <tr className="bg-gray-950 text-gray-500 text-[10px] font-bold border-b border-[#2b2f36] uppercase tracking-wider select-none whitespace-nowrap leading-tight">
+                        <th className="px-3 py-2 border-r border-[#2b2f36]/60 align-bottom">商品</th>
+                        <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">
+                          <div>市價</div>
+                          <div>均價</div>
+                        </th>
+                        <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">
+                          <div>現值</div>
+                          <div>成本</div>
+                        </th>
+                        <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">
+                          <div>總股數</div>
+                          <div>可用股數</div>
+                        </th>
+                        <th className="px-3 py-2 text-right">
+                          <div>未實現損益</div>
+                          <div>報酬率</div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#21262C]">
@@ -779,9 +800,10 @@ function HomeContent() {
                         const availableShares = Math.max(0, h.shares - pendingSellVolume);
 
                         const value = h.shares * pair.price;
+                        const cost = h.shares * h.avgCost;
                         const profit = (pair.price - h.avgCost) * h.shares;
                         const roi = h.avgCost > 0 ? ((pair.price - h.avgCost) / h.avgCost) * 100 : 0;
-                        const profitColor = profit > 0 ? "text-red-500" : profit < 0 ? "text-green-500" : "text-gray-400";
+                        const profitColor = profit > 0 ? "text-[#FF3B3B]" : profit < 0 ? "text-[#00FFA3]" : "text-gray-400";
                         const stockId = PAIR_ID_MAP[pair.id.toLowerCase()] || pair.id.toUpperCase();
                         return (
                           <tr 
@@ -789,21 +811,33 @@ function HomeContent() {
                             onClick={() => router.push(`/market/${pair.id}`)}
                             className="hover:bg-gray-900/40 transition-colors cursor-pointer select-none"
                           >
-                            <td className="px-3 py-3">
+                            {/* 1. 商品名稱 */}
+                            <td className="px-3 py-3 border-r border-[#2b2f36]/60">
                               <div className="font-bold text-xs text-white uppercase tracking-wider">{stockId}</div>
                               <div className="text-[9px] text-gray-500 truncate max-w-[80px]">{pair.name}</div>
                             </td>
-                            <td className="px-3 py-3 text-right">
-                              <div className="text-xs font-bold text-white">{availableShares.toLocaleString()}</div>
-                              {pendingSellVolume > 0 && (
-                                <div className="text-[9px] text-[#848E9C] font-normal">(總庫存: {h.shares.toLocaleString()})</div>
-                              )}
-                              <div className="text-[10px] text-gray-500">{h.avgCost.toFixed(1)}</div>
+
+                            {/* 2. 目前市價 / 成交均價 */}
+                            <td className="px-3 py-3 text-right border-r border-[#2b2f36]/60">
+                              <div className="text-xs font-bold text-white">{pair.price.toFixed(2)}</div>
+                              <div className="text-[10px] text-gray-400">{h.avgCost.toFixed(2)}</div>
                             </td>
-                            <td className="px-3 py-3 text-right">
-                              <div className="text-xs font-bold text-white">{pair.price.toLocaleString()}</div>
-                              <div className="text-[10px] text-gray-500">{value.toLocaleString()}</div>
+
+                            {/* 3. 現值 / 買入成本 */}
+                            <td className="px-3 py-3 text-right border-r border-[#2b2f36]/60">
+                              <div className="text-xs font-bold text-white">{value.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                              <div className="text-[10px] text-gray-400">{cost.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
                             </td>
+
+                            {/* 4. 總股數 / 可用股數 (總股數 - 目前委託賣單股數) */}
+                            <td className="px-3 py-3 text-right border-r border-[#2b2f36]/60">
+                              <div className="text-xs font-bold text-white">{h.shares.toLocaleString()} 股</div>
+                              <div className="text-[10px] text-gray-400 font-mono">
+                                {availableShares.toLocaleString()} 股
+                              </div>
+                            </td>
+
+                            {/* 5. 未實現損益 / 報酬率 */}
                             <td className="px-3 py-3 text-right">
                               <div className={`text-xs font-bold ${profitColor}`}>
                                 {profit > 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}
@@ -820,6 +854,93 @@ function HomeContent() {
                 </div>
               )}
             </div>
+
+            {/* 目前委託狀態 (Active Pending Orders) */}
+            {(() => {
+              const myPendingOrders = (orders || []).filter(o => o.isUser || !o.botId);
+              return (
+                <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden">
+                  <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center select-none">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#FFD700] animate-pulse shadow-[0_0_8px_#FFD700]" />
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">當前委託狀態</h3>
+                    </div>
+                    <span className="text-[10px] font-mono text-gray-400">
+                      共 {myPendingOrders.length} 筆
+                    </span>
+                  </div>
+
+                  {myPendingOrders.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500 text-xs font-bold font-mono">
+                      目前無未成交委託單
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse font-mono">
+                        <thead>
+                          <tr className="bg-gray-950 text-gray-500 text-[10px] font-bold border-b border-[#2b2f36] uppercase tracking-wider select-none">
+                            <th className="px-3 py-2 border-r border-[#2b2f36]/60">商品 / 股號</th>
+                            <th className="px-3 py-2 border-r border-[#2b2f36]/60">類型</th>
+                            <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">委託價格</th>
+                            <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">委託數量</th>
+                            <th className="px-3 py-2 text-center">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#21262C]">
+                          {myPendingOrders.map((o) => {
+                            const stockId = PAIR_ID_MAP[o.pairId.toLowerCase()] || o.pairId.toUpperCase();
+                            const pair = marketData.find(p => p.id.toLowerCase() === o.pairId.toLowerCase());
+                            const isBuy = o.type === 'buy' || (o as any).side === 'BUY';
+                            return (
+                              <tr 
+                                key={o.id}
+                                className="hover:bg-gray-900/40 transition-colors text-xs font-bold"
+                              >
+                                <td 
+                                  onClick={() => router.push(`/market/${o.pairId}`)}
+                                  className="px-3 py-2.5 cursor-pointer"
+                                >
+                                  <div className="font-bold text-xs text-white uppercase tracking-wider">{stockId}</div>
+                                  <div className="text-[9px] text-gray-500 truncate max-w-[90px]">{pair?.name || o.pairId}</div>
+                                </td>
+                                <td className={`px-3 py-2.5 font-bold ${isBuy ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
+                                  {isBuy ? '買進' : '賣出'}
+                                </td>
+                                <td className="px-3 py-2.5 text-right text-white font-mono font-bold">
+                                  {o.price.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2.5 text-right text-white font-mono">
+                                  {o.amount.toLocaleString()} 股
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const res = await cancelOrder(o.id);
+                                      if (!res.success) {
+                                        alert(res.message || "撤單失敗");
+                                      }
+                                    }}
+                                    disabled={isCancelling}
+                                    className={`px-2.5 py-1 rounded transition-colors text-[10px] font-bold ${
+                                      isCancelling
+                                        ? 'bg-[#2B3139] text-[#474D57] cursor-not-allowed'
+                                        : 'bg-[#2B3139] hover:bg-[#FF3B3B]/20 text-gray-300 hover:text-[#FF3B3B] border border-gray-700/50'
+                                    }`}
+                                  >
+                                    {isCancelling ? '撤銷中' : '撤單'}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* 最下方總資產歷史變化分時圖 (1M, 3M, 6M, 1Y, MAX) */}
             <AssetHistoryChart

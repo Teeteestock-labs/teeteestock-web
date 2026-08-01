@@ -418,25 +418,29 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         })()}
                     </div>
 
-                    {/* 圖表區 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded h-96 flex flex-col overflow-hidden">
-                        <div className="border-b border-[#2B2F36] p-3 flex justify-between items-center text-[10px] font-bold bg-[#1E2329] select-none">
+                    {/* 技術分析圖表 */}
+                    <div className="bg-[#181A20] border border-[#2B2F36] rounded h-96 flex flex-col overflow-hidden shadow-xl">
+                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center text-xs font-bold select-none">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] animate-pulse shadow-[0_0_8px_#38BDF8]" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">技術分析圖表</h3>
+                            </div>
                             <div className="flex gap-4">
                                 <span 
                                     onClick={() => setActiveTab('time')}
-                                    className={`pb-1 cursor-pointer transition-colors ${activeTab === 'time' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                    className={`pb-0.5 cursor-pointer transition-colors ${activeTab === 'time' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
                                 >
                                     分時圖
                                 </span>
                                 <span 
                                     onClick={() => setActiveTab('k')}
-                                    className={`pb-1 cursor-pointer transition-colors ${activeTab === 'k' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                    className={`pb-0.5 cursor-pointer transition-colors ${activeTab === 'k' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
                                 >
                                     K線圖
                                 </span>
                                 <span 
                                     onClick={() => setActiveTab('detail')}
-                                    className={`pb-1 cursor-pointer transition-colors ${activeTab === 'detail' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                    className={`pb-0.5 cursor-pointer transition-colors ${activeTab === 'detail' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
                                 >
                                     詳細
                                 </span>
@@ -549,8 +553,15 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         </div>
                     </div>
 
-                    {/* 買賣及五檔配置 (置於K線圖下方) */}
+                    {/* 五檔買賣報價 */}
                     <div className="bg-[#181A20] border border-[#2B2F36] rounded overflow-hidden select-none shadow-2xl">
+                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FFD700] animate-pulse shadow-[0_0_8px_#FFD700]" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">五檔買賣報價</h3>
+                            </div>
+                        </div>
+
                         {/* 頂部快捷按鈕列 (僅保留現價/漲停/跌停) */}
                         <div className="grid grid-cols-3 border-b border-[#2B2F36] select-none text-xs font-bold bg-[#1E2329]/40">
                             <button
@@ -832,24 +843,29 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             </p>
                         </div>
                     </div>
-                    {/* 我的交易回報 (My Order & Trade Returns) */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded p-4 space-y-3 shadow-xl">
-                        <div className="border-b border-[#2B2F36] pb-2 flex justify-between items-center">
+                    {/* 委託成交回報 */}
+                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden">
+                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#00FFA3] animate-pulse shadow-[0_0_8px_#00FFA3]" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">委託成交回報</h3>
+                            </div>
                             <div className="flex gap-4 text-xs font-bold select-none">
                                 <span 
                                     onClick={() => setOrderSubTab('pending')}
-                                    className={`pb-1 cursor-pointer transition-colors ${orderSubTab === 'pending' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                    className={`pb-0.5 cursor-pointer transition-colors ${orderSubTab === 'pending' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
                                 >
                                     委回
                                 </span>
                                 <span 
                                     onClick={() => setOrderSubTab('trades')}
-                                    className={`pb-1 cursor-pointer transition-colors ${orderSubTab === 'trades' ? 'text-[#FF69B4] border-b border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
+                                    className={`pb-0.5 cursor-pointer transition-colors ${orderSubTab === 'trades' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
                                 >
                                     成回
                                 </span>
                             </div>
                         </div>
+                        <div className="p-4 pt-3">
 
                         {orderSubTab === 'pending' ? (() => {
                             const myOrders = orders.filter(o => o.isUser && o.pairId === pair.id);
@@ -948,13 +964,18 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 </div>
                             );
                         })()}
+                        </div>
                     </div>
 
                     {/* 即時成交明細 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded p-4 space-y-3">
-                        <h3 className="text-sm font-bold text-[#FF69B4] flex items-center gap-2 border-b border-[#2B2F36] pb-2">
-                            <span className="w-2 h-2 bg-[#FF69B4] rounded-full animate-pulse" /> 即時成交明細 (Recent Trades)
-                        </h3>
+                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden">
+                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#A855F7] animate-pulse shadow-[0_0_8px_#A855F7]" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">即時成交明細</h3>
+                            </div>
+                        </div>
+                        <div className="p-4 pt-3">
                         <div className="overflow-x-auto overflow-y-auto max-h-[302px] custom-scrollbar">
                             <table className="w-full text-base font-mono">
                                 <thead>
@@ -1022,62 +1043,73 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 </tbody>
                             </table>
                         </div>
+                        </div>
                     </div>
 
-                    {/* 貼貼情報 (TeeTee Intel) */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded p-4 space-y-3 shadow-xl">
-                        <div className="flex justify-between items-center mb-1">
-                            <h2 className="text-sm font-bold text-[#FF69B4] flex items-center gap-2">
-                                <span className="w-2 h-2 bg-[#FF69B4] rounded-full animate-pulse" /> 最新貼貼情報 (Approved Intel)
-                            </h2>
+                    {/* 最新貼貼情報 */}
+                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden">
+                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF69B4] animate-pulse shadow-[0_0_8px_#FF69B4]" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">最新貼貼情報</h3>
+                            </div>
+                            <span className="text-[10px] font-mono text-gray-400">
+                                已核可 ({newsList.length})
+                            </span>
                         </div>
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                            {newsList.length === 0 ? (
-                                <p className="text-center text-sm text-[#848E9C] py-4">目前暫無已核可的貼貼情報</p>
-                            ) : (
-                                newsList.map((news) => {
-                                    let typeLabel = "未知";
-                                    let typeColor = "text-gray-400 bg-gray-500/10 border-gray-500/30";
-                                    if (news.eventType === 'x_mention') { typeLabel = 'X 提及'; typeColor = 'text-sky-400 bg-sky-500/10 border-sky-500/20'; }
-                                    if (news.eventType === 'live_collab') { typeLabel = '日常連動'; typeColor = 'text-red-400 bg-red-500/10 border-red-500/20'; }
-                                    if (news.eventType === 'large_event') { typeLabel = '大型/3D'; typeColor = 'text-purple-400 bg-purple-500/10 border-purple-500/20'; }
-                                    if (news.eventType === 'new_song') { typeLabel = '新曲/MV'; typeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'; }
-                                    if (news.eventType === 'video') { typeLabel = '影片/首播'; typeColor = 'text-purple-400 bg-purple-500/10 border-purple-500/30'; }
-                                    if (news.eventType === 'crowdsourced') { typeLabel = '股民回報'; typeColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30'; }
-                                    if (news.eventType === 'totsumachi') { typeLabel = '突發/凸待'; typeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'; }
+                        <div className="p-4 pt-3">
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                {newsList.length === 0 ? (
+                                    <p className="text-center text-sm text-[#848E9C] py-4">目前暫無已核可的貼貼情報</p>
+                                ) : (
+                                    newsList.map((news) => {
+                                        let typeLabel = "未知";
+                                        let typeColor = "text-gray-400 bg-gray-500/10 border-gray-500/30";
+                                        if (news.eventType === 'x_mention') { typeLabel = 'X 提及'; typeColor = 'text-sky-400 bg-sky-500/10 border-sky-500/20'; }
+                                        if (news.eventType === 'live_collab') { typeLabel = '日常連動'; typeColor = 'text-red-400 bg-red-500/10 border-red-500/20'; }
+                                        if (news.eventType === 'large_event') { typeLabel = '大型/3D'; typeColor = 'text-purple-400 bg-purple-500/10 border-purple-500/20'; }
+                                        if (news.eventType === 'new_song') { typeLabel = '新曲/MV'; typeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'; }
+                                        if (news.eventType === 'video') { typeLabel = '影片/首播'; typeColor = 'text-purple-400 bg-purple-500/10 border-purple-500/30'; }
+                                        if (news.eventType === 'crowdsourced') { typeLabel = '股民回報'; typeColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30'; }
+                                        if (news.eventType === 'totsumachi') { typeLabel = '突發/凸待'; typeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'; }
 
-                                    return (
-                                        <div key={news.id} className="bg-[#0B0E11] border border-[#2B2F36] p-3 rounded-lg hover:border-[#FF69B4]/50 transition-colors">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${typeColor}`}>
-                                                    {typeLabel}
-                                                </span>
-                                                <span className="text-[10px] text-pink-400 font-bold bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20">
-                                                    聯動加成
-                                                </span>
-                                                <span className="text-[10px] text-[#848E9C] ml-auto">
-                                                    {new Date(news.createdAt).toLocaleString()}
-                                                </span>
+                                        return (
+                                            <div key={news.id} className="bg-[#0B0E11] border border-[#2B2F36] p-3 rounded-lg hover:border-[#FF69B4]/50 transition-colors">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${typeColor}`}>
+                                                        {typeLabel}
+                                                    </span>
+                                                    <span className="text-[10px] text-pink-400 font-bold bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20">
+                                                        聯動加成
+                                                    </span>
+                                                    <span className="text-[10px] text-[#848E9C] ml-auto">
+                                                        {new Date(news.createdAt).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-[#EAECEF] mb-2">{news.rawText}</p>
+                                                <a href={news.url} target="_blank" rel="noreferrer" className="text-[10px] text-[#FF69B4] hover:underline flex items-center gap-1">
+                                                    <span>🔗 前往精華來源</span>
+                                                    {news.url.includes('&t=') && <span className="bg-[#FF69B4]/20 text-[#FF69B4] px-1 rounded">帶有時間戳</span>}
+                                                </a>
                                             </div>
-                                            <p className="text-xs text-[#EAECEF] mb-2">{news.rawText}</p>
-                                            <a href={news.url} target="_blank" rel="noreferrer" className="text-[10px] text-[#FF69B4] hover:underline flex items-center gap-1">
-                                                <span>🔗 前往精華來源</span>
-                                                {news.url.includes('&t=') && <span className="bg-[#FF69B4]/20 text-[#FF69B4] px-1 rounded">帶有時間戳</span>}
-                                            </a>
-                                        </div>
-                                    )
-                                })
-                            )}
+                                        )
+                                    })
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* 股民貼貼回報面板 (最下面) */}
-                    <div className="bg-gradient-to-b from-[#1E2329] to-[#181A20] border border-[#2B2F36] rounded p-4 space-y-3 shadow-xl backdrop-blur-md relative overflow-hidden group/form hover:border-[#FF69B4]/30 transition-all">
+                    {/* 股民貼貼回報 */}
+                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden relative group/form hover:border-[#FF69B4]/30 transition-all">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF69B4]/5 rounded-full blur-3xl pointer-events-none" />
                         
-                        <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-[#2B2F36] pb-2">
-                            <span className="text-lg">✍️</span> 股民貼貼回報 (Crowdsource)
-                        </h3>
+                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#F43F5E] animate-pulse shadow-[0_0_8px_#F43F5E]" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">股民貼貼回報</h3>
+                            </div>
+                        </div>
+                        <div className="p-4 pt-3">
 
                         <form onSubmit={handleReportSubmit} className="space-y-3 text-xs">
                             <div className="space-y-1">
@@ -1136,6 +1168,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 遞交貼貼回報 (待審查)
                             </button>
                         </form>
+                        </div>
                     </div>
             </div>
         </main>

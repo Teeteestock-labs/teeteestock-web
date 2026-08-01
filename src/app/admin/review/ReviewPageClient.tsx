@@ -115,6 +115,11 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
   const pairEvents = allEvents.filter(e => e.pairId.toLowerCase() === selectedPair.id.toLowerCase());
   const pendingEvents = pairEvents.filter(e => e.status === ReviewStatus.PENDING);
   const processedEvents = pairEvents.filter(e => e.status === ReviewStatus.APPROVED || e.status === ReviewStatus.REJECTED);
+
+  const hololiveProcessedEvents = allEvents.filter(e =>
+    (e.pairId.toLowerCase() === 'hololive' && (e.status === ReviewStatus.APPROVED || e.status === ReviewStatus.REJECTED)) ||
+    (e.reason && e.reason.includes('已轉移至'))
+  );
   
   const pendingCount = pendingEvents.length;
 
@@ -540,14 +545,26 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
           )}
 
           {/* 3. 已覆核情報區 (完全展開) */}
-          {selectedPair.id !== 'hololive' && (
-            <div className="space-y-3">
-              <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                本週已覆核情報牆 (Processed events)
-              </h4>
-              {processedEvents.length === 0 ? (
-                <div className="text-xs text-gray-655 bg-gray-950/10 px-3 py-2 rounded-lg border border-gray-900">
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-bold text-gray-400 tracking-wider uppercase border-b border-gray-850 pb-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              本週已覆核情報欄 (Processed events)
+            </h4>
+            {selectedPair.id === 'hololive' ? (
+              hololiveProcessedEvents.length === 0 ? (
+                <div className="text-xs text-gray-500 bg-gray-950/10 px-3 py-2 rounded-lg border border-gray-900">
+                  本週目前無已覆核處理之官方情報。
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {hololiveProcessedEvents.map((event) => (
+                    <ProcessedEventEditor key={event.id} event={event} />
+                  ))}
+                </div>
+              )
+            ) : (
+              processedEvents.length === 0 ? (
+                <div className="text-xs text-gray-500 bg-gray-950/10 px-3 py-2 rounded-lg border border-gray-900">
                   本週目前無已處理情報。
                 </div>
               ) : (
@@ -556,9 +573,9 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
                     <ProcessedEventEditor key={event.id} event={event} />
                   ))}
                 </div>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </div>
       </div>
     </div>
