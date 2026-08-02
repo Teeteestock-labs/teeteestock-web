@@ -44,9 +44,9 @@ function BottomNavContent() {
   }
 
   const items = [
-    { id: 'lobby', label: '大廳', icon: LayoutGrid, href: '/?mode=list' },
+    { id: 'lobby', label: '交易大廳', icon: LayoutGrid, href: '/?mode=list' },
     { id: 'stock', label: '個股情報', icon: TrendingUp, href: `/market/${lastStockId}` },
-    { id: 'asset', label: '資產', icon: Wallet, href: '/?mode=asset' },
+    { id: 'asset', label: '個人資產', icon: Wallet, href: '/?mode=asset' },
   ] as const;
 
   return (

@@ -30,24 +30,84 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
+    // 取得玩家買進與賣出各股票的所有歷史交易，用以重建各個歷史結算點的實際持股
+    const userAllTrades = await prisma.trades.findMany({
+      where: {
+        OR: [
+          { buyerId: DEFAULT_PLAYER_ID },
+          { sellerId: DEFAULT_PLAYER_ID }
+        ]
+      },
+      select: { pairId: true, buyerId: true, sellerId: true, volume: true, createdAt: true },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const firstBoughtMap: Record<string, string> = {};
+    userAllTrades.forEach(t => {
+      if (t.buyerId === DEFAULT_PLAYER_ID) {
+        const p = t.pairId.toLowerCase();
+        if (!firstBoughtMap[p]) {
+          firstBoughtMap[p] = t.createdAt.toISOString();
+        }
+      }
+    });
+
+    const mappedSettlementLogs = settlementLogs.map(l => {
+      const settleTime = l.createdAt.getTime();
+      const p = l.pairId.toLowerCase();
+
+      // 累計截至該除息結算時間點為止的玩家淨持股數量
+      let buyVol = 0;
+      let sellVol = 0;
+      userAllTrades.forEach(t => {
+        if (t.pairId.toLowerCase() === p && t.createdAt.getTime() <= settleTime) {
+          if (t.buyerId === DEFAULT_PLAYER_ID) buyVol += t.volume;
+          if (t.sellerId === DEFAULT_PLAYER_ID) sellVol += t.volume;
+        }
+      });
+
+      let userSharesAtSettle = Math.max(0, buyVol - sellVol);
+
+      // 若截至結算時間無撮合交易紀錄但玩家買進時間點早於結算時間且現有持股 > 0，取現有持股為保底
+      if (userSharesAtSettle === 0 && firstBoughtMap[p]) {
+        const firstBoughtTime = new Date(firstBoughtMap[p]).getTime();
+        if (firstBoughtTime <= settleTime + 60000) {
+          const currentHolding = portfolios.find(h => h.pairId.toLowerCase() === p);
+          if (currentHolding) {
+            userSharesAtSettle = Number(currentHolding.shares_owned);
+          }
+        }
+      }
+
+      const userPayout = parseFloat((userSharesAtSettle * (l.dividendPerShare || 0)).toFixed(2));
+
+      return {
+        id: l.id,
+        pairId: l.pairId,
+        dividendPerShare: l.dividendPerShare,
+        newNV: l.newNV,
+        createdAt: l.createdAt.toISOString(),
+        userSharesAtSettle,
+        userPayout
+      };
+    });
+
     return NextResponse.json({
       player: {
         id: account.userId,
         name: account.userId,
         balance: account.balance,
-        holdings: portfolios.map((h) => ({
-          pairId: h.pairId,
-          shares: Number(h.shares_owned), // 安全轉為 Number 以免 JSON 序列化錯誤
-          avgCost: h.average_cost,
-        })),
+        holdings: portfolios.map((h) => {
+          const p = h.pairId.toLowerCase();
+          return {
+            pairId: h.pairId,
+            shares: Number(h.shares_owned), // 安全轉為 Number 以免 JSON 序列化錯誤
+            avgCost: h.average_cost,
+            firstBoughtAt: firstBoughtMap[p] || null,
+          };
+        }),
       },
-      settlementLogs: settlementLogs.map(l => ({
-        id: l.id,
-        pairId: l.pairId,
-        dividendPerShare: l.dividendPerShare,
-        newNV: l.newNV,
-        createdAt: l.createdAt.toISOString()
-      }))
+      settlementLogs: mappedSettlementLogs
     });
   } catch (error) {
     console.error('Error fetching player:', error);

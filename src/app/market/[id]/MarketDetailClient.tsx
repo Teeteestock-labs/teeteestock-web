@@ -124,7 +124,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
         return(
             <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center">
                 <h1 className="text-2xl text-[#FF3B3B] mb-4 font-black">找不到該交易對</h1>
-                <Link href="/" className="text-[#848E9C] hover:text-white transition-colors border-b border-dotted">返回交易所大廳</Link>
+                <Link href="/" className="text-[#848E9C] hover:text-white transition-colors border-b border-dotted">返回交易大廳</Link>
             </div>
         );
     }
@@ -712,7 +712,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 <div className="col-span-5 text-[10px] font-bold text-right flex flex-col justify-center h-[40px] pl-2 border-l border-[#2B2F36]/50">
                                     <div className="text-white mb-0.5">1單位：1股</div>
                                     <div className="text-[#FFD700] truncate">預估價金：</div>
-                                    <div className="text-[#FFD700] font-mono truncate">${estimatedTotal.toLocaleString()}</div>
+                                    <div className="text-[#FFD700] font-mono truncate">{estimatedTotal.toLocaleString()} $TEE</div>
                                 </div>
                             </div>
 

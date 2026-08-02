@@ -608,19 +608,53 @@ function DividendHistorySection({
     }));
   };
 
-  // 計算玩家歷史總受領股息金額
+  // 篩選玩家真正有參與配息的歷史日期群組 (過濾掉參與檔數為 0 的日期)
+  const validDateGroups = useMemo(() => {
+    return dateGroups.filter(([_, group]) => {
+      return group.logs.some(log => {
+        let shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
+        if (typeof log.userSharesAtSettle !== 'number') {
+          const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
+          if (holding && holding.firstBoughtAt) {
+            const boughtTime = new Date(holding.firstBoughtAt).getTime();
+            const settleTime = new Date(log.createdAt).getTime();
+            if (settleTime >= boughtTime - 60000) {
+              shares = holding.shares;
+            }
+          }
+        }
+        return shares > 0;
+      });
+    });
+  }, [dateGroups, holdings]);
+
+  // 計算玩家歷史總受領股息金額 (使用歷史結算點的真實領取紀錄)
   const totalEarnedOverall = useMemo(() => {
     let total = 0;
-    dateGroups.forEach(([_, group]) => {
+    validDateGroups.forEach(([_, group]) => {
       group.logs.forEach(log => {
-        const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
-        if (holding && holding.shares > 0) {
-          total += holding.shares * (log.dividendPerShare || 0);
+        let shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
+        let payout = typeof log.userPayout === 'number' ? log.userPayout : shares * (log.dividendPerShare || 0);
+
+        if (typeof log.userSharesAtSettle !== 'number') {
+          const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
+          if (holding && holding.firstBoughtAt) {
+            const boughtTime = new Date(holding.firstBoughtAt).getTime();
+            const settleTime = new Date(log.createdAt).getTime();
+            if (settleTime >= boughtTime - 60000) {
+              shares = holding.shares;
+              payout = shares * (log.dividendPerShare || 0);
+            }
+          }
+        }
+
+        if (shares > 0) {
+          total += payout;
         }
       });
     });
     return total;
-  }, [dateGroups, holdings]);
+  }, [validDateGroups, holdings]);
 
   return (
     <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden shadow-xl">
@@ -632,32 +666,44 @@ function DividendHistorySection({
         </div>
         <div className="flex items-center gap-3 font-mono">
           <span className="text-xs font-bold text-white">
-            累計領取 +${totalEarnedOverall.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            累計領取 +{totalEarnedOverall.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $TEE
           </span>
           <span className="text-[10px] text-gray-400 border-l border-gray-800 pl-3">
-            共 {dateGroups.length} 期配息
+            共 {validDateGroups.length} 期配息
           </span>
         </div>
       </div>
 
       {/* 2. 依配息日期折疊區域 (Collapsible Groups by Date) */}
-      {dateGroups.length === 0 ? (
+      {validDateGroups.length === 0 ? (
         <div className="p-8 text-center text-gray-500 text-xs font-bold font-mono">
           目前尚無歷史配息紀錄
         </div>
       ) : (
         <div className="divide-y divide-[#21262C] max-h-[320px] overflow-y-auto custom-scrollbar">
-          {dateGroups.map(([dateStr, group], index) => {
-            const isCollapsed = collapsedDates[dateStr] ?? (index !== 0);
+          {validDateGroups.map(([dateStr, group], index) => {
+            const isCollapsed = collapsedDates[dateStr] ?? true;
 
             let dateTotalEarned = 0;
-            // 過濾僅保留基準日有持股 (shares > 0) 的商品
+            // 使用歷史結算當下的真實持股與受領金額 (不隨目前持股變動而改變，未參與者自動隱藏)
             const items = group.logs
               .map(log => {
                 const pair = marketData.find(p => p.id.toLowerCase() === log.pairId.toLowerCase());
-                const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
-                const shares = holding ? holding.shares : 0;
-                const payout = shares * (log.dividendPerShare || 0);
+                
+                let shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
+                let payout = typeof log.userPayout === 'number' ? log.userPayout : shares * (log.dividendPerShare || 0);
+
+                if (typeof log.userSharesAtSettle !== 'number') {
+                  const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
+                  if (holding && holding.firstBoughtAt) {
+                    const boughtTime = new Date(holding.firstBoughtAt).getTime();
+                    const settleTime = new Date(log.createdAt).getTime();
+                    if (settleTime >= boughtTime - 60000) {
+                      shares = holding.shares;
+                      payout = shares * (log.dividendPerShare || 0);
+                    }
+                  }
+                }
 
                 if (shares > 0) {
                   dateTotalEarned += payout;
@@ -675,6 +721,7 @@ function DividendHistorySection({
               .filter(item => item.shares > 0);
 
             const participatingCount = items.length;
+            if (participatingCount === 0) return null;
 
             return (
               <div key={dateStr} className="bg-gray-950/30">
@@ -683,11 +730,9 @@ function DividendHistorySection({
                   onClick={() => toggleDate(dateStr)}
                   className="w-full px-4 py-2.5 bg-[#131722]/80 hover:bg-gray-900/80 transition-colors border-b border-[#2b2f36]/40 flex justify-between items-center text-left select-none"
                 >
-                  <div className="flex items-center gap-3 font-mono">
-                    <span className="text-xs font-bold text-white">
-                      {dateStr}
-                    </span>
-                    <span className="text-[11px] text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-gray-200">{dateStr}</span>
+                    <span className="text-[10px] text-gray-500 font-mono">
                       ({participatingCount} 檔配息)
                     </span>
                   </div>
@@ -696,7 +741,7 @@ function DividendHistorySection({
                     <div className="text-right">
                       <span className="text-[10px] text-gray-400 block">本期配息金額</span>
                       <span className="text-xs font-bold text-white">
-                        +${dateTotalEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        +{dateTotalEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $TEE
                       </span>
                     </div>
                     <span className="text-gray-400 text-xs transition-transform duration-200">
@@ -735,7 +780,7 @@ function DividendHistorySection({
 
                               {/* 2. 每股配息 (不使用亮色) */}
                               <td className="px-4 py-1.5 text-right border-r border-[#2b2f36]/60 text-gray-300">
-                                ${item.log.dividendPerShare.toFixed(2)}
+                                {item.log.dividendPerShare.toFixed(2)} $TEE
                               </td>
 
                               {/* 3. 基準日持有股數 (不使用亮色) */}
@@ -745,7 +790,7 @@ function DividendHistorySection({
 
                               {/* 4. 本期配息金額 (亮白色) */}
                               <td className="px-4 py-1.5 text-right font-bold text-white">
-                                +${item.payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                +{item.payout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $TEE
                               </td>
                             </tr>
                           ))}
@@ -768,6 +813,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>('list');
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
+  const [isAdjustedCost, setIsAdjustedCost] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -953,9 +999,21 @@ function HomeContent() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#00FFA3] animate-pulse shadow-[0_0_8px_#00FFA3]" />
                   <h3 className="text-xs font-bold text-white uppercase tracking-wider">當前持有部位</h3>
                 </div>
-                <span className="text-[10px] font-mono text-gray-400">
-                  共 {holdings.length} 檔
-                </span>
+                <div className="flex items-center gap-3 font-mono">
+                  <button
+                    onClick={() => setIsAdjustedCost(prev => !prev)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all duration-150 border ${
+                      isAdjustedCost
+                        ? 'bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/40 hover:bg-[#FF69B4]/20 shadow-[0_0_8px_rgba(255,105,180,0.2)]'
+                        : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-white hover:bg-gray-800'
+                    }`}
+                  >
+                    {isAdjustedCost ? '✨ 還原成本' : '🔄 原始成本'}
+                  </button>
+                  <span className="text-[10px] font-mono text-gray-400">
+                    共 {holdings.length} 檔
+                  </span>
+                </div>
               </div>
               {holdings.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 text-xs font-bold">目前無持股</div>
@@ -967,11 +1025,11 @@ function HomeContent() {
                         <th className="px-3 py-2 border-r border-[#2b2f36]/60 align-bottom">商品</th>
                         <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">
                           <div>市價</div>
-                          <div>均價</div>
+                          <div>{isAdjustedCost ? '還原均價' : '均價'}</div>
                         </th>
                         <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">
                           <div>現值</div>
-                          <div>成本</div>
+                          <div>{isAdjustedCost ? '還原成本' : '成本'}</div>
                         </th>
                         <th className="px-3 py-2 text-right border-r border-[#2b2f36]/60">
                           <div>總股數</div>
@@ -992,10 +1050,25 @@ function HomeContent() {
                           .reduce((sum, o) => sum + o.amount, 0);
                         const availableShares = Math.max(0, h.shares - pendingSellVolume);
 
+                        // 計算該商品玩家「實際參與配息」的累計每股配息 (若未參與配息則不扣除)
+                        const pairLogs = (settlementLogs || []).filter((l: any) => {
+                          if (l.pairId.toLowerCase() !== h.pairId.toLowerCase()) return false;
+                          if (!h.firstBoughtAt) return true; // 若無首次買進時間紀錄則預設為全部包含
+                          const boughtTime = new Date(h.firstBoughtAt).getTime();
+                          const settleTime = new Date(l.createdAt).getTime();
+                          return settleTime >= boughtTime - 60000; // 僅扣除買進之後發生的除息
+                        });
+                        const cumulativeDividendPerShare = pairLogs.reduce((sum: number, l: any) => sum + (l.dividendPerShare || 0), 0);
+
+                        // 計算有效均價（若啟動還原成本，僅扣除玩家實際有參與的配息）
+                        const effectiveAvgCost = isAdjustedCost 
+                          ? Math.max(0, h.avgCost - cumulativeDividendPerShare)
+                          : h.avgCost;
+
                         const value = h.shares * pair.price;
-                        const cost = h.shares * h.avgCost;
-                        const profit = (pair.price - h.avgCost) * h.shares;
-                        const roi = h.avgCost > 0 ? ((pair.price - h.avgCost) / h.avgCost) * 100 : 0;
+                        const cost = h.shares * effectiveAvgCost;
+                        const profit = (pair.price - effectiveAvgCost) * h.shares;
+                        const roi = effectiveAvgCost > 0 ? ((pair.price - effectiveAvgCost) / effectiveAvgCost) * 100 : 0;
                         const profitColor = profit > 0 ? "text-[#FF3B3B]" : profit < 0 ? "text-[#00FFA3]" : "text-gray-400";
                         const stockId = PAIR_ID_MAP[pair.id.toLowerCase()] || pair.id.toUpperCase();
                         return (
@@ -1013,13 +1086,17 @@ function HomeContent() {
                             {/* 2. 目前市價 / 成交均價 */}
                             <td className="px-3 py-3 text-right border-r border-[#2b2f36]/60">
                               <div className="text-xs font-bold text-white">{pair.price.toFixed(2)}</div>
-                              <div className="text-[10px] text-gray-400">{h.avgCost.toFixed(2)}</div>
+                              <div className={`text-[10px] ${isAdjustedCost ? 'text-[#FF69B4] font-bold' : 'text-gray-400'}`}>
+                                {effectiveAvgCost.toFixed(2)}
+                              </div>
                             </td>
 
                             {/* 3. 現值 / 買入成本 */}
                             <td className="px-3 py-3 text-right border-r border-[#2b2f36]/60">
                               <div className="text-xs font-bold text-white">{value.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-                              <div className="text-[10px] text-gray-400">{cost.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                              <div className={`text-[10px] ${isAdjustedCost ? 'text-[#FF69B4] font-bold' : 'text-gray-400'}`}>
+                                {cost.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </div>
                             </td>
 
                             {/* 4. 總股數 / 可用股數 (總股數 - 目前委託賣單股數) */}

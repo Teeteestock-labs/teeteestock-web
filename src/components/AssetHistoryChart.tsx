@@ -172,6 +172,7 @@ export default function AssetHistoryChart({
   };
 
   const activePoint = hoverIdx !== null ? pointsWithCoords[hoverIdx] : null;
+  const displayPoint = activePoint || (pointsWithCoords.length > 0 ? pointsWithCoords[pointsWithCoords.length - 1] : null);
 
   // 若過往無數據則不做圖，改顯示無數據提示 (需放置於 Hook 調用下方以遵守 React Hook 規範)
   if (!hasHistoricalData || dataPoints.length < 2) {
@@ -193,18 +194,10 @@ export default function AssetHistoryChart({
   return (
     <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] font-mono select-none overflow-hidden space-y-3">
       {/* 頂部標題與時段切換按鈕 (1M, 3M, 6M, 1Y, MAX) */}
-      <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] animate-pulse shadow-[0_0_8px_#38BDF8]" />
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">資產歷史走勢</h3>
-          <span className="text-[11px] font-bold text-white font-mono ml-1">
-            {(activePoint ? activePoint.value : netWorth).toLocaleString()} $TEE
-          </span>
-          {activePoint && (
-            <span className="text-[10px] text-gray-400 font-mono ml-1">
-              [{activePoint.dateStr}]
-            </span>
-          )}
         </div>
 
         {/* 時段切換按鈕區 */}
@@ -225,13 +218,35 @@ export default function AssetHistoryChart({
         </div>
       </div>
 
-      {/* 分時圖畫布 (全寬滿版拉至極致同寬) */}
+      {/* 分時圖畫布與圖上浮動標籤 (On-Chart Floating Label Badge) */}
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         className="relative w-full h-44 cursor-crosshair overflow-hidden"
       >
+        {/* 圖上浮動標籤 (直接顯示在圖上的標籤形式) */}
+        {displayPoint && (
+          <div
+            className="absolute top-2 z-20 pointer-events-none transition-all duration-75 ease-out"
+            style={{
+              left: `${(displayPoint.x / svgWidth) * 100}%`,
+              transform: (displayPoint.x / svgWidth) > 0.65 ? 'translateX(-100%)' : 'translateX(0%)',
+              marginLeft: (displayPoint.x / svgWidth) > 0.65 ? '-12px' : '12px'
+            }}
+          >
+            <div className="bg-[#0f172a]/95 border border-[#38BDF8]/60 shadow-[0_0_12px_rgba(56,189,248,0.35)] rounded-lg px-2.5 py-1 flex items-center gap-2 backdrop-blur-md">
+              <span className="text-[10px] text-gray-300 font-mono tracking-tight font-semibold">
+                {displayPoint.dateStr}
+              </span>
+              <span className="w-px h-3 bg-[#2b2f36]" />
+              <span className="text-xs font-bold text-white font-mono tracking-tight flex items-center gap-1">
+                {displayPoint.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[9px] text-[#38BDF8] font-mono">$TEE</span>
+              </span>
+            </div>
+          </div>
+        )}
+
         <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none" className="w-full h-full block">
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

@@ -56,6 +56,7 @@ export interface UserHolding{
     pairId: string;
     shares: number;         // 當前持有股數
     avgCost: number;        // 平均買入成本
+    firstBoughtAt?: string; // 首次買進時間戳
 }
 
 // 稱號與結算相關
