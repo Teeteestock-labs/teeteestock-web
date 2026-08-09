@@ -3,6 +3,7 @@ import { ReviewStatus, EventType } from '@/types/enums';
 import Link from 'next/link';
 import { getNextSettlementBoundary } from '@/utils/marketHours';
 import TriggerCrawlerButton from './TriggerCrawlerButton';
+import ManualDividendButton from './ManualDividendButton';
 import { INITIAL_PAIRS } from '@/app/constants/market';
 import ReviewPageClient from './ReviewPageClient';
 
@@ -213,7 +214,8 @@ export default async function AdminReviewPage() {
             </h1>
             <p className="text-xs text-gray-500 mt-1">外顯數據主控牆 • 行政干預與情報審查風箱</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <ManualDividendButton />
             <TriggerCrawlerButton />
           </div>
         </header>

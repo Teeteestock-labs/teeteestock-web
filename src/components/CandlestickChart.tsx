@@ -400,7 +400,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const minPt = minVisibleIdx !== -1 ? chartData[minVisibleIdx] : null;
 
     // ── 頂部 HUD 動態注入文字 ──
-    const displayPt = closestPt || chartData[chartData.length - 1];
+    const displayPt = closestPt || (chartData.length > 0 ? chartData[chartData.length - 1] : null);
     const hudTime = displayPt ? displayPt.time : '--';
     const hudOpen = displayPt ? displayPt.open.toFixed(2) : '--';
     const hudHigh = displayPt ? displayPt.high.toFixed(2) : '--';
@@ -412,8 +412,12 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
     const hudChange = displayPt ? `${hudChangeSign}${hudChangeVal.toFixed(2)}` : '--';
     const hudVol = displayPt ? displayPt.volume.toLocaleString() : '--';
     
+    // 分時圖專用：計算相對當日開盤基準價 refPrice 的漲跌金額與漲幅百分比
+    const timeDiff = displayPt ? displayPt.close - refPrice : 0;
+    const timeDiffPercent = displayPt && refPrice > 0 ? (timeDiff / refPrice) * 100 : 0;
+
     const isHudUp = displayPt ? displayPt.close >= displayPt.open : true;
-    const hudColor = (isTimeChart && isMultiDay) ? "#F3BA2F" : (isHudUp ? colorUp : colorDown);
+    const hudColor = (isTimeChart && isMultiDay) ? "#F97316" : (isHudUp ? colorUp : colorDown);
 
     return (
         <div 
@@ -425,19 +429,44 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
             onTouchEnd={handleMouseLeave}
         >
             {/* 頂部 HUD 動態文字面板 */}
-            <div className="absolute top-1.5 left-2 z-10 font-mono text-[8px] sm:text-[9px] text-gray-400 pointer-events-none select-none flex flex-wrap items-center gap-x-1 sm:gap-x-1.5 gap-y-0.5 bg-[#131722]/80 px-2 py-0.5 rounded border border-[#2a2e39]/30">
-                <span>時間: <span className="text-gray-100 font-semibold">{hudTime}</span></span>
-                <span className="text-[#2a2e39]">|</span>
-                <span>開: <span style={{ color: hudColor }} className="font-semibold">{hudOpen}</span></span>
-                <span className="text-[#2a2e39]">|</span>
-                <span>高: <span style={{ color: hudColor }} className="font-semibold">{hudHigh}</span></span>
-                <span className="text-[#2a2e39]">|</span>
-                <span>低: <span style={{ color: hudColor }} className="font-semibold">{hudLow}</span></span>
-                <span className="text-[#2a2e39]">|</span>
-                <span>收: <span style={{ color: hudColor }} className="font-semibold">{hudClose}</span></span>
-                <span className="text-[#2a2e39]">|</span>
-                <span>量: <span className="text-gray-100 font-semibold">{hudVol}股</span></span>
-            </div>
+            {isTimeChart ? (
+                <div className="absolute top-1.5 left-2 z-10 font-mono text-[9px] sm:text-[10px] text-gray-300 pointer-events-none select-none flex flex-wrap items-center gap-x-2 gap-y-0.5 bg-[#131722]/90 px-2.5 py-1 rounded border border-[#2a2e39] shadow-md backdrop-blur-sm">
+                    <span>時：<span className="text-white font-bold">{hudTime}</span></span>
+                    <span className="text-[#2a2e39]">|</span>
+                    <span>價：<span className="text-white font-bold">{hudClose}</span></span>
+                    
+                    {/* 僅出現在當日分時圖 (!isMultiDay) */}
+                    {!isMultiDay && (
+                        <>
+                            <span className="text-[#2a2e39]">|</span>
+                            <span className={`font-bold flex items-center gap-0.5 ${
+                                timeDiff > 0 ? 'text-[#FF3B3B]' : timeDiff < 0 ? 'text-[#00FFA3]' : 'text-gray-400'
+                            }`}>
+                                {timeDiff > 0 && '▲ '}
+                                {timeDiff < 0 && '▼ '}
+                                {timeDiff > 0 ? `+${timeDiff.toFixed(2)}` : timeDiff.toFixed(2)} ({timeDiff > 0 ? '+' : ''}{timeDiffPercent.toFixed(2)}%)
+                            </span>
+                        </>
+                    )}
+
+                    <span className="text-[#2a2e39]">|</span>
+                    <span>量：<span className="text-white font-bold">{hudVol}</span></span>
+                </div>
+            ) : (
+                <div className="absolute top-1.5 left-2 z-10 font-mono text-[8px] sm:text-[9px] text-gray-400 pointer-events-none select-none flex flex-wrap items-center gap-x-1 sm:gap-x-1.5 gap-y-0.5 bg-[#131722]/80 px-2 py-0.5 rounded border border-[#2a2e39]/30">
+                    <span>時間: <span className="text-gray-100 font-semibold">{hudTime}</span></span>
+                    <span className="text-[#2a2e39]">|</span>
+                    <span>開: <span style={{ color: hudColor }} className="font-semibold">{hudOpen}</span></span>
+                    <span className="text-[#2a2e39]">|</span>
+                    <span>高: <span style={{ color: hudColor }} className="font-semibold">{hudHigh}</span></span>
+                    <span className="text-[#2a2e39]">|</span>
+                    <span>低: <span style={{ color: hudColor }} className="font-semibold">{hudLow}</span></span>
+                    <span className="text-[#2a2e39]">|</span>
+                    <span>收: <span style={{ color: hudColor }} className="font-semibold">{hudClose}</span></span>
+                    <span className="text-[#2a2e39]">|</span>
+                    <span>量: <span className="text-gray-100 font-semibold">{hudVol}股</span></span>
+                </div>
+            )}
 
             {/* 主圖表區 (可橫向捲動) */}
             <div ref={containerRef} className={`w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar ${isTimeChart ? '' : 'pr-[60px]'}`}>
@@ -452,9 +481,9 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                                 <stop offset="0%" stopColor={colorDown} stopOpacity="0.0"/>
                                 <stop offset="100%" stopColor={colorDown} stopOpacity="0.3"/>
                             </linearGradient>
-                            <linearGradient id="area-gradient-yellow" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#F3BA2F" stopOpacity="0.25"/>
-                                <stop offset="100%" stopColor="#F3BA2F" stopOpacity="0.0"/>
+                            <linearGradient id="area-gradient-orange" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#F97316" stopOpacity="0.3"/>
+                                <stop offset="100%" stopColor="#F97316" stopOpacity="0.0"/>
                             </linearGradient>
                             <clipPath id="clip-above">
                                 <rect x="0" y="0" width={width} height={yRef} />
@@ -533,7 +562,7 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                                     ).join(' ');
 
                                     if (isMultiDay) {
-                                        const yellowPoints = `${x0},${(paddingTop + chartHeight).toFixed(1)} ` +
+                                        const orangePoints = `${x0},${(paddingTop + chartHeight).toFixed(1)} ` +
                                             chartData.map((d, i) => 
                                                 `${getX(i, d.time).toFixed(1)},${getY(d.close).toFixed(1)}`
                                             ).join(' ') + 
@@ -541,15 +570,15 @@ export default function CandlestickChart({ data: rawData, isTimeChart, yesterday
                                         
                                         return (
                                             <>
-                                                {/* 黃色漸層區 */}
+                                                {/* 橙色漸層區 */}
                                                 <polygon 
-                                                    points={yellowPoints} 
-                                                    fill="url(#area-gradient-yellow)"
+                                                    points={orangePoints} 
+                                                    fill="url(#area-gradient-orange)"
                                                 />
-                                                {/* 黃色單色折線 */}
+                                                {/* 橙色單色折線 */}
                                                 <path 
                                                     d={linePathD} 
-                                                    stroke="#F3BA2F" 
+                                                    stroke="#F97316" 
                                                     strokeWidth="1.5" 
                                                     strokeLinecap="round" 
                                                     strokeLinejoin="round" 

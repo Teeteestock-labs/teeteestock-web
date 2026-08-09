@@ -150,12 +150,14 @@ model SettlementLog {
 }
 
 model SystemConfig {
-  id             Int     @id @default(1)
-  is_market_open Boolean @default(false)
-  tax_rate       Float   @default(0.003)
-  warning_line   Float   @default(10.0)
-  delisting_line Float   @default(5.0)
-  marketStatus   String  @default("CLOSED")
+  id                      Int       @id @default(1)
+  is_market_open          Boolean   @default(false)
+  tax_rate                Float     @default(0.003)
+  warning_line            Float     @default(10.0)
+  delisting_line          Float     @default(5.0)
+  marketStatus            String    @default("CLOSED")
+  lastDividendTriggeredAt DateTime?
+  pendingDividendSettle   Boolean   @default(false)
 }
 
 model ChatMessage {

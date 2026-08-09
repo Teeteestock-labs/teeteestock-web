@@ -55,8 +55,8 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
   if (isAlertMode) {
     // ── 進入 國家隊（Alert Mode 警戒模式）：【遵守漲停限制 ── 漲停板向下 5 檔階梯式佈單】 ──
     const dividendAmount = parseFloat((pair.netValue * 0.08).toFixed(2));
-    // 計算漲停價 (+10% limit up) 並對齊 Tick Size
-    const limitUpPrice = alignToTick(openingPrice * 1.10);
+    // 計算漲停價 (+20% limit up) 並對齊 Tick Size
+    const limitUpPrice = alignToTick(openingPrice * 1.20);
 
     console.log(`[🚨 國家隊 AlertMode] ${pair.id} 股價/跌停低於除息金額 ${dividendAmount.toFixed(2)}，啟動國家隊強勢拉抬護盤！開盤基準價: ${openingPrice.toFixed(2)}，漲停上限 LimitUp: ${limitUpPrice.toFixed(2)}`);
 
@@ -200,7 +200,9 @@ export async function runDailyRolloverOrSettlement(options?: {
   if (options?.forceAction) {
     action = options.forceAction;
   } else {
-    if (logicalDayOfWeek === 0) {
+    // Automatic execution: check if admin manually staged dividend settlement
+    const config = await prisma.systemConfig.findUnique({ where: { id: 1 } });
+    if (config?.pendingDividendSettle) {
       action = 'settle';
     } else {
       action = 'rollover';
@@ -516,6 +518,12 @@ export async function runDailyRolloverOrSettlement(options?: {
         });
       }
 
+      // Reset pending dividend settle status
+      await tx.systemConfig.update({
+        where: { id: 1 },
+        data: { pendingDividendSettle: false }
+      });
+
       return { results: settlementLogs, delistedPairIds };
     }, { timeout: 25000 });
 
@@ -636,18 +644,9 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
     
     if (updatedSettled.count > 0) {
       try {
-        // Check if weekly settlement has been performed in the last 48 hours
-        const anySettledPair = await prisma.cpPairs.findFirst({
-          where: { lastSettledAt: { not: null } },
-          orderBy: { lastSettledAt: 'desc' }
-        });
-        const hoursSinceLastSettle = anySettledPair?.lastSettledAt
-          ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
-          : 999;
-
-        // If today is Monday or Tuesday, and weekly settlement hasn't run in 48h, run 'settle'
-        const isWeeklyWindow = (tz.dayOfWeek === 1 || tz.dayOfWeek === 2);
-        const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
+        // Check if weekly settlement has been manually staged (pendingDividendSettle)
+        const sysConf = await prisma.systemConfig.findUnique({ where: { id: 1 } });
+        const action: 'settle' | 'rollover' = (sysConf?.pendingDividendSettle) ? 'settle' : 'rollover';
         await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
       } catch (err) {
         console.error('[Rollover/Settlement Error]:', err);
@@ -696,7 +695,8 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
         const hoursSinceLastSettle = anySettledPair?.lastSettledAt
           ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
           : 999;
-        const action: 'settle' | 'rollover' = ((tz.dayOfWeek === 1 || tz.dayOfWeek === 2) && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
+        const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes < 1110);
+        const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
         await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
       } catch (err) {
         console.error(err);
@@ -728,7 +728,8 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
           const hoursSinceLastSettle = anySettledPair?.lastSettledAt
             ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
             : 999;
-          const action: 'settle' | 'rollover' = ((tz.dayOfWeek === 1 || tz.dayOfWeek === 2) && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
+          const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes < 1110);
+          const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
           await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
         } catch (err) {
           console.error(err);
@@ -756,4 +757,100 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   }
 
   return currentStatus;
+}
+
+export async function getDividendCooldownInfo() {
+  const config = await prisma.systemConfig.findUnique({ where: { id: 1 } });
+  const COOLDOWN_MS = 156 * 3600 * 1000; // 156 hours = 6.5 days
+  const lastTriggered = config?.lastDividendTriggeredAt || null;
+  const nowMs = Date.now();
+  let remainingMs = 0;
+  if (lastTriggered) {
+    const elapsed = nowMs - lastTriggered.getTime();
+    remainingMs = Math.max(0, COOLDOWN_MS - elapsed);
+  }
+  return {
+    lastDividendTriggeredAt: lastTriggered,
+    cooldownHoursTotal: 156,
+    remainingMs,
+    canTrigger: remainingMs === 0,
+    pendingDividendSettle: config?.pendingDividendSettle || false
+  };
+}
+
+export async function stageManualDividendSettlement() {
+  const cooldown = await getDividendCooldownInfo();
+  if (!cooldown.canTrigger) {
+    const hours = Math.floor(cooldown.remainingMs / (3600 * 1000));
+    const mins = Math.floor((cooldown.remainingMs % (3600 * 1000)) / (60 * 1000));
+    throw new Error(`除息功能尚在冷卻中（156小時冷卻機制），剩餘時間：${hours} 小時 ${mins} 分鐘。`);
+  }
+
+  const stagedResults = await prisma.$transaction(async (tx) => {
+    const pairs = await tx.cpPairs.findMany({
+      where: { status: { not: MarketStatus.DELISTED } }
+    });
+
+    const results = [];
+    for (const pair of pairs) {
+      if (pair.id === 'hololive') continue;
+      const currentNV = pair.netValue;
+      const lastPrice = pair.currentPrice;
+
+      const approvedEvents = await tx.teeteeEvents.findMany({
+        where: {
+          pairId: pair.id,
+          status: ReviewStatus.APPROVED,
+          isSettled: false
+        }
+      });
+
+      const collabBonusSum = approvedEvents.reduce((sum, evt) => {
+        if (evt.type === EventType.STREAM) return sum + 0.09;
+        if (evt.type === EventType.STREAM_3D) return sum + 0.15;
+        if (evt.type === EventType.VIDEO) return sum + 0.30;
+        if (evt.type.startsWith('OVERRIDE:')) {
+          const val = parseFloat(evt.type.split(':')[1]) || 0;
+          return sum + val;
+        }
+        return sum;
+      }, 0);
+
+      const settledNV = currentNV * (1 + collabBonusSum);
+      const dividendPerShare = parseFloat((settledNV * 0.08).toFixed(2));
+      const rawRefPrice = lastPrice - dividendPerShare;
+      const exDividendRefPrice = alignToTick(Math.max(MIN_VALUE, rawRefPrice));
+
+      await tx.cpPairs.update({
+        where: { id: pair.id },
+        data: {
+          next_open_price: exDividendRefPrice
+        }
+      });
+
+      results.push({
+        pairId: pair.id,
+        name: pair.name,
+        currentPrice: lastPrice,
+        dividendPerShare,
+        exDividendRefPrice
+      });
+    }
+
+    await tx.systemConfig.update({
+      where: { id: 1 },
+      data: {
+        lastDividendTriggeredAt: new Date(),
+        pendingDividendSettle: true
+      }
+    });
+
+    return results;
+  });
+
+  return {
+    success: true,
+    message: '已成功試算除息參考價並完成暫存！股利發放、單簿清空與實際價格調整將於週二 18:30 (ROLLOVER) 自動劃轉生效。',
+    stagedResults
+  };
 }
