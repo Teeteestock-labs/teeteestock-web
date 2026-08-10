@@ -6,6 +6,10 @@ import TriggerCrawlerButton from './TriggerCrawlerButton';
 import ManualDividendButton from './ManualDividendButton';
 import { INITIAL_PAIRS } from '@/app/constants/market';
 import ReviewPageClient from './ReviewPageClient';
+import { cookies } from 'next/headers';
+import AdminLoginForm from '../AdminLoginForm';
+import AdminLogoutButton from '../AdminLogoutButton';
+import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +71,14 @@ function hasSharedLongToken(title1: string, title2: string): boolean {
 }
 
 export default async function AdminReviewPage() {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const isAuthenticated = sessionToken === getExpectedAuthToken();
+
+  if (!isAuthenticated) {
+    return <AdminLoginForm />;
+  }
+
   // Fetch all events (including PENDING, APPROVED, REJECTED)
   const allEvents = await prisma.teeteeEvents.findMany({
     orderBy: { createdAt: 'desc' },
@@ -204,7 +216,10 @@ export default async function AdminReviewPage() {
           <Link href="/" className="text-sm font-semibold text-gray-400 hover:text-pink-400 flex items-center gap-1 transition-colors">
             ← 返回交易大廳
           </Link>
-          <span className="text-xs text-gray-600">伺服器本地時間: {new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-600">伺服器本地時間: {new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</span>
+            <AdminLogoutButton />
+          </div>
         </div>
 
         <header className="bg-gray-900/40 border border-gray-800/80 p-6 rounded-2xl backdrop-blur-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">

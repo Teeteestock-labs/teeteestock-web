@@ -48,8 +48,8 @@ export async function approveEvent(id: string, type: string, reason?: string) {
     }
   });
 
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 
 export async function rejectEvent(id: string, reason?: string) {
@@ -60,8 +60,8 @@ export async function rejectEvent(id: string, reason?: string) {
       reason: reason ? reason.trim() : ""
     }
   });
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 
 
@@ -133,8 +133,8 @@ export async function updateAdminAdjust(pairId: string, value: number, reason: s
     }
   });
 
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 
 export async function approveOneAndRejectOthers(approvedId: string, rejectIds: string[], type: string, approvedReason?: string, rejectReason?: string) {
@@ -178,8 +178,8 @@ export async function approveOneAndRejectOthers(approvedId: string, rejectIds: s
     }
   });
 
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 
 export async function rejectMultipleEvents(ids: string[], reason?: string) {
@@ -190,8 +190,8 @@ export async function rejectMultipleEvents(ids: string[], reason?: string) {
       reason: reason ? reason.trim() : ""
     }
   });
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 
 export async function updateProcessedEvent(
@@ -254,16 +254,16 @@ export async function updateProcessedEvent(
     }
   });
 
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 
 export async function deleteProcessedEvent(id: string) {
   await prisma.teeteeEvents.delete({
     where: { id }
   });
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 
 export async function dispatchEventToCP(eventId: string, targetPairId: string) {
@@ -284,7 +284,7 @@ export async function dispatchEventToCP(eventId: string, targetPairId: string) {
     }
   });
 
-  safeRevalidatePath('/admin');
-  safeRevalidatePath('/admin/review');
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
 }
 

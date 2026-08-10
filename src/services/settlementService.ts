@@ -760,13 +760,19 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
 }
 
 export async function getDividendCooldownInfo() {
-  const config = await prisma.systemConfig.findUnique({ where: { id: 1 } });
+  let config = await prisma.systemConfig.findUnique({ where: { id: 1 } });
+  if (!config) {
+    config = await prisma.systemConfig.create({
+      data: { id: 1, marketStatus: 'CLOSED' }
+    });
+  }
   const COOLDOWN_MS = 156 * 3600 * 1000; // 156 hours = 6.5 days
   const lastTriggered = config?.lastDividendTriggeredAt || null;
   const nowMs = Date.now();
   let remainingMs = 0;
   if (lastTriggered) {
-    const elapsed = nowMs - lastTriggered.getTime();
+    const lastTriggeredDate = new Date(lastTriggered);
+    const elapsed = nowMs - lastTriggeredDate.getTime();
     remainingMs = Math.max(0, COOLDOWN_MS - elapsed);
   }
   return {
@@ -783,7 +789,7 @@ export async function stageManualDividendSettlement() {
   if (!cooldown.canTrigger) {
     const hours = Math.floor(cooldown.remainingMs / (3600 * 1000));
     const mins = Math.floor((cooldown.remainingMs % (3600 * 1000)) / (60 * 1000));
-    throw new Error(`除息功能尚在冷卻中（156小時冷卻機制），剩餘時間：${hours} 小時 ${mins} 分鐘。`);
+    throw new Error(`除息功能尚在冷卻中（156小時冷卻機制），距離下次可除息尚需 ${hours} 小時 ${mins} 分鐘。`);
   }
 
   const stagedResults = await prisma.$transaction(async (tx) => {
@@ -837,9 +843,15 @@ export async function stageManualDividendSettlement() {
       });
     }
 
-    await tx.systemConfig.update({
+    await tx.systemConfig.upsert({
       where: { id: 1 },
-      data: {
+      update: {
+        lastDividendTriggeredAt: new Date(),
+        pendingDividendSettle: true
+      },
+      create: {
+        id: 1,
+        marketStatus: 'CLOSED',
         lastDividendTriggeredAt: new Date(),
         pendingDividendSettle: true
       }

@@ -91,6 +91,23 @@ export default function ManualDividendButton() {
     }
   };
 
+  const handleResetCooldown = async () => {
+    if (!confirm('確定要重置 156 小時除息冷卻時間嗎？')) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/dividend-settle', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setFeedbackMsg({ type: 'success', text: '已成功重置除息冷卻時間與暫存狀態！' });
+        await fetchStatus();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const canTrigger = cooldown ? cooldown.canTrigger && remainingMs === 0 : false;
   const isPending = cooldown?.pendingDividendSettle;
 
@@ -134,9 +151,18 @@ export default function ManualDividendButton() {
           <span>手動執行除息 (試算參考價)</span>
         </button>
       ) : (
-        <div className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-gray-900/80 border border-gray-700/80 text-gray-400 flex items-center gap-2 cursor-not-allowed select-none">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span>除息冷卻中 ({formatRemainingTime(remainingMs)})</span>
+        <div className="flex items-center gap-2">
+          <div className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-gray-900/80 border border-gray-700/80 text-gray-400 flex items-center gap-2 select-none">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>除息冷卻中 ({formatRemainingTime(remainingMs)})</span>
+          </div>
+          <button
+            onClick={handleResetCooldown}
+            title="重置冷卻倒數 (測試調試專用)"
+            className="px-2.5 py-2 rounded-xl text-xs font-bold bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 hover:text-white transition-colors"
+          >
+            🔄 重置冷卻
+          </button>
         </div>
       )}
 

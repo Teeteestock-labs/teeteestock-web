@@ -368,7 +368,7 @@ async function sendNotification(newEventCount: number) {
   const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:3000';
   
   const payload = {
-    content: `📱 【teeteeStock 交易所廣播】\n報告主理人！YouTube 採集工頭剛剛在線路上挖到 ${newEventCount} 筆潛在的香香聯動情報！\n目前狀態皆為：PENDING（待審查）\n🔗 👉 [點此進入管理員後台一鍵審查](${BASE_URL}/admin)`
+    content: `📱 【teeteeStock 交易所廣播】\n報告主理人！YouTube 採集工頭剛剛在線路上挖到 ${newEventCount} 筆潛在的香香聯動情報！\n目前狀態皆為：PENDING（待審查）\n🔗 👉 [點此進入管理員後台一鍵審查](${BASE_URL}/quantum-nexus-77)`
   };
 
   try {
