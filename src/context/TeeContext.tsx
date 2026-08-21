@@ -4,7 +4,7 @@ import { INITIAL_PAIRS } from '@/app/constants/market';
 import { teeteePair, UserHolding, ChartDataPoint, Order } from '@/app/types';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isValidTickSize, getTickSize, alignToTick } from '@/utils/validatePrice';
-import { isPreMarketPeriod, isOperatingPeriod } from '@/utils/marketHours';
+import { isPreMarketPeriod, isOperatingPeriod, getCurrentMarketStatus } from '@/utils/marketHours';
 
 
 export interface OrderBook {
@@ -102,6 +102,14 @@ const _INITIAL_BOTS: Bot[] = [
     { id: 'bot_5', name: '投信E', balance: 10000, holdings: {} },
 ];
 
+const getInitialMarketStatus = (): 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE' | 'CLOSED_SETTLED' => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('tee_market_status');
+        if (saved) return saved as any;
+    }
+    return getCurrentMarketStatus() as any;
+};
+
 export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [balance, setBalance] = useState(10000);
     const [holdings, setHoldings] = useState<UserHolding[]>([]);
@@ -109,7 +117,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [bots, setBots] = useState<Bot[]>([]);
     
-    const [marketStatus, setMarketStatus] = useState<'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE' | 'CLOSED_SETTLED'>('CLOSED');
+    const [marketStatus, setMarketStatus] = useState<'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' | 'MAINTENANCE' | 'CLOSED_SETTLED'>(getInitialMarketStatus);
     const [isInitialized, setIsInitialized] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,14 +127,19 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     // 同步後端行情與玩家狀態
     const fetchLatestMarketAndPlayer = async () => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
         try {
             // 1. 同步行情與訂單
-            const marketRes = await fetch('/api/market');
-            if (marketRes.ok) {
+            const marketRes = await fetch('/api/market').catch(err => {
+                console.warn('[TeeContext] Transient fetch market error:', err?.message || err);
+                return null;
+            });
+            if (marketRes && marketRes.ok) {
                 const data = await marketRes.json();
                 if (data.success) {
                     if (data.marketStatus) {
                         setMarketStatus(data.marketStatus);
+                        localStorage.setItem('tee_market_status', data.marketStatus);
                     }
                     if (Array.isArray(data.pairs)) {
                         const mergedMarket = data.pairs.map((p: any) => {
@@ -149,8 +162,11 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             }
 
             // 2. 同步玩家資產
-            const playerRes = await fetch('/api/player');
-            if (playerRes.ok) {
+            const playerRes = await fetch('/api/player').catch(err => {
+                console.warn('[TeeContext] Transient fetch player error:', err?.message || err);
+                return null;
+            });
+            if (playerRes && playerRes.ok) {
                 const data = await playerRes.json();
                 if (data && data.player) {
                     setBalance(data.player.balance);
@@ -161,8 +177,12 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                     localStorage.setItem('tee_last_db_balance', data.player.balance.toString());
                 }
             }
-        } catch (err) {
-            console.error("Error fetching latest market and player data:", err);
+        } catch (err: any) {
+            if (err?.name === 'TypeError' || err?.message?.includes('Failed to fetch')) {
+                console.warn('[TeeContext] Network fetch interrupted, will retry in next cycle...');
+            } else {
+                console.error("Error fetching latest market and player data:", err);
+            }
         }
     };
 
@@ -329,6 +349,13 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         const savedOrders = localStorage.getItem('tee_orders');
         const savedBots = localStorage.getItem('tee_bots');
 
+        const saveStatus = localStorage.getItem('tee_market_status');
+        if (saveStatus) {
+            setMarketStatus(saveStatus as any);
+        } else {
+            setMarketStatus(getCurrentMarketStatus() as any);
+        }
+
         if (saveBalance) setBalance(Number(saveBalance));
         try { if (saveHoldings) setHoldings(JSON.parse(saveHoldings)); } catch (_e) { console.warn('Failed to parse holdings from localStorage'); }
         try { if (savedMarket) setMarketData(JSON.parse(savedMarket)); } catch (_e) { console.warn('Failed to parse market from localStorage'); }
@@ -350,6 +377,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     // 當資料變動時，同步到 LocalStorage
     useEffect(() => {
         if (!isInitialized || !mounted) return;
+        localStorage.setItem('tee_market_status', marketStatus);
         localStorage.setItem('tee_balance', balance.toString());
         localStorage.setItem('tee_holdings', JSON.stringify(holdings));
         localStorage.setItem('tee_market', JSON.stringify(marketData));
@@ -444,7 +472,16 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                 return { success: false, message: data.error || '委託失敗' };
             }
 
-            // 成功：從 DB 同步最新狀態（餘額、庫存、訂單、行情）
+            // 成功：若市場處於 OPEN 狀態，立即觸發一次撮合劃轉，實現即時成交與持股更新
+            if (marketStatus === 'OPEN') {
+                try {
+                    await fetch('/api/matching', { method: 'POST' });
+                } catch (e) {
+                    console.error('Auto matching trigger failed:', e);
+                }
+            }
+
+            // 從 DB 同步最新狀態（餘額、庫存、訂單、行情）
             await fetchLatestMarketAndPlayer();
             return { success: true, message: "委託單已送出" };
         } catch (err) {
@@ -475,6 +512,13 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             });
 
             if (res.ok) {
+                if (marketStatus === 'OPEN') {
+                    try {
+                        await fetch('/api/matching', { method: 'POST' });
+                    } catch (e) {
+                        console.error('Auto matching trigger failed:', e);
+                    }
+                }
                 // 成功：從 DB 同步最新狀態
                 await fetchLatestMarketAndPlayer();
                 return { success: true, message: '撤單成功' };
@@ -524,10 +568,11 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         }
     };
 
-    // 每 3 秒自動向後台同步最新行情與玩家資產
+    // 每 3 秒自動向後台同步最新行情與玩家資產 (當頁面處於前台時)
     useEffect(() => {
         if (!isInitialized) return;
         const intervalId = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return;
             fetchLatestMarketAndPlayer();
         }, 3000);
         return () => clearInterval(intervalId);

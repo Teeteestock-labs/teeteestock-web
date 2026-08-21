@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || 'teetee_admin_super_secret_2026';
+const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || '8a0925685d4fe09c7c7181a3f1e4ff44';
 export const AUTH_COOKIE_NAME = 'teetee_admin_session';
 
 export function getExpectedAuthToken() {

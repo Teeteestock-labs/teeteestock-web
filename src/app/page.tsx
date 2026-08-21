@@ -9,6 +9,8 @@ import TickerTape from "@/components/TickerTape";
 import BottomNav from "@/components/BottomNav";
 import GlobalStats from "@/components/GlobalStats";
 import AssetHistoryChart from "@/components/AssetHistoryChart";
+import DividendNotificationModal from "@/components/DividendNotificationModal";
+import LoginRewardModal from "@/components/LoginRewardModal";
 import { alignToTick } from "@/utils/validatePrice";
 import { teeteePair, UserHolding } from "@/app/types";
 
@@ -462,7 +464,7 @@ function AssetDonutChart({
   const totalShares = activeHoldings.reduce((sum, h) => sum + h.shares, 0);
 
   const slices: DonutSlice[] = activeHoldings.map((h, idx) => {
-    const pair = marketData.find(p => p.id === h.pairId);
+    const pair = marketData.find(p => p.id.toLowerCase() === h.pairId.toLowerCase());
     const stockId = PAIR_ID_MAP[h.pairId.toLowerCase()] || h.pairId.toUpperCase();
     const pct = totalShares > 0 ? (h.shares / totalShares) * 100 : 0;
     return {
@@ -612,49 +614,26 @@ function DividendHistorySection({
   const validDateGroups = useMemo(() => {
     return dateGroups.filter(([_, group]) => {
       return group.logs.some(log => {
-        let shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
-        if (typeof log.userSharesAtSettle !== 'number') {
-          const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
-          if (holding && holding.firstBoughtAt) {
-            const boughtTime = new Date(holding.firstBoughtAt).getTime();
-            const settleTime = new Date(log.createdAt).getTime();
-            if (settleTime >= boughtTime - 60000) {
-              shares = holding.shares;
-            }
-          }
-        }
+        const shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
         return shares > 0;
       });
     });
-  }, [dateGroups, holdings]);
+  }, [dateGroups]);
 
-  // 計算玩家歷史總受領股息金額 (使用歷史結算點的真實領取紀錄)
+  // 計算玩家歷史總受領股息金額 (僅使用 UserDividendLog 精確記錄)
   const totalEarnedOverall = useMemo(() => {
     let total = 0;
     validDateGroups.forEach(([_, group]) => {
       group.logs.forEach(log => {
-        let shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
-        let payout = typeof log.userPayout === 'number' ? log.userPayout : shares * (log.dividendPerShare || 0);
-
-        if (typeof log.userSharesAtSettle !== 'number') {
-          const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
-          if (holding && holding.firstBoughtAt) {
-            const boughtTime = new Date(holding.firstBoughtAt).getTime();
-            const settleTime = new Date(log.createdAt).getTime();
-            if (settleTime >= boughtTime - 60000) {
-              shares = holding.shares;
-              payout = shares * (log.dividendPerShare || 0);
-            }
-          }
-        }
-
+        const shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
+        const payout = typeof log.userPayout === 'number' ? log.userPayout : shares * (log.dividendPerShare || 0);
         if (shares > 0) {
           total += payout;
         }
       });
     });
     return total;
-  }, [validDateGroups, holdings]);
+  }, [validDateGroups]);
 
   return (
     <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden shadow-xl">
@@ -685,25 +664,13 @@ function DividendHistorySection({
             const isCollapsed = collapsedDates[dateStr] ?? true;
 
             let dateTotalEarned = 0;
-            // 使用歷史結算當下的真實持股與受領金額 (不隨目前持股變動而改變，未參與者自動隱藏)
+            // 僅使用 UserDividendLog 精確記錄的持股與配息金額 (不隨目前持股變動)
             const items = group.logs
               .map(log => {
                 const pair = marketData.find(p => p.id.toLowerCase() === log.pairId.toLowerCase());
                 
-                let shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
-                let payout = typeof log.userPayout === 'number' ? log.userPayout : shares * (log.dividendPerShare || 0);
-
-                if (typeof log.userSharesAtSettle !== 'number') {
-                  const holding = holdings.find(h => h.pairId.toLowerCase() === log.pairId.toLowerCase());
-                  if (holding && holding.firstBoughtAt) {
-                    const boughtTime = new Date(holding.firstBoughtAt).getTime();
-                    const settleTime = new Date(log.createdAt).getTime();
-                    if (settleTime >= boughtTime - 60000) {
-                      shares = holding.shares;
-                      payout = shares * (log.dividendPerShare || 0);
-                    }
-                  }
-                }
+                const shares = typeof log.userSharesAtSettle === 'number' ? log.userSharesAtSettle : 0;
+                const payout = typeof log.userPayout === 'number' ? log.userPayout : shares * (log.dividendPerShare || 0);
 
                 if (shares > 0) {
                   dateTotalEarned += payout;
@@ -859,7 +826,7 @@ function HomeContent() {
   };
 
   const totalStockValue = holdings.reduce((sum, h) => {
-    const pair = marketData.find(p => p.id === h.pairId);
+    const pair = marketData.find(p => p.id.toLowerCase() === h.pairId.toLowerCase());
     return sum + (h.shares * (pair?.price || 0));
   }, 0);
 
@@ -1043,20 +1010,18 @@ function HomeContent() {
                     </thead>
                     <tbody className="divide-y divide-[#21262C]">
                       {holdings.map((h) => {
-                        const pair = marketData.find(p => p.id === h.pairId);
+                        const pair = marketData.find(p => p.id.toLowerCase() === h.pairId.toLowerCase());
                         if (!pair) return null;
                         const pendingSellVolume = (orders || [])
                           .filter(o => (o.isUser || !o.botId) && o.pairId.toLowerCase() === h.pairId.toLowerCase() && (o.type === 'sell' || (o as any).side === 'SELL'))
                           .reduce((sum, o) => sum + o.amount, 0);
                         const availableShares = Math.max(0, h.shares - pendingSellVolume);
 
-                        // 計算該商品玩家「實際參與配息」的累計每股配息 (若未參與配息則不扣除)
+                        // 計算該商品玩家「實際有領取配息」的累計每股配息 (僅計入有 UserDividendLog 記錄的結算期)
                         const pairLogs = (settlementLogs || []).filter((l: any) => {
                           if (l.pairId.toLowerCase() !== h.pairId.toLowerCase()) return false;
-                          if (!h.firstBoughtAt) return true; // 若無首次買進時間紀錄則預設為全部包含
-                          const boughtTime = new Date(h.firstBoughtAt).getTime();
-                          const settleTime = new Date(l.createdAt).getTime();
-                          return settleTime >= boughtTime - 60000; // 僅扣除買進之後發生的除息
+                          // 只有 userSharesAtSettle > 0 才代表該期有實際領到配息
+                          return typeof l.userSharesAtSettle === 'number' && l.userSharesAtSettle > 0;
                         });
                         const cumulativeDividendPerShare = pairLogs.reduce((sum: number, l: any) => sum + (l.dividendPerShare || 0), 0);
 
@@ -1231,6 +1196,8 @@ function HomeContent() {
         )}
       </div>
 
+      <DividendNotificationModal />
+      <LoginRewardModal />
       <BottomNav />
     </main>
   );

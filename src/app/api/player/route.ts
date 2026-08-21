@@ -30,6 +30,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
+    const userDividendLogs = await prisma.userDividendLog.findMany({
+      where: { userId: DEFAULT_PLAYER_ID },
+      orderBy: { createdAt: 'desc' }
+    });
+
     // 取得玩家買進與賣出各股票的所有歷史交易，用以重建各個歷史結算點的實際持股
     const userAllTrades = await prisma.trades.findMany({
       where: {
@@ -56,30 +61,18 @@ export async function GET() {
       const settleTime = l.createdAt.getTime();
       const p = l.pairId.toLowerCase();
 
-      // 累計截至該除息結算時間點為止的玩家淨持股數量
-      let buyVol = 0;
-      let sellVol = 0;
-      userAllTrades.forEach(t => {
-        if (t.pairId.toLowerCase() === p && t.createdAt.getTime() <= settleTime) {
-          if (t.buyerId === DEFAULT_PLAYER_ID) buyVol += t.volume;
-          if (t.sellerId === DEFAULT_PLAYER_ID) sellVol += t.volume;
-        }
-      });
+      // Check UserDividendLog first for exact recorded payout
+      const exactLog = userDividendLogs.find(
+        d => d.pairId.toLowerCase() === p && Math.abs(d.createdAt.getTime() - settleTime) < 300000
+      );
 
-      let userSharesAtSettle = Math.max(0, buyVol - sellVol);
+      let userSharesAtSettle = exactLog ? Number(exactLog.sharesOwned) : 0;
+      let userPayout = exactLog ? exactLog.totalPayout : 0;
 
-      // 若截至結算時間無撮合交易紀錄但玩家買進時間點早於結算時間且現有持股 > 0，取現有持股為保底
-      if (userSharesAtSettle === 0 && firstBoughtMap[p]) {
-        const firstBoughtTime = new Date(firstBoughtMap[p]).getTime();
-        if (firstBoughtTime <= settleTime + 60000) {
-          const currentHolding = portfolios.find(h => h.pairId.toLowerCase() === p);
-          if (currentHolding) {
-            userSharesAtSettle = Number(currentHolding.shares_owned);
-          }
-        }
+      if (!exactLog) {
+        // 沒有 UserDividendLog 精確記錄 = 該期未參與配息，不使用現在持股反推
+        // （歷史結算在加入 UserDividendLog 功能之前的資料將自然隱藏）
       }
-
-      const userPayout = parseFloat((userSharesAtSettle * (l.dividendPerShare || 0)).toFixed(2));
 
       return {
         id: l.id,
@@ -91,6 +84,15 @@ export async function GET() {
         userPayout
       };
     });
+
+    const mappedDividendLogs = userDividendLogs.map(d => ({
+      id: d.id,
+      pairId: d.pairId,
+      sharesOwned: Number(d.sharesOwned),
+      dividendPerShare: d.dividendPerShare,
+      totalPayout: d.totalPayout,
+      createdAt: d.createdAt.toISOString()
+    }));
 
     return NextResponse.json({
       player: {
@@ -107,7 +109,8 @@ export async function GET() {
           };
         }),
       },
-      settlementLogs: mappedSettlementLogs
+      settlementLogs: mappedSettlementLogs,
+      dividendLogs: mappedDividendLogs
     });
   } catch (error) {
     console.error('Error fetching player:', error);

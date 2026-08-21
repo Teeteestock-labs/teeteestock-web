@@ -358,39 +358,6 @@ async function fetchVideosFromRSS(channelId: string): Promise<VideoFeed[]> {
 
 // ── Notification Trigger ──
 
-async function sendNotification(newEventCount: number) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) {
-    console.warn('[Crawler Alert] Warning: DISCORD_WEBHOOK_URL is not configured in .env. Skipping notification.');
-    return;
-  }
-
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:3000';
-  
-  const payload = {
-    content: `📱 【teeteeStock 交易所廣播】\n報告主理人！YouTube 採集工頭剛剛在線路上挖到 ${newEventCount} 筆潛在的香香聯動情報！\n目前狀態皆為：PENDING（待審查）\n🔗 👉 [點此進入管理員後台一鍵審查](${BASE_URL}/quantum-nexus-77)`
-  };
-
-  try {
-    const res = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-      console.log(`[Crawler Alert] Discord notification sent successfully for ${newEventCount} new events.`);
-    } else {
-      const errText = await res.text();
-      console.error(`[Crawler Alert] Discord webhook returned error status ${res.status}:`, errText);
-    }
-  } catch (error) {
-    console.error('[Crawler Alert] Failed to send Discord notification:', error);
-  }
-}
-
 // ── Main Job ──
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -521,11 +488,7 @@ export async function runPoll(options?: { targetDate?: Date }) {
   console.log(`Crawler job completed. Inserted ${newEventsInsertedCount} new events.`);
 
   // Notification Engine Trigger
-  if (newEventsInsertedCount > 0) {
-    await sendNotification(newEventsInsertedCount);
-  } else {
-    console.log('No new events inserted. Notification skipped.');
-  }
+
 
   return { insertedCount: newEventsInsertedCount };
 }
@@ -580,8 +543,8 @@ if (isOnceMode) {
 
   console.log(`Cleanup cron scheduler started. Will run every Tuesday at 02:00 Taipei time. (Cron: ${cleanupCronExpression})`);
 
-  // Schedule daily rollover at 18:30:00 Taipei time (30 18 * * *)
-  const rolloverCronExpression = '30 18 * * *';
+  // Schedule daily rollover at 18:30:00 Taipei time from Tuesday to Sunday (30 18 * * 0,2,3,4,5,6, excludes Monday)
+  const rolloverCronExpression = '30 18 * * 0,2,3,4,5,6';
   cron.schedule(rolloverCronExpression, async () => {
     console.log('[Daily Rollover Cron] Triggering daily rollover at 18:30...');
     try {
@@ -593,5 +556,5 @@ if (isOnceMode) {
   }, {
     timezone: 'Asia/Taipei'
   });
-  console.log(`Daily Rollover cron scheduler started. Will run daily at 18:30 Taipei time. (Cron: ${rolloverCronExpression})`);
+  console.log(`Daily Rollover cron scheduler started. Will run Tue-Sun at 18:30 Taipei time. (Cron: ${rolloverCronExpression})`);
 }

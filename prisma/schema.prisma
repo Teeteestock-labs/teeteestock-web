@@ -160,6 +160,30 @@ model SystemConfig {
   pendingDividendSettle   Boolean   @default(false)
 }
 
+model UserDividendLog {
+  id               String   @id @default(uuid())
+  userId           String
+  pairId           String
+  sharesOwned      BigInt
+  dividendPerShare Float
+  totalPayout      Float
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model UserLoginReward {
+  id            String   @id @default(uuid())
+  userId        String
+  rewardDay     String
+  rewardYearInt Int
+  rewardWeekInt Int
+  amount        Float
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, rewardYearInt, rewardWeekInt, rewardDay])
+}
+
 model ChatMessage {
   id         String   @id @default(uuid())
   stock_code String

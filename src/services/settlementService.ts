@@ -189,6 +189,16 @@ export async function runDailyRolloverOrSettlement(options?: {
   const now = options?.targetDate || new Date();
   const tzTime = getTaipeiTime(now);
 
+  // Monday Guard: Monday is a trading holiday. Automatic rollover/settlement occurs on Tuesday 18:30.
+  if (tzTime.dayOfWeek === 1 && !options?.forceAction) {
+    console.log('[Rollover/Settlement] Skipping: Monday is a trading holiday; rollover/settlement is scheduled for Tuesday 18:30.');
+    return {
+      actionExecuted: 'none' as any,
+      results: [],
+      message: 'Monday is a trading holiday; rollover/settlement is scheduled for Tuesday 18:30.'
+    };
+  }
+
   // Determine the logical trading day ending.
   const logicalDayOfWeek = (tzTime.dayOfWeek - 1 + 7) % 7;
 
@@ -412,6 +422,17 @@ export async function runDailyRolloverOrSettlement(options?: {
                 update: { balance: { increment: cashTotal } },
                 create: { userId: holding.userId, balance: 10000.0 + cashTotal }
               });
+
+              await tx.userDividendLog.create({
+                data: {
+                  userId: holding.userId,
+                  pairId: latestPair.id,
+                  sharesOwned: holding.shares_owned,
+                  dividendPerShare,
+                  totalPayout: dividendCash,
+                  createdAt: new Date()
+                }
+              });
             }
 
             if (wasDelisted) {
@@ -588,12 +609,8 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   let clockStatus: 'CLOSED' | 'ROLLOVER' | 'PRE_MARKET' | 'OPEN' | 'SETTLING' = 'CLOSED';
   
   if (tz.dayOfWeek === 1) {
-    // Monday: Holiday (SETTLING), Weekly Dividend Settlement occurs at Monday 23:59
-    if (totalMinutes >= 1439) {
-      clockStatus = 'ROLLOVER';
-    } else {
-      clockStatus = 'SETTLING';
-    }
+    // Monday: Holiday (SETTLING) for the entire 24 hours. No trading, price mutation or rollover on Monday.
+    clockStatus = 'SETTLING';
   } else if (tz.dayOfWeek === 2) {
     // Tuesday: SETTLING until 18:30, ROLLOVER at 18:30 - 18:45, PRE_MARKET at 18:45 - 19:00, OPEN at 19:00 - 24:00
     if (totalMinutes < 1110) {
