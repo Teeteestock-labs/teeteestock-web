@@ -1,21 +1,26 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { UserChoice } from '@/types/enums';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 const DEFAULT_PLAYER_ID = 'default_player';
 const DEFAULT_BALANCE = 10000;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // 取得或建立預設玩家帳戶
+    const authUser = await getAuthenticatedUser(request);
+    const targetUserId = authUser?.id || DEFAULT_PLAYER_ID;
+    const displayName = authUser?.name || targetUserId;
+
+    // 取得或建立玩家帳戶
     let account = await prisma.userAccount.findUnique({
-      where: { userId: DEFAULT_PLAYER_ID },
+      where: { userId: targetUserId },
     });
 
     if (!account) {
       account = await prisma.userAccount.create({
         data: {
-          userId: DEFAULT_PLAYER_ID,
+          userId: targetUserId,
           balance: DEFAULT_BALANCE,
         },
       });
@@ -23,7 +28,7 @@ export async function GET() {
 
     // 取得玩家的持股 portfolios
     const portfolios = await prisma.userPortfolios.findMany({
-      where: { userId: DEFAULT_PLAYER_ID },
+      where: { userId: targetUserId },
     });
 
     const settlementLogs = await prisma.settlementLog.findMany({
@@ -31,7 +36,7 @@ export async function GET() {
     });
 
     const userDividendLogs = await prisma.userDividendLog.findMany({
-      where: { userId: DEFAULT_PLAYER_ID },
+      where: { userId: targetUserId },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -39,8 +44,8 @@ export async function GET() {
     const userAllTrades = await prisma.trades.findMany({
       where: {
         OR: [
-          { buyerId: DEFAULT_PLAYER_ID },
-          { sellerId: DEFAULT_PLAYER_ID }
+          { buyerId: targetUserId },
+          { sellerId: targetUserId }
         ]
       },
       select: { pairId: true, buyerId: true, sellerId: true, volume: true, createdAt: true },
@@ -49,7 +54,7 @@ export async function GET() {
 
     const firstBoughtMap: Record<string, string> = {};
     userAllTrades.forEach(t => {
-      if (t.buyerId === DEFAULT_PLAYER_ID) {
+      if (t.buyerId === targetUserId) {
         const p = t.pairId.toLowerCase();
         if (!firstBoughtMap[p]) {
           firstBoughtMap[p] = t.createdAt.toISOString();
@@ -97,7 +102,7 @@ export async function GET() {
     return NextResponse.json({
       player: {
         id: account.userId,
-        name: account.userId,
+        name: displayName,
         balance: account.balance,
         holdings: portfolios.map((h) => {
           const p = h.pairId.toLowerCase();

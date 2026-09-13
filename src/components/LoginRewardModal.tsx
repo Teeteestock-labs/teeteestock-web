@@ -25,6 +25,7 @@ export default function LoginRewardModal() {
   const [todayAmount, setTodayAmount] = useState<number>(0);
   const [todayKey, setTodayKey] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
     async function checkLoginReward() {
@@ -60,6 +61,8 @@ export default function LoginRewardModal() {
       ]);
       setTodayAmount(50);
       setTodayKey('THU');
+      setIsFadingOut(false);
+      setIsProcessing(false);
       setIsOpen(true);
     };
 
@@ -71,49 +74,54 @@ export default function LoginRewardModal() {
     };
   }, []);
 
-  // 點擊任何地方關閉視窗，並即時將獎勵匯入使用者資產
-  const handleClaimAndClose = async () => {
-    if (isProcessing) return;
+  // 按下「領取獎勵」時的處理邏輯
+  const handleClaim = async () => {
+    if (isProcessing || isFadingOut) return;
     setIsProcessing(true);
 
+    // 1. 即時將當天卡片轉變為「已領取」樣式
+    setDaysProgress((prev) =>
+      prev.map((day) =>
+        day.isToday || day.key === todayKey
+          ? { ...day, claimed: true, isToday: false }
+          : day
+      )
+    );
+
+    // 2. 呼叫 API 劃轉獎勵金額並即時更新玩家資產餘額
     try {
-      // 呼叫 API 即時領取入帳
       const res = await fetch('/api/login-reward', { method: 'POST' });
       if (res.ok) {
-        // 即時向後端同步最新玩家資產餘額
         await refreshPlayerState();
       }
     } catch (err) {
       console.error('Failed to claim login reward:', err);
-    } finally {
-      setIsProcessing(false);
-      setIsOpen(false);
     }
+
+    // 3. 觸發 3 秒淡出效果，並在 3 秒後完全關閉視窗
+    setIsFadingOut(true);
+    setTimeout(() => {
+      setIsOpen(false);
+    }, 3000);
   };
 
   if (!isOpen) return null;
 
   return (
     <div
-      onClick={handleClaimAndClose}
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn font-mono select-none cursor-pointer"
+      className={`fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 font-mono select-none transition-opacity duration-[3000ms] ${
+        isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      }`}
     >
-      <div
-        onClick={(e) => {
-          // 確保點擊視窗內部任何區域同樣觸發關閉與領取
-          e.stopPropagation();
-          handleClaimAndClose();
-        }}
-        className="bg-[#121418] border border-[#2B2F36] rounded-2xl p-6 max-w-xl w-full space-y-6 shadow-2xl relative text-[#EAECEF] cursor-pointer hover:border-gray-600 transition-colors"
-      >
-        {/* 大標題與簡潔文字 */}
+      <div className="bg-[#121418] border border-[#2B2F36] rounded-2xl p-6 max-w-xl w-full space-y-6 shadow-2xl relative text-[#EAECEF]">
+        {/* 標題與說明 */}
         <div className="text-center space-y-2 border-b border-[#2B2F36] pb-4">
           <h2 className="text-xl font-extrabold text-white tracking-wider">
             登入獎勵
           </h2>
           <p className="text-xs text-gray-400">
             {todayAmount > 0
-              ? `今日登入獎勵 +${todayAmount} $TEE，點擊任意處即刻匯入資產`
+              ? `今日登入獎勵 +${todayAmount} $TEE`
               : '每日 00:00 重置，週三至週日登入即可領取獎勵！'}
           </p>
         </div>
@@ -145,7 +153,7 @@ export default function LoginRewardModal() {
                 <div className="my-2 min-h-[22px] flex items-center justify-center">
                   {isClaimed ? (
                     <span className="text-[11px] font-bold bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded flex items-center gap-1">
-                      ✓ 已領
+                      ✓ 已領取
                     </span>
                   ) : isToday ? (
                     <span className="text-[10px] font-bold bg-[#00FFA3]/20 text-[#00FFA3] px-1.5 py-0.5 rounded">
@@ -165,19 +173,17 @@ export default function LoginRewardModal() {
           })}
         </div>
 
-        {/* 底部說明與確認提示 */}
-        <div className="bg-[#181A20] border border-[#2B2F36] rounded-xl px-4 py-3 text-center">
-          <p className="text-xs text-gray-300 font-semibold">
-            💡 點擊視窗任意處：自動劃轉獎勵入帳並關閉
-          </p>
-        </div>
-
-        {/* 按鈕（點擊即關閉並領取） */}
+        {/* 按鈕（需按下「領取獎勵」才執行劃轉與 3 秒淡出） */}
         <button
-          onClick={handleClaimAndClose}
-          className="w-full py-3 rounded-xl font-bold text-xs bg-[#2B2F36] hover:bg-[#363B44] text-white border border-gray-700 hover:border-gray-500 transition-all active:scale-[0.99] cursor-pointer shadow-md"
+          onClick={handleClaim}
+          disabled={isFadingOut}
+          className={`w-full py-3 rounded-xl font-bold text-xs border transition-all cursor-pointer shadow-md ${
+            isFadingOut
+              ? 'bg-emerald-900/50 text-emerald-300 border-emerald-500/40 cursor-default'
+              : 'bg-[#2B2F36] hover:bg-[#363B44] text-white border-gray-700 hover:border-gray-500 active:scale-[0.99]'
+          }`}
         >
-          確認收下
+          {isFadingOut ? '已領取' : '領取獎勵'}
         </button>
       </div>
     </div>

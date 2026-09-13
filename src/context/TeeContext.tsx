@@ -365,6 +365,14 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         fetchLatestMarketAndPlayer().then(() => {
             setIsInitialized(true);
         });
+
+        const handleAuthChange = () => {
+            fetchLatestMarketAndPlayer();
+        };
+        window.addEventListener('auth_state_changed', handleAuthChange);
+        return () => {
+            window.removeEventListener('auth_state_changed', handleAuthChange);
+        };
     }, []);
 
     // 計算活躍買單總凍結資金與可用餘額

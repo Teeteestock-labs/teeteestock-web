@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { OrderSide } from '@/types/enums';
 import { alignToTick } from '@/utils/validatePrice';
 import { checkAndTickMarketStatus } from '@/services/settlementService';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -77,7 +78,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "委託價格超出今日漲跌停限制區間。" }, { status: 400 });
     }
 
-    const targetUserId = userId || 'default_player';
+    const authUser = await getAuthenticatedUser(request);
+    const targetUserId = userId || authUser?.id || 'default_player';
 
     // ── Self-Match Prevention (API-Level Defense) ──
     const isBot = targetUserId === 'SYSTEM_MM' || targetUserId === 'MARKET_MAKER' || targetUserId.startsWith('TEST_BOT_');

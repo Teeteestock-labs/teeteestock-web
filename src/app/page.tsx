@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTee } from "@/context/TeeContext";
+import { useAuth } from "@/context/AuthContext";
 import SettlementTimer from "@/components/SettlementTimer";
 import TickerTape from "@/components/TickerTape";
 import BottomNav from "@/components/BottomNav";
@@ -11,6 +12,7 @@ import GlobalStats from "@/components/GlobalStats";
 import AssetHistoryChart from "@/components/AssetHistoryChart";
 import DividendNotificationModal from "@/components/DividendNotificationModal";
 import LoginRewardModal from "@/components/LoginRewardModal";
+import Footer from "@/components/Footer";
 import { alignToTick } from "@/utils/validatePrice";
 import { teeteePair, UserHolding } from "@/app/types";
 
@@ -806,6 +808,7 @@ function HomeContent() {
     executeWeeklySettlement,
     settlementLogs
   } = useTee();
+  const { user } = useAuth();
 
   const sortedMarketData = [...marketData].sort((a, b) => a.id.localeCompare(b.id));
 
@@ -941,6 +944,20 @@ function HomeContent() {
 
         {mode === 'asset' && (
           <div className="p-4 space-y-4">
+            {!user && (
+              <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-3 flex items-center justify-between gap-2 text-xs text-slate-300 shadow-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-400 font-bold">💡 訪客試玩模式</span>
+                  <span className="text-slate-400 hidden sm:inline">登入或註冊專屬交易帳號即可永久保存投資部位與歷史紀錄！</span>
+                </div>
+                <Link
+                  href="/login"
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs shrink-0 transition-colors"
+                >
+                  登入 / 註冊
+                </Link>
+              </div>
+            )}
             <div className="bg-[#181a20]/40 p-4 rounded-xl border border-[#2b2f36] flex justify-between items-center bg-gray-950/20">
               <div className="flex flex-col justify-center space-y-3">
                 <div>
@@ -969,13 +986,27 @@ function HomeContent() {
                 <div className="flex items-center gap-3 font-mono">
                   <button
                     onClick={() => setIsAdjustedCost(prev => !prev)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all duration-150 border ${
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all duration-150 border flex items-center gap-1.5 select-none cursor-pointer ${
                       isAdjustedCost
                         ? 'bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/40 hover:bg-[#FF69B4]/20 shadow-[0_0_8px_rgba(255,105,180,0.2)]'
                         : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-white hover:bg-gray-800'
                     }`}
+                    title="加回歷史除息金額（還原成本計算）"
                   >
-                    {isAdjustedCost ? '✨ 還原成本' : '🔄 原始成本'}
+                    <span
+                      className={`w-3 h-3 rounded-[2px] border flex items-center justify-center shrink-0 transition-colors ${
+                        isAdjustedCost
+                          ? 'border-[#FF69B4] bg-[#FF69B4] text-gray-950'
+                          : 'border-gray-500 bg-transparent'
+                      }`}
+                    >
+                      {isAdjustedCost && (
+                        <svg className="w-2.5 h-2.5 stroke-[3.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </span>
+                    <span>還原成本</span>
                   </button>
                   <span className="text-[10px] font-mono text-gray-400">
                     共 {holdings.length} 檔
@@ -1196,6 +1227,7 @@ function HomeContent() {
         )}
       </div>
 
+      <Footer />
       <DividendNotificationModal />
       <LoginRewardModal />
       <BottomNav />

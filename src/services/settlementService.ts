@@ -54,11 +54,11 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
 
   if (isAlertMode) {
     // ── 進入 國家隊（Alert Mode 警戒模式）：【遵守漲停限制 ── 漲停板向下 5 檔階梯式佈單】 ──
-    const dividendAmount = parseFloat((pair.netValue * 0.08).toFixed(2));
+    const nvThreshold = parseFloat((pair.netValue * 0.10).toFixed(2));
     // 計算漲停價 (+20% limit up) 並對齊 Tick Size
     const limitUpPrice = alignToTick(openingPrice * 1.20);
 
-    console.log(`[🚨 國家隊 AlertMode] ${pair.id} 股價/跌停低於除息金額 ${dividendAmount.toFixed(2)}，啟動國家隊強勢拉抬護盤！開盤基準價: ${openingPrice.toFixed(2)}，漲停上限 LimitUp: ${limitUpPrice.toFixed(2)}`);
+    console.log(`[🚨 國家隊 AlertMode] ${pair.id} 股價/跌停低於淨值 10% 門檻 ${nvThreshold.toFixed(2)} (淨值: ${pair.netValue.toFixed(2)})，啟動國家隊強勢拉抬護盤！開盤基準價: ${openingPrice.toFixed(2)}，漲停上限 LimitUp: ${limitUpPrice.toFixed(2)}`);
 
     // 取得國家隊（造市商）可用資金
     const mmAccount = await tx.userAccount.findUnique({
@@ -578,9 +578,9 @@ export async function runPreMarketMMDeployment(_now: Date = new Date()) {
 
     const alertPairIds: string[] = [];
     for (const p of updatedPairs) {
-      const dividendAmount = parseFloat((p.netValue * 0.08).toFixed(2));
+      const nvThreshold = parseFloat((p.netValue * 0.10).toFixed(2));
       const limitDownPrice = p.currentPrice * 0.80;
-      if (p.currentPrice <= dividendAmount || p.openingPrice <= dividendAmount || limitDownPrice < dividendAmount) {
+      if (p.currentPrice < nvThreshold || p.openingPrice < nvThreshold || limitDownPrice < nvThreshold) {
         alertPairIds.push(p.id);
       }
     }
@@ -611,6 +611,19 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   if (tz.dayOfWeek === 1) {
     // Monday: Holiday (SETTLING) for the entire 24 hours. No trading, price mutation or rollover on Monday.
     clockStatus = 'SETTLING';
+
+    // Monday 24:00 Auto-stage Guard: If manual dividend button is not in cooldown, auto-trigger the button's stage action
+    if (totalMinutes >= 1438) {
+      try {
+        const cooldown = await getDividendCooldownInfo();
+        if (cooldown.canTrigger) {
+          console.log('[State Machine] Monday 24:00: Manual dividend button is not in cooldown. Auto-triggering button stage action...');
+          await stageManualDividendSettlement();
+        }
+      } catch (err) {
+        console.error('[State Machine Monday 24:00 Auto Stage Error]:', err);
+      }
+    }
   } else if (tz.dayOfWeek === 2) {
     // Tuesday: SETTLING until 18:30, ROLLOVER at 18:30 - 18:45, PRE_MARKET at 18:45 - 19:00, OPEN at 19:00 - 24:00
     if (totalMinutes < 1110) {

@@ -5,7 +5,7 @@ import { parseStringPromise } from 'xml2js';
 import dotenv from 'dotenv';
 import { prisma } from '../lib/prisma';
 import { EventType, ReviewStatus } from '../types/enums';
-import { runDailyRolloverOrSettlement } from '../services/settlementService';
+import { runDailyRolloverOrSettlement, getDividendCooldownInfo, stageManualDividendSettlement } from '../services/settlementService';
 
 // Load environment variables
 dotenv.config();
@@ -557,4 +557,25 @@ if (isOnceMode) {
     timezone: 'Asia/Taipei'
   });
   console.log(`Daily Rollover cron scheduler started. Will run Tue-Sun at 18:30 Taipei time. (Cron: ${rolloverCronExpression})`);
+
+  // Schedule Monday 23:59 auto-staging for manual dividend button if not in cooldown
+  const mondayStageCronExpression = '59 23 * * 1';
+  cron.schedule(mondayStageCronExpression, async () => {
+    console.log('[Monday 24:00 Cron] Checking if manual dividend button needs auto-staging...');
+    try {
+      const cooldown = await getDividendCooldownInfo();
+      if (cooldown.canTrigger) {
+        console.log('[Monday 24:00 Cron] Manual dividend button is not in cooldown. Auto-executing stage action...');
+        const result = await stageManualDividendSettlement();
+        console.log('[Monday 24:00 Cron] Successfully auto-staged manual dividend button:', result);
+      } else {
+        console.log('[Monday 24:00 Cron] Manual dividend button is already in cooldown / activated. Skipping.');
+      }
+    } catch (err) {
+      console.error('[Monday 24:00 Cron] Failed to auto-stage manual dividend button:', err);
+    }
+  }, {
+    timezone: 'Asia/Taipei'
+  });
+  console.log(`Monday Auto-Stage cron scheduler started. Will run Monday at 23:59 Taipei time. (Cron: ${mondayStageCronExpression})`);
 }

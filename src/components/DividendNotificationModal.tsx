@@ -26,6 +26,7 @@ const STOCK_NAME_MAP: Record<string, string> = {
 export default function DividendNotificationModal() {
   const [unnotifiedLogs, setUnnotifiedLogs] = useState<DividendLogItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
     async function checkDividends() {
@@ -44,6 +45,7 @@ export default function DividendNotificationModal() {
 
         if (pending.length > 0) {
           setUnnotifiedLogs(pending);
+          setIsFadingOut(false);
           setIsOpen(true);
         }
       } catch (err) {
@@ -60,6 +62,7 @@ export default function DividendNotificationModal() {
         { id: 'mock-3', pairId: 'PKMR', sharesOwned: 50, dividendPerShare: 6.50, totalPayout: 325.00, createdAt: new Date().toISOString() },
       ];
       setUnnotifiedLogs(mockItems);
+      setIsFadingOut(false);
       setIsOpen(true);
     };
 
@@ -72,13 +75,20 @@ export default function DividendNotificationModal() {
   }, []);
 
   const handleClose = () => {
+    if (isFadingOut) return;
+
     const storedNotifiedIds = localStorage.getItem('notified_dividend_ids');
     const notifiedSet = new Set<string>(storedNotifiedIds ? JSON.parse(storedNotifiedIds) : []);
 
     unnotifiedLogs.forEach(l => notifiedSet.add(l.id));
 
     localStorage.setItem('notified_dividend_ids', JSON.stringify(Array.from(notifiedSet)));
-    setIsOpen(false);
+
+    // 觸發 3 秒淡出效果
+    setIsFadingOut(true);
+    setTimeout(() => {
+      setIsOpen(false);
+    }, 3000);
   };
 
   if (!isOpen || unnotifiedLogs.length === 0) return null;
@@ -86,10 +96,14 @@ export default function DividendNotificationModal() {
   const totalPayoutSum = unnotifiedLogs.reduce((sum, item) => sum + item.totalPayout, 0);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn font-mono select-none">
+    <div
+      className={`fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 font-mono select-none transition-opacity duration-[3000ms] ${
+        isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      }`}
+    >
       <div className="bg-[#121418] border border-[#2B2F36] rounded-2xl p-6 max-w-xl w-full space-y-5 shadow-2xl relative text-[#EAECEF]">
         
-        {/* 1, 2, 3. 標題與說明（極簡高雅，無禮物圖示與炫彩裝飾） */}
+        {/* 標題與說明 */}
         <div className="text-center space-y-2 border-b border-[#2B2F36] pb-4">
           <h2 className="text-xl font-extrabold text-white tracking-wider">
             現金股利發放通知
@@ -100,7 +114,7 @@ export default function DividendNotificationModal() {
           </div>
         </div>
 
-        {/* 4. 持股配息明細清單 (Breakdown Table) */}
+        {/* 持股配息明細清單 (Breakdown Table) */}
         <div className="bg-[#181A20] border border-[#2B2F36] rounded-xl overflow-hidden">
           <div className="max-h-60 overflow-y-auto custom-scrollbar">
             <table className="w-full text-left text-xs border-collapse font-mono">
@@ -138,7 +152,7 @@ export default function DividendNotificationModal() {
           </div>
         </div>
 
-        {/* 5. 總計應發股利卡片（沉穩極簡風格，無符號） */}
+        {/* 總計應發股利卡片 */}
         <div className="bg-[#181A20] border border-[#2B2F36] rounded-xl px-4 py-3 flex items-center justify-between">
           <span className="text-xs font-bold text-gray-300">總計應發股利</span>
           <span className="text-lg font-black text-white font-mono">
@@ -146,12 +160,17 @@ export default function DividendNotificationModal() {
           </span>
         </div>
 
-        {/* 6. 確認按鈕（相同沉穩高雅風格） */}
+        {/* 確認按鈕 (點擊後觸發 5 秒淡出關閉) */}
         <button
           onClick={handleClose}
-          className="w-full py-3 rounded-xl font-bold text-xs bg-[#2B2F36] hover:bg-[#363B44] text-white border border-gray-700 hover:border-gray-500 transition-all active:scale-[0.99] cursor-pointer shadow-md"
+          disabled={isFadingOut}
+          className={`w-full py-3 rounded-xl font-bold text-xs border transition-all cursor-pointer shadow-md ${
+            isFadingOut
+              ? 'bg-emerald-900/50 text-emerald-300 border-emerald-500/40 cursor-default'
+              : 'bg-[#2B2F36] hover:bg-[#363B44] text-white border-gray-700 hover:border-gray-500 active:scale-[0.99]'
+          }`}
         >
-          確認
+          {isFadingOut ? '已確認' : '確認'}
         </button>
       </div>
     </div>

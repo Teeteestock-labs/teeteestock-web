@@ -527,14 +527,27 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 {activeTab === 'k' && (
                                     <button
                                         onClick={() => setIsAdjustedKline(!isAdjustedKline)}
-                                        className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all flex items-center gap-1 select-none border ${
+                                        className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all flex items-center gap-1.5 select-none border cursor-pointer ${
                                             isAdjustedKline
                                                 ? 'bg-[#FF69B4]/20 text-[#FF69B4] border-[#FF69B4]/50 shadow-[0_0_8px_rgba(255,105,180,0.3)] font-black'
                                                 : 'bg-[#2B2F36]/60 text-[#848E9C] border-transparent hover:text-white hover:bg-[#2B2F36]'
                                         }`}
                                         title="加回歷史除息金額（還原 K 線走勢）"
                                     >
-                                        <span>{isAdjustedKline ? '✨ 還原k線' : '🔄 原始k線'}</span>
+                                        <span
+                                            className={`w-3 h-3 rounded-[2px] border flex items-center justify-center shrink-0 transition-colors ${
+                                                isAdjustedKline
+                                                    ? 'border-[#FF69B4] bg-[#FF69B4] text-gray-950'
+                                                    : 'border-gray-500 bg-transparent'
+                                            }`}
+                                        >
+                                            {isAdjustedKline && (
+                                                <svg className="w-2.5 h-2.5 stroke-[3.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                            )}
+                                        </span>
+                                        <span>還原k</span>
                                     </button>
                                 )}
                             </div>

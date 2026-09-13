@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getTaipeiTime } from '@/utils/marketHours';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 const DEFAULT_USER_ID = 'default_player';
 
@@ -32,8 +33,11 @@ function getTaipeiYearAndWeek(now: Date = new Date()) {
   return { year: d.getUTCFullYear(), week: weekNo, dayOfWeek: tz.dayOfWeek };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthenticatedUser(request);
+    const targetUserId = authUser?.id || DEFAULT_USER_ID;
+
     const now = new Date();
     const { year, week, dayOfWeek } = getTaipeiYearAndWeek(now);
     const todayKey = DAY_INDEX_TO_KEY[dayOfWeek] || null;
@@ -41,7 +45,7 @@ export async function GET() {
     // 查詢使用者當週已領取的所有獎勵紀錄
     const claimedRecords = await prisma.userLoginReward.findMany({
       where: {
-        userId: DEFAULT_USER_ID,
+        userId: targetUserId,
         rewardYearInt: year,
         rewardWeekInt: week,
       },
@@ -75,8 +79,11 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const authUser = await getAuthenticatedUser(request);
+    const targetUserId = authUser?.id || DEFAULT_USER_ID;
+
     const now = new Date();
     const { year, week, dayOfWeek } = getTaipeiYearAndWeek(now);
     const todayKey = DAY_INDEX_TO_KEY[dayOfWeek];
@@ -96,7 +103,7 @@ export async function POST() {
       const existing = await tx.userLoginReward.findUnique({
         where: {
           userId_rewardYearInt_rewardWeekInt_rewardDay: {
-            userId: DEFAULT_USER_ID,
+            userId: targetUserId,
             rewardYearInt: year,
             rewardWeekInt: week,
             rewardDay: todayKey,
@@ -111,7 +118,7 @@ export async function POST() {
       // 1. 紀錄領取歷史
       const rewardRecord = await tx.userLoginReward.create({
         data: {
-          userId: DEFAULT_USER_ID,
+          userId: targetUserId,
           rewardDay: todayKey,
           rewardYearInt: year,
           rewardWeekInt: week,
@@ -121,9 +128,9 @@ export async function POST() {
 
       // 2. 即時更新/匯入玩家資產 (balance + amount)
       const updatedAccount = await tx.userAccount.upsert({
-        where: { userId: DEFAULT_USER_ID },
+        where: { userId: targetUserId },
         update: { balance: { increment: amount } },
-        create: { userId: DEFAULT_USER_ID, balance: 10000.0 + amount },
+        create: { userId: targetUserId, balance: 10000.0 + amount },
       });
 
       return { rewardRecord, newBalance: updatedAccount.balance };
