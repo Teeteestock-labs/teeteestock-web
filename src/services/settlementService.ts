@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { MarketStatus, EventType, ReviewStatus, OrderSide } from '../types/enums';
-import { alignToTick, getTickSize } from '../utils/validatePrice';
+import { alignToTick, getTickSize, generateMMFiveBidsAndAsks } from '../utils/validatePrice';
 import { getTaipeiTime } from '../utils/marketHours';
 
 const WARNING_LINE = 10;          // 警戒線
@@ -128,25 +128,20 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
   // 3. 依據持股比例執行控盤策略
   if (ratio < 0.20) {
     // 比例 < 20%（初期）：【流動性注入模式】
-    // 以 openingPrice 為中心，左右 2% 內掛滿大額買賣單（每檔 5,000 股），溫和供給籌碼。
-    const buyPrice1 = alignToTick(openingPrice * 0.99);
-    const buyPrice2 = alignToTick(openingPrice * 0.98);
-    const sellPrice1 = alignToTick(openingPrice * 1.01);
-    const sellPrice2 = alignToTick(openingPrice * 1.02);
+    // 依據價格級距掛出 5 檔買單與 5 檔賣單，每檔數量 = Math.ceil(80000 / 掛價)
+    const { bids, asks } = generateMMFiveBidsAndAsks(openingPrice);
 
-    await tx.orderBook.create({
-      data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice1, volume: 5000 }
-    });
-    await tx.orderBook.create({
-      data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice2, volume: 5000 }
-    });
-    await tx.orderBook.create({
-      data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: sellPrice1, volume: 5000 }
-    });
-    await tx.orderBook.create({
-      data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: sellPrice2, volume: 5000 }
-    });
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【流動性注入模式】：掛出中心價左右 2% 內四檔委託各 5,000 股。`);
+    for (const b of bids) {
+      await tx.orderBook.create({
+        data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: b.price, volume: b.volume }
+      });
+    }
+    for (const a of asks) {
+      await tx.orderBook.create({
+        data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: a.price, volume: a.volume }
+      });
+    }
+    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【流動性注入模式】：依級距掛出 5 檔買賣單，單檔資金各約 80,000 TEE。`);
   } else if (ratio >= 0.20 && ratio <= 0.70) {
     // 比例處於 20% ~ 70%（中期）：【野性波動模式】
     // 撤出盤口中央，Spread 放寬至 10%（左右各 5%），每檔掛 1,000 股。

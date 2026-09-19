@@ -37,21 +37,30 @@ interface TickerItemProps {
 }
 
 // 輔助函數：繪製今日 K 棒
-const renderMiniKBar = (open: number, close: number, high: number, low: number) => {
-  const isUp = close > open;
-  const isDown = close < open;
+const renderMiniKBar = (
+  open: number,
+  close: number,
+  high: number,
+  low: number,
+  changePercent: number
+) => {
+  const isUp = close > open || (close === open && changePercent > 0);
+  const isDown = close < open || (close === open && changePercent < 0);
   const color = isUp ? '#ef4444' : isDown ? '#22c55e' : '#ffffff'; // 紅漲綠跌平盤白
 
   const max = Math.max(high, open, close);
   const min = Math.min(low, open, close);
-  const range = max - min || 1.0;
 
-  // 畫布高度為 26px，上下留 2px padding
-  const padding = 2;
-  const h = 26;
-  const chartH = h - padding * 2;
+  // k棒大小按照漲幅比例 每2％一種長度 20％為最長（目前長度 22px）
+  const step = Math.min(10, Math.max(1, Math.ceil(Math.abs(changePercent) / 2)));
+  const currentBarH = Math.max(2, (step / 10) * 22);
+
+  const topY = 13 - currentBarH / 2;
+  const bottomY = 13 + currentBarH / 2;
+
   const getY = (val: number) => {
-    return padding + (chartH - ((val - min) / range) * chartH);
+    if (max === min) return 13;
+    return topY + ((max - val) / (max - min)) * currentBarH;
   };
 
   const yHigh = getY(high);
@@ -214,7 +223,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
         {/* 商品 */}
         <td className="pl-4 border-r border-slate-800/80 py-1">
           <div className="flex items-center gap-2">
-            {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+            {renderMiniKBar(openVal, closeVal, highVal, lowVal, changePercent)}
             <div>
               <span className="font-black text-xs uppercase tracking-wider text-white">{stockId}</span>
               <span className="text-[9px] block text-gray-500">{pair.name}</span>
@@ -274,7 +283,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
               {pair.price.toFixed(2)}
             </span>
             <div className="scale-125 transform-gpu origin-right pr-1">
-              {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+              {renderMiniKBar(openVal, closeVal, highVal, lowVal, changePercent)}
             </div>
           </div>
 
@@ -314,7 +323,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
               {pair.price.toFixed(2)}
             </span>
             <div className="scale-110 transform-gpu origin-right pr-1">
-              {renderMiniKBar(openVal, closeVal, highVal, lowVal)}
+              {renderMiniKBar(openVal, closeVal, highVal, lowVal, changePercent)}
             </div>
           </div>
 

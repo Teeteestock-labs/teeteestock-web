@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { generateMMFiveBidsAndAsks } from '../src/utils/validatePrice';
 
 const prisma = new PrismaClient();
 
@@ -173,30 +174,29 @@ async function main() {
   console.log('✅ default_player account and balance initialized to 10,000.');
 
   // 8. Deploy MARKET_MAKER liquidity orders (5 bids and 5 asks for all 9 pairs)
-  console.log('Deploying MARKET_MAKER 5-tier bid and ask liquidity orders...');
+  console.log('Deploying MARKET_MAKER 5-tier bid and ask liquidity orders by tick rules...');
   for (const pairId of CP_PAIR_IDS) {
-    const buyPrices = [99.5, 99.0, 98.5, 98.0, 97.5];
-    for (const p of buyPrices) {
+    const { bids, asks } = generateMMFiveBidsAndAsks(100.0);
+    for (const b of bids) {
       await prisma.orderBook.create({
         data: {
           userId: 'MARKET_MAKER',
           pairId: pairId,
           side: 'BUY',
-          price: p,
-          volume: 5000,
+          price: b.price,
+          volume: b.volume,
         },
       });
     }
 
-    const sellPrices = [100.5, 101.0, 101.5, 102.0, 102.5];
-    for (const p of sellPrices) {
+    for (const a of asks) {
       await prisma.orderBook.create({
         data: {
           userId: 'MARKET_MAKER',
           pairId: pairId,
           side: 'SELL',
-          price: p,
-          volume: 5000,
+          price: a.price,
+          volume: a.volume,
         },
       });
     }

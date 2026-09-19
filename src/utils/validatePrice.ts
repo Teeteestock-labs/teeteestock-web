@@ -33,3 +33,35 @@ export function alignToTick(price: number): number {
   return parseFloat((Math.round(price / tickSize) * tickSize).toFixed(2));
 }
 
+/**
+ * 依據當前股價級距計算造市商五檔買單與賣單
+ * 下檔五檔買單：依據當時價格級距向下延伸 5 檔
+ * 上檔五檔賣單：依據當時價格級距向上延伸 5 檔
+ * 每檔掛單數量 = 80000 / 掛價 (Math.ceil 無條件進一位)
+ */
+export function generateMMFiveBidsAndAsks(refPrice: number): {
+  bids: { price: number; volume: number }[];
+  asks: { price: number; volume: number }[];
+} {
+  const bids: { price: number; volume: number }[] = [];
+  let pBid = refPrice;
+  for (let i = 0; i < 5; i++) {
+    const tick = getTickSize(pBid - 0.0001);
+    pBid = alignToTick(pBid - tick);
+    if (pBid <= 0) break;
+    const volume = Math.ceil(80000 / pBid);
+    bids.push({ price: pBid, volume });
+  }
+
+  const asks: { price: number; volume: number }[] = [];
+  let pAsk = refPrice;
+  for (let i = 0; i < 5; i++) {
+    const tick = getTickSize(pAsk);
+    pAsk = alignToTick(pAsk + tick);
+    const volume = Math.ceil(80000 / pAsk);
+    asks.push({ price: pAsk, volume });
+  }
+
+  return { bids, asks };
+}
+

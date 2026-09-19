@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { generateMMFiveBidsAndAsks } from '../src/utils/validatePrice';
 
 const prisma = new PrismaClient();
 
@@ -18,32 +19,28 @@ async function main() {
   for (const pairId of CP_PAIR_IDS) {
     const pair = await prisma.cpPairs.findUnique({ where: { id: pairId } });
     const refPrice = pair ? pair.currentPrice : 100.0;
+    const { bids, asks } = generateMMFiveBidsAndAsks(refPrice);
 
-    // 買進 5 檔
-    const buyPrices = [refPrice - 0.5, refPrice - 1.0, refPrice - 1.5, refPrice - 2.0, refPrice - 2.5];
-    for (const p of buyPrices) {
-      if (p <= 0) continue;
+    for (const b of bids) {
       await prisma.orderBook.create({
         data: {
           userId: 'MARKET_MAKER',
           pairId: pairId,
           side: 'BUY',
-          price: parseFloat(p.toFixed(2)),
-          volume: 5000,
+          price: b.price,
+          volume: b.volume,
         },
       });
     }
 
-    // 賣出 5 檔
-    const sellPrices = [refPrice + 0.5, refPrice + 1.0, refPrice + 1.5, refPrice + 2.0, refPrice + 2.5];
-    for (const p of sellPrices) {
+    for (const a of asks) {
       await prisma.orderBook.create({
         data: {
           userId: 'MARKET_MAKER',
           pairId: pairId,
           side: 'SELL',
-          price: parseFloat(p.toFixed(2)),
-          volume: 5000,
+          price: a.price,
+          volume: a.volume,
         },
       });
     }
