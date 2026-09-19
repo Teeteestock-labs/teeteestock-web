@@ -38,6 +38,9 @@ async function main() {
   const archivedEventCount = await prisma.archivedEvents.deleteMany();
   console.log(`Cleared ${archivedEventCount.count} records from ArchivedEvents.`);
 
+  const divLogCount = await prisma.userDividendLog.deleteMany();
+  console.log(`Cleared ${divLogCount.count} records from UserDividendLog.`);
+
   // 2. Reset CP Pairs prices and status
   console.log('Resetting CP Pairs to initial values (100.0, NORMAL)...');
   for (const pairId of CP_PAIR_IDS) {
@@ -47,6 +50,7 @@ async function main() {
         netValue: 100.0,
         currentPrice: 100.0,
         openingPrice: 100.0,
+        todayOpenPrice: 100.0,
         last_close_price: 100.0,
         next_open_price: 100.0,
         status: 'NORMAL',
@@ -130,6 +134,43 @@ async function main() {
     });
   }
   console.log('✅ MARKET_MAKER portfolios reset.');
+
+  // 7. Reset Real Players' accounts and portfolios
+  console.log('Resetting real players accounts and portfolios...');
+  const playerPortfoliosDeleted = await prisma.userPortfolios.deleteMany({
+    where: {
+      userId: {
+        notIn: ['MARKET_MAKER', 'SYSTEM'],
+        not: {
+          startsWith: 'TEST_BOT_'
+        }
+      }
+    }
+  });
+  console.log(`Cleared ${playerPortfoliosDeleted.count} player portfolio records.`);
+
+  const playerAccountsReset = await prisma.userAccount.updateMany({
+    where: {
+      userId: {
+        notIn: ['MARKET_MAKER', 'SYSTEM'],
+        not: {
+          startsWith: 'TEST_BOT_'
+        }
+      }
+    },
+    data: {
+      balance: 10000.0,
+      isMuted: false
+    }
+  });
+  console.log(`Reset ${playerAccountsReset.count} player accounts balance to 10,000.`);
+
+  await prisma.userAccount.upsert({
+    where: { userId: 'default_player' },
+    update: { balance: 10000.0, isMuted: false },
+    create: { userId: 'default_player', balance: 10000.0, isMuted: false }
+  });
+  console.log('✅ default_player account and balance initialized to 10,000.');
 
   console.log('--- Database Reset and Seeding Completed Successfully ---');
 }
