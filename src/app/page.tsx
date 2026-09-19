@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTee } from "@/context/TeeContext";
 import { useAuth } from "@/context/AuthContext";
-import SettlementTimer from "@/components/SettlementTimer";
 import TickerTape from "@/components/TickerTape";
 import BottomNav from "@/components/BottomNav";
 import GlobalStats from "@/components/GlobalStats";
@@ -874,13 +873,6 @@ function HomeContent() {
       <div className="flex-1 overflow-y-auto">
         {mode === 'list' && (
           <div className="p-3 space-y-4">
-            {/* Controls & Simulator */}
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-gray-900/30 p-3 rounded-xl border border-gray-900">
-              <div className="flex items-center gap-2">
-                <SettlementTimer />
-              </div>
-            </div>
-
             {/* 三模切換器 (Interface Selector) */}
             <div className="bg-gray-950 p-1 rounded-xl border border-gray-900 flex select-none">
               <button
