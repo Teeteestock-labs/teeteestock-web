@@ -12,6 +12,7 @@
     "matching": "tsx scripts/matching-daemon.ts",
     "chaos:bot": "tsx scripts/chaos-bot-daemon.ts",
     "market:reset": "tsx scripts/reset-market.ts",
+    "mm:deploy": "tsx scripts/deploy-mm.ts",
     "cron:crawler": "tsx src/cron/crawler.ts"
   },
   "dependencies": {

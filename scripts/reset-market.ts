@@ -172,6 +172,37 @@ async function main() {
   });
   console.log('✅ default_player account and balance initialized to 10,000.');
 
+  // 8. Deploy MARKET_MAKER liquidity orders (5 bids and 5 asks for all 9 pairs)
+  console.log('Deploying MARKET_MAKER 5-tier bid and ask liquidity orders...');
+  for (const pairId of CP_PAIR_IDS) {
+    const buyPrices = [99.5, 99.0, 98.5, 98.0, 97.5];
+    for (const p of buyPrices) {
+      await prisma.orderBook.create({
+        data: {
+          userId: 'MARKET_MAKER',
+          pairId: pairId,
+          side: 'BUY',
+          price: p,
+          volume: 5000,
+        },
+      });
+    }
+
+    const sellPrices = [100.5, 101.0, 101.5, 102.0, 102.5];
+    for (const p of sellPrices) {
+      await prisma.orderBook.create({
+        data: {
+          userId: 'MARKET_MAKER',
+          pairId: pairId,
+          side: 'SELL',
+          price: p,
+          volume: 5000,
+        },
+      });
+    }
+  }
+  console.log('✅ MARKET_MAKER 5-tier bid/ask orders deployed for all 9 pairs.');
+
   console.log('--- Database Reset and Seeding Completed Successfully ---');
 }
 
