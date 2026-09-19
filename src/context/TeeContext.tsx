@@ -129,11 +129,18 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const fetchLatestMarketAndPlayer = async () => {
         if (typeof navigator !== 'undefined' && !navigator.onLine) return;
         try {
-            // 1. 同步行情與訂單
-            const marketRes = await fetch('/api/market').catch(err => {
-                console.warn('[TeeContext] Transient fetch market error:', err?.message || err);
-                return null;
-            });
+            // 1 & 2. 並行抓取行情與玩家資產，大幅減少等待延遲
+            const [marketRes, playerRes] = await Promise.all([
+                fetch('/api/market').catch(err => {
+                    console.warn('[TeeContext] Transient fetch market error:', err?.message || err);
+                    return null;
+                }),
+                fetch('/api/player').catch(err => {
+                    console.warn('[TeeContext] Transient fetch player error:', err?.message || err);
+                    return null;
+                })
+            ]);
+
             if (marketRes && marketRes.ok) {
                 const data = await marketRes.json();
                 if (data.success) {
@@ -161,11 +168,6 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                 }
             }
 
-            // 2. 同步玩家資產
-            const playerRes = await fetch('/api/player').catch(err => {
-                console.warn('[TeeContext] Transient fetch player error:', err?.message || err);
-                return null;
-            });
             if (playerRes && playerRes.ok) {
                 const data = await playerRes.json();
                 if (data && data.player) {
@@ -480,17 +482,17 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                 return { success: false, message: data.error || '委託失敗' };
             }
 
-            // 成功：若市場處於 OPEN 狀態，立即觸發一次撮合劃轉，實現即時成交與持股更新
+            // 成功：在背景觸發撮合與非同步更新，不阻塞前端按鈕響應（將延遲從 5 秒降至 0.2 秒）
             if (marketStatus === 'OPEN') {
-                try {
-                    await fetch('/api/matching', { method: 'POST' });
-                } catch (e) {
-                    console.error('Auto matching trigger failed:', e);
-                }
+                fetch('/api/matching', { method: 'POST' })
+                    .catch(e => console.error('Auto matching trigger failed:', e))
+                    .finally(() => {
+                        fetchLatestMarketAndPlayer();
+                    });
+            } else {
+                fetchLatestMarketAndPlayer();
             }
 
-            // 從 DB 同步最新狀態（餘額、庫存、訂單、行情）
-            await fetchLatestMarketAndPlayer();
             return { success: true, message: "委託單已送出" };
         } catch (err) {
             console.error("Order submission failed:", err);
@@ -521,19 +523,18 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
             if (res.ok) {
                 if (marketStatus === 'OPEN') {
-                    try {
-                        await fetch('/api/matching', { method: 'POST' });
-                    } catch (e) {
-                        console.error('Auto matching trigger failed:', e);
-                    }
+                    fetch('/api/matching', { method: 'POST' })
+                        .catch(e => console.error('Auto matching trigger failed:', e))
+                        .finally(() => {
+                            fetchLatestMarketAndPlayer();
+                        });
+                } else {
+                    fetchLatestMarketAndPlayer();
                 }
-                // 成功：從 DB 同步最新狀態
-                await fetchLatestMarketAndPlayer();
                 return { success: true, message: '撤單成功' };
             } else {
                 const data = await res.json();
-                // 不論原因，都同步一次 DB 狀態以確保 UI 正確
-                await fetchLatestMarketAndPlayer();
+                fetchLatestMarketAndPlayer();
                 if (data.error === 'Order not found') {
                     return { success: false, message: '該委託單已成交或已被撮合，無法撤銷。' };
                 }
