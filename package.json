@@ -9,6 +9,9 @@
     "lint": "eslint",
     "login:x": "tsx scripts/login-x.ts",
     "macro:x": "tsx scripts/macro-search.ts",
+    "matching": "tsx scripts/matching-daemon.ts",
+    "chaos:bot": "tsx scripts/chaos-bot-daemon.ts",
+    "market:reset": "tsx scripts/reset-market.ts",
     "cron:crawler": "tsx src/cron/crawler.ts"
   },
   "dependencies": {

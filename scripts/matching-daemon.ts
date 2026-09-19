@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 // Load environment variables from .env
 dotenv.config();
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.INTERNAL_API_URL || 'http://127.0.0.1:3000';
 const MATCHING_API_URL = `${BASE_URL}/api/matching`;
 
 async function triggerMatching() {
