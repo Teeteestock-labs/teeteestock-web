@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { EventType, ReviewStatus } from '@/types/enums';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 const PAIR_ID_MAP: Record<string, string> = {
   'micomet': 'MCMT',
@@ -72,7 +73,8 @@ export async function POST(request: Request) {
       type = EventType.STREAM_3D;
     }
 
-    const reporterId = userId || 'default_player';
+    const authUser = await getAuthenticatedUser(request);
+    const reporterId = authUser?.id || (userId && userId !== 'default_player' ? userId : 'default_player');
 
     // Insert as PENDING
     const event = await prisma.teeteeEvents.create({

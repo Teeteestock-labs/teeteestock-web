@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     }
 
     const authUser = await getAuthenticatedUser(request);
-    const targetUserId = userId || authUser?.id || 'default_player';
+    const targetUserId = authUser?.id || (userId && userId !== 'default_player' ? userId : 'default_player');
 
     // ── Self-Match Prevention (API-Level Defense) ──
     const isBot = targetUserId === 'SYSTEM_MM' || targetUserId === 'MARKET_MAKER' || targetUserId.startsWith('TEST_BOT_');

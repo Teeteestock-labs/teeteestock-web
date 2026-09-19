@@ -472,8 +472,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                     pairId,
                     side: type.toUpperCase(),
                     price,
-                    volume: amount,
-                    userId: 'default_player'
+                    volume: amount
                 })
             });
             const data = await res.json();
@@ -518,7 +517,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             const res = await fetch('/api/orders/cancel', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, userId: 'default_player' })
+                body: JSON.stringify({ orderId })
             });
 
             if (res.ok) {
@@ -621,7 +620,6 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             body: JSON.stringify({
                 pairId,
                 url: url,
-                userId: 'default_player',
                 type: type
             })
         }).catch(err => {

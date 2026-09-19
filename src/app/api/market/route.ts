@@ -3,10 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { INITIAL_PAIRS } from '@/app/constants/market';
 import { getTaipeiTime, getActiveTradingDay, getTaipeiSessionRange } from '@/utils/marketHours';
 import { checkAndTickMarketStatus } from '@/services/settlementService';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthenticatedUser(request);
+    const currentUserId = authUser?.id || 'default_player';
     const now = new Date();
     const marketStatus = await checkAndTickMarketStatus(now);
     const activeTrading = getActiveTradingDay(now);
@@ -243,8 +246,8 @@ export async function GET() {
       type: o.side.toLowerCase() as 'buy' | 'sell',
       price: o.price,
       amount: o.volume,
-      isUser: o.userId === 'default_player',
-      botId: o.userId !== 'default_player' ? o.userId : undefined,
+      isUser: o.userId === currentUserId,
+      botId: o.userId !== currentUserId ? o.userId : undefined,
       timestamp: o.createdAt.getTime()
     }));
 

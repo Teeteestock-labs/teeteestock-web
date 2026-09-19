@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { teeteePair } from "@/app/types";
 import { useTee } from "@/context/TeeContext";
+import { useAuth } from "@/context/AuthContext";
 import { getTeeTeeNews } from "./actions";
 import CandlestickChart from "@/components/CandlestickChart";
 import TickerTape from "@/components/TickerTape";
@@ -23,6 +24,8 @@ const PAIR_ID_MAP: Record<string, string> = {
 };
 
 export default function MarketDetailClient({ id }: { id: string }) {
+    const { user } = useAuth();
+    const currentUserId = user?.id || 'default_player';
     const { balance, availableBalance, submitOrder, holdings, marketData, orders, reportInteraction, cancelOrder, marketStatus, submitTeeteeReport, getOrderBook, isSubmitting, isCancelling } = useTee();
     const [amount, setAmount] = useState<number>(0);
     const [orderPrice, setOrderPrice] = useState<number>(0);
@@ -978,7 +981,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             );
                         })() : (() => {
                             const myTrades = (pair.recentTrades || []).filter(
-                                t => t.buyerId === 'default_player' || t.sellerId === 'default_player'
+                                t => t.buyerId === currentUserId || t.sellerId === currentUserId
                             );
                             return (
                                 <div className="overflow-x-auto overflow-y-auto max-h-[250px] custom-scrollbar">
@@ -1001,7 +1004,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                                 </tr>
                                             ) : (
                                                 myTrades.map((t, idx) => {
-                                                    const isBuy = t.buyerId === 'default_player';
+                                                    const isBuy = t.buyerId === currentUserId;
                                                     const sideText = isBuy ? '買進' : '賣出';
                                                     const sideColor = isBuy ? 'text-[#FF3B3B]' : 'text-[#00FFA3]';
                                                     const totalVal = t.price * t.amount;
