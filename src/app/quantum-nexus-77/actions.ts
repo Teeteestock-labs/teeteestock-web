@@ -288,3 +288,20 @@ export async function dispatchEventToCP(eventId: string, targetPairId: string) {
   safeRevalidatePath('/quantum-nexus-77/review');
 }
 
+export async function updateInquiryStatus(id: string, status: string) {
+  await prisma.contactInquiry.update({
+    where: { id },
+    data: { status },
+  });
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
+}
+
+export async function deleteInquiry(id: string) {
+  await prisma.contactInquiry.delete({
+    where: { id },
+  });
+  safeRevalidatePath('/quantum-nexus-77');
+  safeRevalidatePath('/quantum-nexus-77/review');
+}
+

@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import StatementPageLayout from '@/components/StatementPageLayout';
 
 export const metadata: Metadata = {
-  title: '免責聲明 (Disclaimer) | teeteeStock 虛擬交易所',
+  title: '免責聲明 | teeteeStock 虛擬交易所',
   description: '說明本平台虛擬娛樂性質、數據參考性質與使用者自負風險之重要聲明。',
 };
 
@@ -18,7 +18,7 @@ export default function DisclaimerPage() {
         {/* 頂部大標題 */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
-            免責聲明 (Disclaimer)
+            免責聲明
           </h1>
           <p className="text-xs font-normal text-slate-400">
             最後更新日期：2026 年 9 月

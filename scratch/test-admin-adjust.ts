@@ -1,6 +1,6 @@
 import { prisma } from '../src/lib/prisma';
 import { runDailyRolloverOrSettlement } from '../src/services/settlementService';
-import { updateAdminAdjust } from '../src/app/admin/actions';
+import { updateAdminAdjust } from '../src/app/quantum-nexus-77/actions';
 import { MarketStatus } from '../src/types/enums';
 
 async function testAdministrativeAdjustment() {

@@ -209,4 +209,19 @@ model ChatMessage {
   @@index([stock_code, created_at])
 }
 
+model ContactInquiry {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  category  String
+  subject   String?
+  message   String
+  status    String   @default("PENDING") // PENDING, RESOLVED, IGNORED
+  ip        String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
 

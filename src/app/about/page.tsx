@@ -22,14 +22,18 @@ export default function AboutPage() {
           </h1>
         </div>
 
+        {/* 前言導言 */}
+        <section className="space-y-3">
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            teeteeStock（貼貼交易所）是專為 VTuber 觀眾所打造的概念股虛擬交易所。
+          </p>
+        </section>
+
         {/* 第一章 */}
         <section className="space-y-3">
           <h2 className="text-xl font-normal text-slate-100">
             一、平台理念：將「貼貼」數值化
           </h2>
-          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            teeteeStock（貼貼交易所）是專為 VTuber 觀眾所打造的概念股虛擬交易所。
-          </p>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
             在日語裡，「てぇてぇ（TeeTee）」主要以 VTuber 社群中，用來形容「同伴、成員或推的角色之間感情融洽、互動親密」象徵著兩位之間真摯、珍貴且令人心動的互動。我們深信，粉絲們每一次因直播同台而激動、因雙人合唱而感動的情緒，都具有真實且不可磨滅的「精神價值」。
           </p>

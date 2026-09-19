@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import StatementPageLayout from '@/components/StatementPageLayout';
 
 export const metadata: Metadata = {
-  title: '服務條款 (Terms of Service) | teeteeStock 虛擬交易所',
+  title: '服務條款 | teeteeStock 虛擬交易所',
   description: '規範使用者在本交易所之帳號使用、虛擬點數交易與社群行為準則。',
 };
 
@@ -18,7 +18,7 @@ export default function TermsPage() {
         {/* 頂部大標題 */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
-            服務條款 (Terms of Service)
+            服務條款
           </h1>
           <p className="text-xs font-normal text-slate-400">
             最後更新日期：2026 年 9 月

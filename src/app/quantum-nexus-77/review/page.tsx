@@ -6,6 +6,7 @@ import TriggerCrawlerButton from './TriggerCrawlerButton';
 import ManualDividendButton from './ManualDividendButton';
 import { INITIAL_PAIRS } from '@/app/constants/market';
 import ReviewPageClient from './ReviewPageClient';
+import InquiriesTable from './InquiriesTable';
 import { cookies } from 'next/headers';
 import AdminLoginForm from '../AdminLoginForm';
 import AdminLogoutButton from '../AdminLogoutButton';
@@ -88,6 +89,12 @@ export default async function AdminReviewPage() {
   const archivedEvents = await prisma.archivedEvents.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50
+  });
+
+  // Fetch recent contact inquiries
+  const inquiries = await prisma.contactInquiry.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 100
   });
 
   // Ensure special 'hololive' system pair exists in the database
@@ -243,6 +250,21 @@ export default async function AdminReviewPage() {
           </div>
 
           <ReviewPageClient previews={previews} allEvents={allEvents} />
+        </section>
+
+        {/* 使用者聯絡與意見回報牆 */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+              <h2 className="text-lg font-bold text-white tracking-tight">使用者聯絡與意見回報 (User Inquiries & Feedback)</h2>
+            </div>
+            <span className="text-xs text-gray-500 font-mono">
+              共 {inquiries.length} 筆記錄
+            </span>
+          </div>
+
+          <InquiriesTable inquiries={inquiries} />
         </section>
 
         {/* 歷史已歸檔情報牆 */}

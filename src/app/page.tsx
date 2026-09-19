@@ -845,7 +845,7 @@ function HomeContent() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-pink-500/20 border-t-pink-500 rounded-full animate-spin" />
           <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase animate-pulse">
-            正在安全對接交易所行情中...
+            正在載入資訊...
           </span>
         </div>
       </main>
