@@ -134,100 +134,170 @@ export default function AboutContent() {
   if (lang === 'ja') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
-        <div className="border-b border-slate-800/80 pb-6">
+        {/* Header */}
+        <div className="border-b border-slate-800/80 pb-6 space-y-1">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
-            teeteeStock について
+            teeteeStockについて
           </h1>
-          <p className="text-xs font-normal text-slate-400 mt-1">
-            VTuber概念株インデックス・コミュニティ模擬取引所
+          <p className="text-xs sm:text-sm font-normal text-slate-400">
+            VTuberの「てぇてぇ」を楽しむ、それを株化したコミュニティ・シミュレーション取引所
           </p>
         </div>
 
+        {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            teeteeStock（てぇてぇ取引所）は、VTuberリスナーとファンのために創設された概念株の模擬取引プラットフォームです。
+            <strong className="font-normal text-slate-100">teeteeStock（てぇてぇ取引所）</strong>は、VTuberを応援するリスナーやファンのために生まれた、<strong className="font-normal text-slate-100">株のシミュレーション取引サイト</strong>です。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            好きなコンビやユニットの「てぇてぇ」を、株を通して楽しんでみませんか？
           </p>
         </section>
 
-        <section className="space-y-3">
+        {/* Section 1 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            一、プラットフォーム理念：「てぇてぇ」を数値化・可視化
+            1. 当サイトの基本の方針：「てぇてぇ」を数値化し、可視化する
           </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>
+              コラボ配信で見せる息ぴったりのやり取り。
+            </p>
+            <p>
+              一緒に歌うデュエット。
+            </p>
+            <p>
+              何気ない会話の中に見える二人だけの空気感。
+            </p>
+          </div>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>
+              メンバー同士の仲の良さや、推し同士の尊い関係性。
+            </p>
+            <p>
+              そんな瞬間を見ていると、「ああ、てぇてぇ……」と思うことがありますね。
+            </p>
+          </div>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            日本語のVTuberカルチャーにおいて「てぇてぇ（TeeTee）」とは、仲間やメンバー、推し同士の温かく親密な絆や尊い関係性を表す特別な言葉です。ファンがコラボ配信で胸を熱くし、デュエット楽曲に感動するその想いには、掛け替えのない「精神的価値」が存在すると私たちは確信しています。
+            teeteeStockは、そんなファンならではの楽しさを株化したという形にして、市場として楽しめるようにしました。
           </p>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            その尊さを目撃するたび、「この二人の価値はストップ高だ！」と感じる瞬間があります。teeteeStockはその素晴らしい感情を具現化し、推しCPやユニットを模擬株式として取引所に上場させました。ここでの応援は単なる一方的な視聴にとどまらず、模擬株を通じて彼女たちの成長と輝きを共に分かち合うことができます！
+            好きなコンビやユニットを模擬株として保有し、コラボや活動によって変化する「てぇてぇ」の価値を追いかけながら、みんなで推しの活躍を楽しむ。
+          </p>
+          <p className="text-sm font-normal text-slate-200 leading-relaxed [text-indent:2em]">
+            それが、teeteeStockの目指す「てぇてぇ取引所」である。
           </p>
         </section>
 
+        {/* Section 2 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            二、主な特徴とシステム仕組み
+            2. 特徴と仕組み
           </h2>
 
-          <div className="space-y-2">
+          {/* 2.1 */}
+          <div className="space-y-3">
             <h3 className="text-base font-normal text-slate-200">
-              1. 現実の配信・活動と連動するファンダメンタルズ
+              1. コンビの活動と連動
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              各ユニットの基本価値である「1株あたり純資産（NAV）」は、現実の活動とダイナミックに連動します：
+              各コンビのてぇてぇ価値は、実際の活動やコラボ実績などをもとに変動する。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              たとえば、
             </p>
             <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>通常のペア配信・コラボ：当週の基礎NAVバフを押し上げます。</span>
+                <span className="text-slate-200">通常のコラボ配信</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>大型3Dライブ共演：強力な価値ブレイクスルーを誘発。</span>
+                <span className="text-slate-200">大型3Dライブでの共演</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>オリジナル曲公開・大型コラボ企画：超高倍率のNAV急騰をもたらします！</span>
+                <span className="text-slate-200">オリジナル楽曲の公開・大型コラボ</span>
               </div>
             </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              など、さまざまな活動が市場の変化につながる。
+            </p>
           </div>
 
-          <div className="space-y-2">
+          {/* 2.2 */}
+          <div className="space-y-3">
             <h3 className="text-base font-normal text-slate-200">
-              2. 本格的な連続板寄せ約定エンジンと気配値深度
+              2. 本格的なシミュレーション取引システム
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              単なるスコア集計ではなく、近代株式市場に準拠した本格的な取引エンジンを実装しています：
+              単純なスコア集計だけではなく、実際の株式市場を参考にした取引システムを採用している。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              <strong className="font-normal text-slate-200">リアルタイムの情報</strong>では、買い注文・売り注文それぞれ上位5本の気配値を確認できる。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              また、
             </p>
             <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>リアルタイム板情報：買い・売り各5档のリアルタイム気配値を表示。</span>
+                <span className="text-slate-200">ストップ高・ストップ安（&plusmn;20%）</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>ストップ高・安制限（±20%）および呼値ルール：市場の秩序ある価格形成を維持。</span>
+                <span className="text-slate-200">呼値ルール</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>歩み値・複数時間軸ローソク足チャート：1分足、5分足、日足、週足、月足、および権利落ち修正K線を完備。</span>
+                <span className="text-slate-200">歩み値</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span className="text-slate-200">複数の時間軸に対応したローソク足チャート</span>
               </div>
             </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              など、より本格的な市場体験を楽しめる仕組みを用意している。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              チャートは<strong className="font-normal text-slate-200">1分足・5分足・日足・週足・月足</strong>に対応し、配当落ちなどを考慮した<strong className="font-normal text-slate-200">調整後チャート</strong>も確認できる。
+            </p>
           </div>
 
-          <div className="space-y-2">
+          {/* 2.3 */}
+          <div className="space-y-3">
             <h3 className="text-base font-normal text-slate-200">
-              3. 毎週の現金配当金（TEE）付与
+              3. シミュレーション配当
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              毎週末、各ユニットの当週コラボ実績に基づいて配当落ち決済が行われ、配当金が定時付与されます。配当受取後の実質取得コストを算出する「還元コスト」機能により、累計損益も一目で把握できます。
+              各ユニットのコラボ実績などをもとに、<strong className="font-normal text-slate-200">配当落ち処理</strong>を行い、シミュレーション上の配当として<strong className="font-normal text-slate-200">TEE</strong>を付与する。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              さらに、これまでに受け取った配当を考慮した<strong className="font-normal text-slate-200">「還元コスト」</strong>を確認できるため、現在の保有状況だけでなく、累計でどのくらいのリターンになっているのかもチェックできる。
             </p>
           </div>
         </section>
 
-        <section className="space-y-3">
+        {/* Section 3 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            三、ファンコミュニティ応援の趣旨
+            3. ファンコミュニティとしての楽しみ方
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本取引所の値動きおよびインデックスは、すべてファンコミュニティのエンターテインメント目的で運営されています。気軽で楽しい気持ちで推し活と市場の盛り上がりをお楽しみください！
+            teeteeStockの価格変動や各種インデックスは、<strong className="font-normal text-slate-200">ファンコミュニティのためのエンターテインメントとして設計されている。</strong>
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            実際のお金を使った投資ではなく、好きなVTuberやコンビ、ユニットの活動をきっかけに、みんなで市場の動きを楽しむためのシミュレーションである。
+          </p>
+          <div className="py-2 pl-[2em] text-sm text-slate-200 font-normal leading-relaxed">
+            <p>「今日はこの二人、めちゃくちゃてぇてぇだった！」</p>
+          </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            そんな気持ちを、ちょっとだけ市場っぽく楽しんでみる。
+          </p>
+          <p className="text-sm font-normal text-slate-200 leading-relaxed [text-indent:2em]">
+            teeteeStockで、推し活と「てぇてぇ」の新しい楽しみ方を見つけてください。
           </p>
         </section>
       </div>
