@@ -17,7 +17,6 @@ const FORM_TEXT = {
     subjectPlaceholder: '簡述您的問題或事由（選填）',
     messageLabel: '訊息內容',
     messagePlaceholder: '請詳細填寫您欲諮詢、回報或建議之具體內容（至少 5 個字）...',
-    submitNote: '※ 點擊送出後，表單將直接傳送至平台管理後台。',
     submitting: '正在送出訊息...',
     submit: '送出訊息',
     categories: [
@@ -41,7 +40,6 @@ const FORM_TEXT = {
     subjectPlaceholder: 'Brief summary of your inquiry (optional)',
     messageLabel: 'Message',
     messagePlaceholder: 'Please describe your inquiry, bug report, or suggestion in detail (at least 5 characters)...',
-    submitNote: '※ Once submitted, your message will be sent directly to the platform management team.',
     submitting: 'Sending...',
     submit: 'Send Message',
     categories: [
@@ -65,7 +63,6 @@ const FORM_TEXT = {
     subjectPlaceholder: 'お問い合わせの概要（任意）',
     messageLabel: 'メッセージ内容',
     messagePlaceholder: 'ご質問、バグ報告、ご提案の内容を具体的にご記入ください（5文字以上）...',
-    submitNote: '※ 送信後、メッセージはプラットフォーム管理チームへ直接送信されます。',
     submitting: '送信中...',
     submit: 'メッセージを送信',
     categories: [
@@ -256,11 +253,8 @@ export default function ContactForm() {
             />
           </div>
 
-          {/* 提示與送出按鈕 */}
-          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <p className="text-xs text-slate-500 font-normal">
-              {t.submitNote}
-            </p>
+          {/* 送出按鈕 */}
+          <div className="pt-2 flex justify-end">
             <button
               type="submit"
               disabled={isSubmitting}
