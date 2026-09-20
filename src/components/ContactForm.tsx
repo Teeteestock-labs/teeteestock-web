@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLegalLanguage } from '@/context/LegalLanguageContext';
 
 const FORM_TEXT = {
@@ -21,12 +21,11 @@ const FORM_TEXT = {
     submitting: '正在送出訊息...',
     submit: '送出訊息',
     categories: [
-      '系統異常與 Bug 回報',
-      '帳號與資產相關問題',
-      'VTuber 聯動數據與每股淨值建議',
-      '版權與權利人下架通知',
-      '平台功能建議與意見回饋',
-      '其他聯絡事項',
+      '系統問題與 Bug 回報',
+      '帳號與虛擬資產問題',
+      '著作權與權利人通知',
+      '平台建議與意見回饋',
+      '其他問題',
     ],
   },
   en: {
@@ -46,10 +45,9 @@ const FORM_TEXT = {
     submitting: 'Sending...',
     submit: 'Send Message',
     categories: [
-      'System Issue or Bug Report',
-      'Account or Asset Inquiries',
-      'VTuber Collab Data & NAV Suggestions',
-      'Copyright or Rights Holder Notice',
+      'Technical Issues & Bug Reports',
+      'Account & Virtual Asset Inquiries',
+      'Copyright & Rights Holder Notices',
       'Platform Suggestions & Feedback',
       'Other Inquiries',
     ],
@@ -71,11 +69,10 @@ const FORM_TEXT = {
     submitting: '送信中...',
     submit: 'メッセージを送信',
     categories: [
-      'システム異常・バグ報告',
-      'アカウント・資産に関するお問い合わせ',
-      'VTuberコラボデータ・NAVに関するご提案',
-      '権利者様からのご連絡・削除申請',
-      'プラットフォーム機能へのご提案・ご意見',
+      'システム問題・バグ報告',
+      'アカウント・仮想資産に関するお問い合わせ',
+      '著作権・権利者様からのご連絡',
+      'プラットフォームへの提案・ご意見',
       'その他のお問い合わせ',
     ],
   },
@@ -87,7 +84,7 @@ export default function ContactForm() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [category, setCategory] = useState<string>(t.categories[0]);
+  const [categoryIndex, setCategoryIndex] = useState(0);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   
@@ -95,17 +92,13 @@ export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // When language changes, update default category if currently on a default option
-  useEffect(() => {
-    setCategory(t.categories[0]);
-  }, [lang]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setIsSubmitting(true);
 
     try {
+      const selectedCategory = t.categories[categoryIndex] || t.categories[0];
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: {
@@ -114,7 +107,7 @@ export default function ContactForm() {
         body: JSON.stringify({
           name,
           email,
-          category,
+          category: selectedCategory,
           subject,
           message,
         }),
@@ -130,7 +123,7 @@ export default function ContactForm() {
       // 清空表單
       setName('');
       setEmail('');
-      setCategory(t.categories[0]);
+      setCategoryIndex(0);
       setSubject('');
       setMessage('');
     } catch (err: unknown) {
@@ -218,12 +211,12 @@ export default function ContactForm() {
             <select
               id="contact-category"
               disabled={isSubmitting}
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryIndex}
+              onChange={(e) => setCategoryIndex(Number(e.target.value))}
               className="w-full bg-[#05080e] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-slate-600 transition-colors disabled:opacity-50"
             >
-              {t.categories.map((opt) => (
-                <option key={opt} value={opt} className="bg-[#0a111a] text-slate-100">
+              {t.categories.map((opt, idx) => (
+                <option key={opt} value={idx} className="bg-[#0a111a] text-slate-100">
                   {opt}
                 </option>
               ))}
