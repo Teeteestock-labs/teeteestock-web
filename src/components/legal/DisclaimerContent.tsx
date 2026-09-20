@@ -9,6 +9,7 @@ export default function DisclaimerContent() {
   if (lang === 'en') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
+        {/* Header */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             Disclaimer
@@ -18,91 +19,326 @@ export default function DisclaimerContent() {
           </p>
         </div>
 
+        {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            This Disclaimer applies to all visitors and users who access, browse, or use the teeteeStock exchange (&quot;the Platform&quot;). By entering or using this Platform, you acknowledge that you fully understand and unconditionally agree to all terms of this Disclaimer.
+            This Disclaimer applies to information, data, charts, virtual assets, and other content made available through teeteeStock (the &ldquo;Platform&rdquo; or the &ldquo;Service&rdquo;).
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            teeteeStock is a fan-made virtual market simulation created for entertainment and community engagement. Your use of the Platform is also subject to our Terms of Service and Privacy Policy.
           </p>
         </section>
 
+        {/* Section 1 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            1. Non-Financial Institution & Investment Risk Exemption
+            1. Not a Financial Service or Investment Platform
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Non-Regulated Financial Market:
+              1.1 Virtual Market Simulation
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              This Platform is an independent fan community entertainment and simulation project. It is not a securities broker, futures dealer, banking institution, or financial investment advisory regulated by any financial supervisory authority or government agency.
+              teeteeStock is a fictional market simulation designed for VTuber fans and online communities.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Platform is not a securities exchange, securities broker, futures dealer, bank, investment adviser, payment service, or other financial service.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              No feature of the Platform is intended to constitute an offer, solicitation, recommendation, or provision of financial products or investment services.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Data Must Not Be Used as Investment Advice:
+              1.2 No Investment Advice
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              All ticker symbols, market fluctuations, candlestick charts, NAV metrics, and order prices displayed on this Platform are the outputs of simulated fan community algorithms and hold zero analytical or reference value for real financial markets. Nothing on this Platform constitutes investment advice or financial solicitation. The Platform assumes no legal responsibility for any financial loss resulting from real-world trading based on data from this Platform.
+              Ticker symbols, market prices, order books, candlestick charts, NAV figures, percentage changes, dividends, rankings, and other market-related information displayed on the Platform are generated for entertainment and game-simulation purposes.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Such information should not be relied upon for making real-world investment, trading, financial, tax, or other commercial decisions.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Nothing on the Platform constitutes investment advice, financial advice, a securities recommendation, or a solicitation to buy or sell any real-world financial instrument.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              1.3 No Real-World Economic Value
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              TEE Tokens, virtual shares, Virtual Dividends, virtual balances, simulated prices, and other in-platform assets are fictional game elements.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              They:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>have no cash or monetary value;</li>
+              <li>cannot be redeemed for fiat currency;</li>
+              <li>do not represent securities or ownership interests;</li>
+              <li>do not represent an interest in any VTuber, agency, company, or other entity; and</li>
+              <li>do not create any payment obligation or other financial claim against the Team.</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Users must not buy, sell, or exchange these virtual assets for real-world money or other things of value.
             </p>
           </div>
         </section>
 
+        {/* Section 2 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            2. Algorithms, Scraped Data & System Stability Exemption
+            2. Data Sources, Algorithms, and Accuracy
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. External Data Sources & Algorithmic Margins:
+              2.1 Third-Party and Public Data
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              NAV calculations rely on publicly accessible third-party platforms (e.g., YouTube live streaming statuses and official activity). Due to third-party API limits, network delays, or scheduling frequencies, the Platform cannot guarantee absolute real-time accuracy, completeness, or faultlessness.
+              Certain Platform features may use publicly available information or data obtained from third-party services, including livestream schedules, collaboration information, public announcements, and other publicly available activity data.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The availability and accuracy of such information may depend on third-party websites, APIs, data providers, network conditions, and automated data-collection systems.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. System Anomalies & Data Rollbacks:
+              2.2 No Guarantee of Real-Time Accuracy
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Platform reserves the right to suspend operations, reset, or rollback historical matching data due to scheduled maintenance, server hardware issues, software bug repairs, or cyber attacks. The Platform bears no liability for any virtual data delays, discrepancies, or lost orders caused by such events.
+              We do not guarantee that Platform data will always be:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>accurate;</li>
+              <li>complete;</li>
+              <li>current;</li>
+              <li>available in real time;</li>
+              <li>free from technical errors; or</li>
+              <li>consistent with information displayed by an original third-party source.</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Data may be delayed, incomplete, incorrectly classified, or unavailable due to API limitations, network conditions, changes to third-party platforms, or technical errors.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              2.3 Simulated Calculations
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              NAV, market prices, dividends, rankings, and other values may be calculated using proprietary or automated game logic.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              These calculations are intended solely for the operation of the Platform&apos;s simulation and should not be interpreted as objective valuations of any VTuber, talent, agency, company, collaboration, or real-world asset.
             </p>
           </div>
         </section>
 
+        {/* Section 3 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            3. Fan-Made Community Nature & Copyright Notice
+            3. System Availability and Virtual Data
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Unofficial Fan Project:
+              3.1 Service Interruptions
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              This Platform is an independent, non-profit community fan project and has no official licensing, commercial partnership, sponsorship, or affiliation with any VTuber talent, group, or agency (including but not limited to COVER Corporation, ANYCOLOR Inc., Brave group, etc.).
+              The Platform may occasionally become unavailable or experience degraded performance due to:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>scheduled maintenance;</li>
+              <li>emergency maintenance;</li>
+              <li>software or hardware failures;</li>
+              <li>infrastructure problems;</li>
+              <li>network outages;</li>
+              <li>third-party service failures;</li>
+              <li>security incidents;</li>
+              <li>cyberattacks;</li>
+              <li>bugs; or</li>
+              <li>other circumstances beyond our reasonable control.</li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3.2 Corrections and Rollbacks
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              To maintain the integrity of the simulation, the Team may correct, cancel, reverse, reset, or roll back virtual transactions and other game data where reasonably necessary.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              This may include circumstances involving:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>technical errors;</li>
+              <li>incorrect data;</li>
+              <li>calculation errors;</li>
+              <li>duplicated transactions;</li>
+              <li>exploits or unauthorized activity;</li>
+              <li>security incidents; or</li>
+              <li>major system failures.</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              As a result, virtual orders, transactions, balances, prices, dividends, rankings, or historical records may be changed or removed.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Fair Use & Notice and Takedown Policy:
+              3.3 No Guarantee of Data Preservation
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              All talent names, pairing titles, public livestream thumbnails, and media referenced on this Platform belong to their respective copyright holders. References are made under the doctrine of Fair Use for non-profit fan appreciation. If any copyright holder objects to content cited on this Platform, please reach out via our contact channels and we will promptly review and take down the material.
+              We do not guarantee that virtual portfolios, transaction histories, rankings, or other game data will be permanently preserved.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Users should not treat Platform records as a substitute for financial, accounting, legal, or other official records.
             </p>
           </div>
         </section>
 
+        {/* Section 4 */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-normal text-slate-100">
+            4. Unofficial Fan-Made Project
+          </h2>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              4.1 No Affiliation
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              teeteeStock is an independent and unofficial fan project.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Unless expressly stated otherwise, the Platform is not sponsored, endorsed, authorized, operated by, or affiliated with any VTuber, talent, group, management agency, company, or rights holder, including but not limited to COVER Corporation, ANYCOLOR Inc., or Brave group.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              References to any third party do not imply endorsement, sponsorship, authorization, or partnership.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              4.2 Third-Party Intellectual Property
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Names, trademarks, logos, character designs, artwork, photographs, thumbnails, videos, music, stream materials, and other third-party content remain the property of their respective rights holders.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              teeteeStock does not claim ownership of such third-party materials.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Platform may reference publicly available information or third-party materials for purposes such as identification, commentary, fan-community interaction, information, and entertainment.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The use of any third-party material on the Platform does not necessarily imply that the Team owns or has exclusive rights to that material.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              4.3 Rights Complaints and Takedown Requests
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              If you believe that material displayed on the Platform infringes your copyright, trademark, publicity right, or other legal right, please contact the Team through the designated contact channel.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Please provide sufficient information to identify the relevant material and explain the basis of your request.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We will review reported material in good faith and may remove, restrict, modify, or replace material where appropriate.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Nothing in this section is intended to determine or concede the legal status of any particular use of third-party material.
+            </p>
+          </div>
+        </section>
+
+        {/* Section 5 */}
         <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            4. External Links & Third-Party Websites Disclaimer
+            5. External Links and Third-Party Websites
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            This Platform may contain links directing to external third-party sites (e.g. YouTube channels, livestream broadcasts). These websites are operated independently by third parties. The Platform has no control over their content or security practices and accepts no responsibility for any risks or damages incurred while visiting external services.
+            The Platform may contain links to third-party websites and services, including official VTuber websites, YouTube channels, livestream pages, social-media accounts, and other external resources.
           </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            These third-party services are operated independently from teeteeStock.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We do not control and are not responsible for:
+          </p>
+          <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+            <li>their availability;</li>
+            <li>their content;</li>
+            <li>their security practices;</li>
+            <li>their privacy practices;</li>
+            <li>their terms of service; or</li>
+            <li>their handling of personal information.</li>
+          </ul>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            A link to a third-party website does not constitute an endorsement, sponsorship, authorization, or affiliation with that website or its operator.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Your use of third-party services is subject to the terms and policies of the applicable third party.
+          </p>
+        </section>
+
+        {/* Section 6 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            6. Limitation of Responsibility
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            To the maximum extent permitted by applicable law, the Team is not responsible for losses arising from a user&apos;s reliance on Platform information for real-world financial, investment, commercial, or other decisions.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            The Team is also not responsible for losses or disruption resulting from third-party data sources, third-party services, network failures, technical problems, or other circumstances beyond the Team&apos;s reasonable control.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Nothing in this Disclaimer excludes or limits any liability, right, or protection that cannot lawfully be excluded or limited under applicable law.
+          </p>
+        </section>
+
+        {/* Section 7 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            7. Changes to This Disclaimer
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We may update this Disclaimer from time to time to reflect changes to the Platform, its features, data sources, or applicable requirements.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            The updated version will be posted on the Platform with a revised &ldquo;Last Updated&rdquo; date.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Where appropriate, material changes may be communicated through the Platform or another reasonable channel.
+          </p>
+        </section>
+
+        {/* Section 8 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            8. Governing Terms
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            This Disclaimer should be read together with the teeteeStock Terms of Service and Privacy Policy.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            If there is a conflict between this Disclaimer and the Terms of Service, the Terms of Service will control to the extent permitted by applicable law.
+          </p>
+          <div className="pt-2 pl-[2em]">
+            <p className="text-sm font-normal text-slate-200">
+              teeteeStock Development Team
+            </p>
+          </div>
         </section>
       </div>
     );
