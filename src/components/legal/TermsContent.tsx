@@ -1461,7 +1461,7 @@ export default function TermsContent() {
             3. 非官方與同人應援宣告：
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本平台為獨立之非官方同人社群娛樂專案，與任何 VTuber 經紀公司、事務所（包括但不限於 COVER Corporation、ANYCOLOR Inc. 等）或 VTuber 個人無任何官方贊助、授權、商業合作或從屬關係。
+            本平台為獨立之非官方同人社群娛樂專案，與任何 VTuber 經紀公司、事務所（包括但不限於 COVER Corporation、ANYCOLOR Inc.、Brave group 等）或 VTuber 個人無任何官方贊助、授權、商業合作或從屬關係。
           </p>
         </div>
       </section>
@@ -1587,7 +1587,7 @@ export default function TermsContent() {
             2. 第三方權利尊重：
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本平台引用之 VTuber 名稱、組合標籤、直播封面與公開影音資訊，其商標權與著作權均屬於原創作者、相關個人或其所屬經紀公司所有。本平台之引用皆基於非營利社群同好交流之合理使用範疇。
+            本平台引用之 VTuber 名稱、組合稱呼、公開直播封面縮圖與影音公開資訊，其商標權與著作權均屬於原創作者、相關個人或其所屬經紀公司所有。本平台之引用皆基於非營利社群同好交流之合理使用範疇。
           </p>
         </div>
       </section>
@@ -1611,7 +1611,7 @@ export default function TermsContent() {
             2. 免責範疇：
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            因電信網路障礙、伺服器定期維護、天災等不可抗力因素，或因資料源異動導致之虛擬數據延遲、暫停服務或數據回滾，本團隊不承擔任何實體賠償責任。
+            因電信網路障礙、伺服器定期維護、天災等不可抗力因素，或因資料源異動導致之虛擬數據延遲、暫停服務或資料回溯，本團隊不承擔任何實體賠償責任。
           </p>
         </div>
 
@@ -1645,6 +1645,11 @@ export default function TermsContent() {
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
             本條款之解釋、效力及履行，均以中華民國法律為準據法。因本條款或使用本服務所生之爭議，雙方同意以台灣台北地方法院為第一審管轄法院。
+          </p>
+        </div>
+        <div className="pt-2 pl-[2em]">
+          <p className="text-sm font-normal text-slate-200">
+            teeteeStock 開發團隊
           </p>
         </div>
       </section>

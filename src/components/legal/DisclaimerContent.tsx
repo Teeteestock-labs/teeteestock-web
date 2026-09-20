@@ -556,7 +556,7 @@ export default function DisclaimerContent() {
             2. 數據不得作為投資依據：
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本平台所顯示之代號、行情走勢、K 線圖、每股淨值與買賣報價，均為虛擬社群模擬演算法之運算結果，絕不具備任何現實金融市場之分析與參考價值。本平台所載任何資訊，均不得解讀為證券投資建議、理財諮詢或買賣招攬。任何人若逕自將本平台資訊應用於現實金融證券投資而導致之任何直接、間接或衍生性財產損失，本平台概不承擔任何法律與賠償責任。
+            本平台所顯示之代號、行情走勢、K 線圖、每股淨值與買賣報價，均為虛擬社群模擬演算法之運算結果，絕不具備任何現實金融市場之分析與參考價值。本平台所載任何資訊，均不得解讀為證券投資建議、理財諮詢或買賣招攬。任何人若逕自將本平台資訊應用於現實金融證券投資而導致之任何直接、間接或衍生性財產損失，本平台及營運團隊概不承擔任何法律與賠償責任。
           </p>
         </div>
       </section>
@@ -577,10 +577,10 @@ export default function DisclaimerContent() {
 
         <div className="space-y-2">
           <h3 className="text-base font-normal text-slate-200">
-            2. 系統異常與數據回溯：
+            2. 系統異常與資料回溯：
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本平台保留因定期維護、伺服器突發性軟硬體故障、程式錯誤修復或駭客惡意攻擊，而暫停服務、重置或回溯歷史撮合數據之權利。因前述狀況導致之虛擬數據延遲、遺失或撮合未成功，本平台不負任何補償或賠償責任。
+            本平台及營運團隊保留因定期維護、伺服器突發性軟硬體故障、程式錯誤修復或駭客惡意攻擊，而暫停服務、重置或回溯歷史撮合數據之權利。因前述狀況導致之虛擬數據延遲、遺失或撮合未成功，本平台及營運團隊概不負任何補償或賠償責任。
           </p>
         </div>
       </section>
@@ -604,7 +604,7 @@ export default function DisclaimerContent() {
             2. 合理使用與通知移除機制：
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本平台引用之藝人名稱、組合稱呼、公開直播封面縮圖與影音公開資訊，其智慧財產權與商標權均歸屬原權利人所有，本平台僅基於非營利社群同好應援目的於「合理使用（Fair Use）」範圍內引用。若相關權利人認為本平台引用內容有所不妥或涉及侵權，請透過官方聯絡管道告知，本平台接獲通知後將會立即進行查核並配合移除。
+            本平台引用之 VTuber 名稱、組合稱呼、公開直播封面縮圖與公開影音資訊，其智慧財產權與商標權均歸屬原權利人所有，本平台僅基於非營利社群同好應援目的於「合理使用（Fair Use）」範圍內引用。若相關權利人認為本平台引用內容有所不妥或涉及侵權，請透過官方聯絡管道告知，營運團隊接獲通知後將會立即進行查核並配合移除。
           </p>
         </div>
       </section>
@@ -614,8 +614,25 @@ export default function DisclaimerContent() {
           四、外部連結與第三方網站免責
         </h2>
         <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-          本平台頁面可能包含連往第三方網站或服務（例如 YouTube 頻道、直播串流頁面等）之超連結。該等外部網站之內容、服務與隱私權規範均由該第三方獨立維運，本平台無法控制其內容與安全性，亦不對您因造訪第三方網站所生之任何風險或損害承擔責任。
+          本平台頁面可能包含連往第三方網站或服務（例如 YouTube 頻道、直播串流頁面等）之超連結。該等外部網站之內容、服務與隱私權規範均由該第三方獨立維運，本平台及營運團隊無法控制其內容與安全性，亦不對您因造訪第三方網站所生之任何風險或損害承擔責任。
         </p>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-normal text-slate-100">
+          五、條款準據與合併適用
+        </h2>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          本免責聲明應與 teeteeStock《服務條款》及《隱私權政策》合併閱讀並共同適用。
+        </p>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          若本免責聲明之內容與《服務條款》有任何牴觸或解釋歧異，在法令允許之最大範圍內，應以《服務條款》之約定為準。
+        </p>
+        <div className="pt-2 pl-[2em]">
+          <p className="text-sm font-normal text-slate-200">
+            teeteeStock 開發團隊
+          </p>
+        </div>
       </section>
     </div>
   );
