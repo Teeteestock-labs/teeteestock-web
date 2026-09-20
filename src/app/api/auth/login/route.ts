@@ -43,6 +43,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!user.password_hash) {
+      return NextResponse.json(
+        { error: `此帳號係使用第三方（${user.provider}）快速登入建立，請點擊下方第三方按鈕登入。` },
+        { status: 401 }
+      );
+    }
+
     const isMatch = await comparePassword(password, user.password_hash);
     if (!isMatch) {
       return NextResponse.json(

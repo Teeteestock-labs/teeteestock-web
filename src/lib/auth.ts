@@ -103,6 +103,8 @@ export async function getAuthenticatedUser(request: Request) {
       id: true,
       email: true,
       name: true,
+      avatar: true,
+      provider: true,
       role: true,
       createdAt: true,
     },

@@ -24,7 +24,11 @@ export default function GlobalStats() {
         ) : user ? (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-slate-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full text-[11px]">
-              <UserIcon className="w-3 h-3 text-emerald-400" />
+              {user.avatar ? (
+                <img src={user.avatar} alt="avatar" className="w-3.5 h-3.5 rounded-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <UserIcon className="w-3 h-3 text-emerald-400" />
+              )}
               <span className="max-w-[90px] truncate font-medium">{user.name || user.email.split('@')[0]}</span>
             </div>
             <button

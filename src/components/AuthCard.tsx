@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -46,6 +46,18 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
+
+  // 監聽 URL 參數中的 OAuth 回應或錯誤通知
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const notice = searchParams.get('notice');
+    if (error) {
+      setErrorMessage(decodeURIComponent(error));
+    }
+    if (notice) {
+      setOauthNotice(decodeURIComponent(notice));
+    }
+  }, [searchParams]);
 
   // 即時驗證邏輯
   const isEmailValid = useMemo(() => {
@@ -133,7 +145,12 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
   };
 
   const handleOAuthClick = (provider: string) => {
-    setOauthNotice(`已預留 ${provider} 一鍵登入接口，現階段可直接透過 Email 帳號進行註冊或登入！`);
+    if (provider.toLowerCase() === 'google') {
+      setIsSubmitting(true);
+      window.location.href = `/api/auth/oauth/google?redirect=${encodeURIComponent(redirectPath)}`;
+      return;
+    }
+    setOauthNotice(`目前已優先開通 Google 快速登入！${provider} 快速登入即將上線。`);
     setTimeout(() => setOauthNotice(null), 4000);
   };
 
@@ -435,8 +452,9 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
       <div className="grid grid-cols-3 gap-2.5">
         <button
           type="button"
+          disabled={isSubmitting}
           onClick={() => handleOAuthClick('Google')}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300 transition-colors"
+          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 rounded-xl text-xs text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Google 登入"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -462,8 +480,9 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
 
         <button
           type="button"
+          disabled={isSubmitting}
           onClick={() => handleOAuthClick('Discord')}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300 transition-colors"
+          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Discord 登入"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#5865F2">
@@ -474,8 +493,9 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
 
         <button
           type="button"
+          disabled={isSubmitting}
           onClick={() => handleOAuthClick('GitHub')}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300 transition-colors"
+          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="GitHub 登入"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
