@@ -1085,7 +1085,7 @@ export default function TermsContent() {
               2. 実際の金融商品ではありません
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本サービス内で表示される銘柄、模擬株式、株価、NAV、気配値、チャート、指数、TEEその他の数値やデータは、すべて本サービス上のシミュレーションを目的としたものです。
+              本サービス内で表示される模擬銘柄、株価、NAV、気配値、チャート、指数、TEEその他の数値やデータは、すべて本サービス上のシミュレーションを目的としたものです。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               これらは現実の金融商品、証券、通貨、投資商品その他の資産を表すものではありません。
@@ -1106,7 +1106,7 @@ export default function TermsContent() {
               本サービスは、特定のVTuber事務所、企業、タレント本人その他の権利者によって運営、承認、後援、提携または公式認定されたものではありません。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              特に、COVER株式会社、ANYCOLOR株式会社その他のVTuber関連企業・事務所および所属タレントとは、別途明示されている場合を除き、公式な提携関係その他の関係を有するものではありません。
+              特に、COVER株式会社、ANYCOLOR株式会社、Brave groupその他のVTuber関連企業・事務所および所属タレントとは、別途明示されている場合を除き、公式な提携関係その他の関係を有するものではありません。
             </p>
           </div>
         </section>
@@ -1173,7 +1173,7 @@ export default function TermsContent() {
               1. 仮想資産としての性質
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本サービス内の模擬株式、TEE、配当その他の数値・ポイントは、すべて本サービス上のシミュレーションおよびゲーム体験のために提供される仮想的なものです。
+              本サービス内の模擬銘柄、TEE、配当その他の数値・ポイントは、すべて本サービス上のシミュレーションおよびゲーム体験のために提供される仮想的なものです。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               これらは現実の法定通貨、電子マネー、暗号資産、証券その他の金融資産ではありません。
@@ -1185,7 +1185,7 @@ export default function TermsContent() {
               2. 換金および譲渡の禁止
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              TEE、模擬株式、アカウントその他本サービス内の資産について、現実の金銭その他の財産的利益との交換、売買、譲渡、貸与、担保設定その他これらに類する行為を行ってはなりません。
+              TEE、模擬銘柄、アカウントその他本サービス内の資産について、現実の金銭その他の財産的利益との交換、売買、譲渡、貸与、担保設定その他これらに類する行為を行ってはなりません。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               いわゆるリアルマネートレード（RMT）も禁止します。
@@ -1197,7 +1197,7 @@ export default function TermsContent() {
               3. 残高・計算方法等の変更
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              運営チームは、サービスの運営、ゲームバランスの調整、システム変更その他の必要に応じて、模擬株式の計算方法、NAV、配当条件、TEEの付与条件その他の仕様を変更することがあります。
+              運営チームは、サービスの運営、ゲームバランスの調整、システム変更その他の必要に応じて、模擬銘柄の計算方法、NAV、配当条件、TEEの付与条件その他の仕様を変更することがあります。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               これらの変更により、ユーザーの保有する仮想資産の数値や評価額等が変動する場合があります。
@@ -1334,7 +1334,7 @@ export default function TermsContent() {
             <p>1. 運営チームは、サービスの改善、運営上の都合、技術的な事情その他の理由により、本サービスの内容、仕様、機能または提供方法を変更することがあります。</p>
             <p>2. 運営チームは、必要に応じて本サービスの全部または一部を終了することがあります。</p>
             <p>3. 本サービスの変更または終了により、ユーザーが保有していた仮想資産、TEE、取引履歴その他のゲーム内データが利用できなくなる場合があります。</p>
-            <p>4. 本サービス終了時点で保有しているTEE、模擬株式その他の仮想資産について、現実の金銭その他の補償を行うものではありません。</p>
+            <p>4. 本サービス終了時点で保有しているTEE、模擬銘柄その他の仮想資産について、現実の金銭その他の補償を行うものではありません。</p>
           </div>
         </section>
 

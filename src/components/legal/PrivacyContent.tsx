@@ -361,7 +361,7 @@ export default function PrivacyContent() {
 
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            teeteeStock（以下「本プラットフォーム」または「当運営」）へようこそ。当運営は利用者のプライバシーと個人情報の保護を極めて重視しています。VTuber概念株の模擬板寄せ取引やコミュニティ機能を安心してご利用いただくため、本プライバシーポリシー（以下「本ポリシー」）を定めます。本サービスの利用をもって、本ポリシーの全内容に同意したものとみなされます。
+            teeteeStock（以下「本サービス」または「運営チーム」）へようこそ。運営チームはユーザーのプライバシーと個人情報の保護を極めて重視しています。VTuber模擬銘柄の模擬板寄せ取引やコミュニティ機能を安心してご利用いただくため、本プライバシーポリシー（以下「本ポリシー」）を定めます。本サービスの利用をもって、本ポリシーの全内容に同意したものとみなされます。
           </p>
         </section>
 
@@ -402,7 +402,7 @@ export default function PrivacyContent() {
               4. 機密財務情報の非収集方針：
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは非営利の同人エンターテインメント模擬企画であり、現実の金銭決済は一切行いません。マイナンバー、本名、現住所、クレジットカード番号、銀行口座番号等の機密性の高い個人財務情報を要求することは一切ありません。
+              本サービスは非営利の同人エンターテインメント模擬企画であり、現実の金銭決済は一切行いません。マイナンバー、本名、現住所、クレジットカード番号、銀行口座番号等の機密性の高い個人財務情報を要求することは一切ありません。
             </p>
           </div>
         </section>
@@ -417,7 +417,7 @@ export default function PrivacyContent() {
               1. 会員認証とアカウント保護：
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              利用者のログイン認証、セッション管理、および不正アクセスの防止に利用します。
+              ユーザーのログイン認証、セッション管理、および不正アクセスの防止に利用します。
             </p>
           </div>
 
@@ -426,7 +426,7 @@ export default function PrivacyContent() {
               2. 約定シミュレーションと仮想資産管理：
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              概念株の注文約定処理、NAV変動計算、損益計算、および週間配当金・TEEコインの付与処理に利用します。
+              模擬銘柄の注文約定処理、NAV変動計算、損益計算、および週間配当金・TEEコインの付与処理に利用します。
             </p>
           </div>
 
@@ -459,7 +459,7 @@ export default function PrivacyContent() {
               2. ブラウザによる設定管理：
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              利用者はブラウザ設定によりCookieの無効化や削除が可能です。ただし、無効化によりログイン維持等の一部の機能が正常に動作しない場合があります。
+              ユーザーはブラウザ設定によりCookieの無効化や削除が可能です。ただし、無効化によりログイン維持等の一部の機能が正常に動作しない場合があります。
             </p>
           </div>
         </section>
@@ -498,7 +498,7 @@ export default function PrivacyContent() {
               1. 個人情報の売却・譲渡禁止：
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              当運営は、利用者の個人情報をマーケティング業者や第三者に売却、賃貸、または譲渡することは一切ありません。
+              運営チームは、ユーザーの個人情報をマーケティング業者や第三者に売却、賃貸、または譲渡することは一切ありません。
             </p>
           </div>
 
@@ -514,7 +514,7 @@ export default function PrivacyContent() {
 
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            六、利用者の権利およびデータ削除（忘れられる権利）
+            六、ユーザーの権利およびデータ削除（忘れられる権利）
           </h2>
 
           <div className="space-y-2">
@@ -522,7 +522,7 @@ export default function PrivacyContent() {
               1. 情報の確認と修正：
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              利用者はいつでもログインし、自身のニックネームや設定情報を確認・変更できます。
+              ユーザーはいつでもログインし、自身のニックネームや設定情報を確認・変更できます。
             </p>
           </div>
 

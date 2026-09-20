@@ -360,7 +360,7 @@ export default function DisclaimerContent() {
         {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本免責事項は、teeteeStock（以下「本プラットフォーム」）を利用するすべての利用者に適用されます。本プラットフォームを利用することにより、本免責事項の内容に同意したものとみなされます。
+            本免責事項は、teeteeStock（以下「本サービス」といいます。）を利用するすべてのユーザーに適用されます。本サービスを利用することにより、本免責事項の内容に同意したものとみなされます。
           </p>
         </section>
 
@@ -375,13 +375,13 @@ export default function DisclaimerContent() {
               1. 金融サービスではありません
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは、VTuberを応援するファンコミュニティのための、非公式かつ非営利のエンターテインメント目的のシミュレーションサービスです。
+              本サービスは、VTuberを応援するファンコミュニティのための、非公式かつ非営利のエンターテインメント目的のシミュレーションサービスです。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               現実の証券取引所、証券会社、金融商品取引業者、投資顧問その他の金融機関が提供するサービスではなく、金融商品の販売、投資助言その他の金融サービスを提供するものではありません。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは、台湾その他の地域における金融監督当局から、証券取引または金融サービスを行うための認可・登録・免許等を受けたものではありません。
+              本サービスは、台湾その他の地域における金融監督当局から、証券取引または金融サービスを行うための認可・登録・免許等を受けたものではありません。
             </p>
           </div>
 
@@ -390,13 +390,13 @@ export default function DisclaimerContent() {
               2. 現実の投資判断には利用しないでください
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォーム上に表示される銘柄コード、株価、チャート、1株あたり純資産（NAV）、気配値、取引データその他の情報は、本プラットフォーム独自のシミュレーションルールおよびアルゴリズムに基づいて生成されたものです。
+              本サービス上に表示される模擬銘柄コード、株価、チャート、1株あたり純資産（NAV）、気配値、取引データその他の情報は、本サービス独自のシミュレーションルールおよびアルゴリズムに基づいて生成されたものです。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               これらの情報は、現実の金融市場における価格、価値、業績その他の状況を示すものではなく、現実の投資判断のための情報として提供されるものでもありません。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォーム上の情報をもとに、利用者が現実の金融商品その他の資産について行った投資・取引等によって生じた損失または損害について、運営チームは責任を負いません。
+              本サービス上の情報をもとに、ユーザーが現実の金融商品その他の資産について行った投資・取引等によって生じた損失または損害について、運営チームは責任を負いません。
             </p>
           </div>
         </section>
@@ -412,7 +412,7 @@ export default function DisclaimerContent() {
               1. 外部情報および自動処理による誤差
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              各概念株のNAVその他の数値は、公開されている外部情報やVTuberの活動状況、配信・イベント等の情報を、本プラットフォーム独自のルールおよび自動処理によって反映しています。
+              各模擬銘柄のNAVその他の数値は、公開されている外部情報やVTuberの活動状況、配信・イベント等の情報を、本サービス独自のルールおよび自動処理によって反映しています。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               外部サービスの仕様変更、APIの利用制限、通信障害、取得遅延、データの欠損その他の事情により、情報の正確性、完全性、最新性またはリアルタイム性を保証するものではありません。
@@ -427,13 +427,13 @@ export default function DisclaimerContent() {
               2. システム障害およびデータのロールバック
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              メンテナンス、サーバー障害、システム上の不具合、バグ修正、外部サービスの障害、サイバー攻撃その他の事情により、本プラットフォームは、事前の通知なくサービスの全部または一部を停止、変更または一時的に利用できない状態とする場合があります。
+              メンテナンス、サーバー障害、システム上の不具合、バグ修正、外部サービスの障害、サイバー攻撃その他の事情により、本サービスは、事前の通知なくサービスの全部または一部を停止、変更または一時的に利用できない状態とする場合があります。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              また、必要に応じて、取引履歴、仮想資産、株価その他の仮想データを修正、初期化またはロールバックする場合があります。
+              また、必要に応じて、取引履歴、仮想資産、模擬銘柄の株価その他の仮想データを修正、初期化またはロールバックする場合があります。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              これらによって利用者の仮想資産、取引履歴その他のデータに影響が生じた場合であっても、運営チームは、現金その他による補償を行いません。
+              これらによってユーザーの仮想資産、取引履歴その他のデータに影響が生じた場合であっても、運営チームは、現金その他による補償を行いません。
             </p>
           </div>
         </section>
@@ -449,7 +449,7 @@ export default function DisclaimerContent() {
               1. 非公式のファンプロジェクト
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは、VTuberを応援するファンコミュニティによって独立して運営される、非公式のファンプロジェクトです。
+              本サービスは、VTuberを応援するファンコミュニティによって独立して運営される、非公式のファンプロジェクトです。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               特定のVTuber本人、VTuberグループ、所属事務所、企業その他の権利者によって運営、承認、後援、提携または公式認定されたものではありません。
@@ -464,10 +464,10 @@ export default function DisclaimerContent() {
               2. 第三者の知的財産権について
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォーム上で使用または表示されるVTuberの名前、ユニット名、活動情報、配信情報、サムネイルその他の第三者に関するコンテンツについて、著作権、商標権その他の知的財産権が存在する場合、それらの権利は各権利者に帰属します。
+              本サービス上で使用または表示されるVTuberの名前、ユニット名、活動情報、配信情報、サムネイルその他の第三者に関するコンテンツについて、著作権、商標権その他の知的財産権が存在する場合、それらの権利は各権利者に帰属します。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは、これらの権利を取得または所有するものではありません。
+              本サービスは、これらの権利を取得または所有するものではありません。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               権利者または正当な権利を有する方から、掲載内容についてのご連絡や削除等の要請を受けた場合には、内容を確認したうえで、必要に応じて掲載内容の修正、非表示または削除等の対応を行います。
@@ -479,7 +479,7 @@ export default function DisclaimerContent() {
               3. 権利に関するお問い合わせ
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォーム上のコンテンツについて、著作権、商標権その他の権利に関する問題がある場合は、運営チームまでご連絡ください。
+              本サービス上のコンテンツについて、著作権、商標権その他の権利に関する問題がある場合は、運営チームまでご連絡ください。
             </p>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
               権利関係を確認するため、必要に応じて、対象となるコンテンツや権利関係を確認できる情報の提供をお願いする場合があります。
@@ -493,13 +493,13 @@ export default function DisclaimerContent() {
             四、外部リンクおよび第三者サービスについて
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本プラットフォームには、YouTubeその他の第三者が運営するウェブサイト、配信ページ、SNS等へのリンクが含まれる場合があります。
+            本サービスには、YouTubeその他の第三者が運営するウェブサイト、配信ページ、SNS等へのリンクが含まれる場合があります。
           </p>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            これらの外部サービスは、それぞれの運営者が独自に提供・管理するものであり、本プラットフォームの管理下にはありません。
+            これらの外部サービスは、それぞれの運営者が独自に提供・管理するものであり、本サービスの管理下にはありません。
           </p>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            外部サービスの内容、提供状況、利用規約、プライバシーポリシーその他の事項について、本プラットフォームが保証するものではありません。
+            外部サービスの内容、提供状況、利用規約、プライバシーポリシーその他の事項について、本サービスが保証するものではありません。
           </p>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
             外部サービスの利用については、各サービスの利用規約およびプライバシーポリシー等をご確認ください。
@@ -509,12 +509,23 @@ export default function DisclaimerContent() {
           </p>
         </section>
 
-        {/* Footer */}
-        <div className="border-t border-slate-800/80 pt-6">
-          <p className="text-sm font-normal text-slate-400 [text-indent:2em]">
-            teeteeStock開発チーム
+        {/* Section 五 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            五、本規約との適用関係
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            本免責事項は、teeteeStock「利用規約」および「プライバシーポリシー」と一体として解釈され、適用されるものとします。
           </p>
-        </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            本免責事項と利用規約の規定に矛盾または抵触が生じた場合は、適用法令の許容する最大限の範囲において、利用規約の定めが優先するものとします。
+          </p>
+          <div className="pt-2 pl-[2em]">
+            <p className="text-sm font-normal text-slate-200">
+              teeteeStock開発チーム
+            </p>
+          </div>
+        </section>
       </div>
     );
   }
