@@ -13,7 +13,7 @@ export default function AboutContent() {
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             About teeteeStock
           </h1>
-          <p className="text-xs sm:text-sm font-normal text-emerald-400 font-mono">
+          <p className="text-xs sm:text-sm font-normal text-slate-400">
             teeteeStock: A Virtual Exchange for VTuber Fans
           </p>
         </div>
@@ -30,13 +30,13 @@ export default function AboutContent() {
             <p className="leading-relaxed">
               A great collab. A sweet interaction. A duet that makes the whole chat go:
             </p>
-            <blockquote className="my-2 py-2 px-4 rounded-xl bg-slate-900/90 border-l-4 border-emerald-500 text-emerald-400 font-mono text-sm tracking-wide font-bold">
+            <p className="leading-relaxed py-1 font-normal text-slate-200">
               &ldquo;THE TEE TEE IS REAL.&rdquo;
-            </blockquote>
+            </p>
             <p className="leading-relaxed">
               At teeteeStock, we believe those moments are worth celebrating.
             </p>
-            <p className="leading-relaxed font-medium text-slate-200">
+            <p className="leading-relaxed">
               So why not give them a market?
             </p>
           </div>
@@ -59,15 +59,15 @@ export default function AboutContent() {
             <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span><strong className="text-slate-200 font-normal">Regular Duet Streams &amp; Collabs:</strong> Add to the unit&apos;s weekly fundamental value.</span>
+                <span>Regular Duet Streams &amp; Collabs: Add to the unit&apos;s weekly fundamental value.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span><strong className="text-slate-200 font-normal">Major 3D Live Performances:</strong> Trigger major value increases.</span>
+                <span>Major 3D Live Performances: Trigger major value increases.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span><strong className="text-slate-200 font-normal">Original Songs &amp; Landmark Collaborations:</strong> Trigger significant fundamental value boosts.</span>
+                <span>Original Songs &amp; Landmark Collaborations: Trigger significant fundamental value boosts.</span>
               </div>
             </div>
           </div>
@@ -83,15 +83,15 @@ export default function AboutContent() {
             <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span><strong className="text-slate-200 font-normal">Real-Time Quotes:</strong> Live five-level order book showing bids and asks.</span>
+                <span>Real-Time Quotes: Live five-level order book showing bids and asks.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span><strong className="text-slate-200 font-normal">Price Limits &amp; Tick Sizes:</strong> &plusmn;20% price limits.</span>
+                <span>Price Limits &amp; Tick Sizes: &plusmn;20% price limits.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span><strong className="text-slate-200 font-normal">Candlestick Charts:</strong> View 1-minute, 5-minute, daily, weekly, and monthly charts, with dividend-adjusted charting available.</span>
+                <span>Candlestick Charts: View 1-minute, 5-minute, daily, weekly, and monthly charts, with dividend-adjusted charting available.</span>
               </div>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function AboutContent() {
             All market prices, charts, and indices are designed purely for entertainment. There is no need to take the market too seriously&mdash;just relax, have fun, and enjoy cheering for your favorite VTuber pairings and units!
           </p>
           <div className="pt-2 pl-[2em]">
-            <p className="text-sm font-mono font-medium text-pink-400">
+            <p className="text-sm font-normal text-slate-300 leading-relaxed">
               TeeTee goes up. You cheer. The market moves.
             </p>
           </div>
