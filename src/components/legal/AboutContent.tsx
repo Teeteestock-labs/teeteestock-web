@@ -49,7 +49,7 @@ export default function AboutContent() {
           </h2>
 
           {/* Subsection A */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h3 className="text-base font-normal text-slate-200">
               Real-World Activities Drive Fundamental Value
             </h3>
@@ -59,17 +59,20 @@ export default function AboutContent() {
             <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Regular Duet Streams &amp; Collabs: Add to the unit&apos;s weekly fundamental value.</span>
+                <span className="text-slate-200">Regular Duet Streams &amp; Collabs</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Major 3D Live Performances: Trigger major value increases.</span>
+                <span className="text-slate-200">Major 3D Live Performances</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Original Songs &amp; Landmark Collaborations: Trigger significant fundamental value boosts.</span>
+                <span className="text-slate-200">Original Songs &amp; Landmark Collaborations</span>
               </div>
             </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              etc.
+            </p>
           </div>
 
           {/* Subsection B */}
