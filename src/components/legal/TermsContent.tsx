@@ -9,6 +9,7 @@ export default function TermsContent() {
   if (lang === 'en') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
+        {/* Header */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             Terms of Service
@@ -18,227 +19,1003 @@ export default function TermsContent() {
           </p>
         </div>
 
+        {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            Welcome to teeteeStock exchange (&quot;the Platform&quot; or &quot;the Service&quot;), operated by the teeteeStock dev team (&quot;the Team&quot; or &quot;we&quot;). To safeguard your rights and interests, please carefully read these Terms of Service (&quot;these Terms&quot;) before registering, logging in, or using our services.
+            Welcome to teeteeStock (the &ldquo;Platform&rdquo; or the &ldquo;Service&rdquo;), a fan-made virtual stock market simulation operated by the teeteeStock development team (the &ldquo;Team,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;).
           </p>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            By registering an account, logging in, or beginning to use any functionality provided by this Platform, you are deemed to have fully read, understood, and unconditionally agreed to be bound by all stipulations of these Terms. If you disagree with any part, please immediately cease using this Service.
+            These Terms of Service (the &ldquo;Terms&rdquo;) govern your access to and use of the Service.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            By creating an account, accessing the Service, or using any feature of the Platform, you acknowledge that you have read and understood these Terms and agree to be bound by them. If you do not agree with these Terms, please do not access or use the Service.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            If you have any questions about these Terms, please contact us through the contact information provided on the Platform.
           </p>
         </section>
 
+        {/* Section 1 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            1. Nature of Service (Virtual Simulation, Not Real Financial Trading)
+            1. About the Service
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Exclusively Community Entertainment:
+              1.1 Fan-Made Entertainment Platform
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              teeteeStock is a concept stock virtual matching simulation system created exclusively for VTuber audiences. Its purpose is to deliver fan engagement and entertainment experiences, and it is under no circumstances a real financial securities exchange.
+              teeteeStock is a fan-made virtual stock market simulation designed for VTuber fans and online communities.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Platform is intended solely for entertainment, community interaction, and fan engagement. It is designed to simulate the experience of a market using fictional shares, prices, orders, virtual assets, and other game mechanics.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. No Real Investment Value or Financial Advice:
+              1.2 Not a Financial Product or Investment Service
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              All ticker symbols, concept shares, K-line charts, NAVs, percentage changes, matching prices, and settlement metrics presented on this Platform are playful simulated calculations based on public livestream information. Nothing in this Service constitutes any form of investment advice, financial planning, or securities offering.
+              teeteeStock is not a securities exchange, brokerage service, investment platform, payment service, financial product, or other financial service.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Nothing available through the Service constitutes:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>an offer or solicitation to buy or sell securities;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>investment, financial, tax, or legal advice;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>a recommendation to invest in any person, company, project, or asset;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>an ownership interest in any VTuber, talent, agency, company, or other entity; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>a promise of financial return.</span>
+              </div>
+            </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+              All prices, charts, ticker symbols, NAV figures, dividends, order-book activity, settlement figures, and other market data displayed by the Platform are fictional or simulated game data.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. Unofficial Fan-Made Project Declaration:
+              1.3 No Real-World Economic Value
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              This Platform is an independent, unofficial fan project and is not sponsored, authorized, commercially partnered with, or affiliated with any VTuber management agency (including but not limited to COVER Corporation, ANYCOLOR Inc.) or any individual VTuber.
+              Unless expressly stated otherwise in a separate written agreement, all of the following are virtual game elements only:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>TEE Tokens;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>virtual shares;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>virtual dividends;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>virtual cash balances;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>simulated market prices;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>virtual portfolios;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>rankings and scores; and</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>other in-game assets or credits.</span>
+              </div>
+            </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+              These virtual assets do not represent fiat currency, securities, equity, debt, ownership interests, or claims against the Team or any third party.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Virtual assets cannot be redeemed for cash or other real-world property.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              1.4 Unofficial Fan Project
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              teeteeStock is an independent and unofficial fan project.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Unless expressly stated otherwise, the Platform is not sponsored, endorsed, authorized, operated by, or affiliated with any VTuber, VTuber agency, talent management company, rights holder, or other third party, including but not limited to COVER Corporation or ANYCOLOR Inc.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The appearance of a VTuber, talent, agency, company, trademark, character, or other third-party reference on the Platform does not imply endorsement, authorization, partnership, or affiliation.
             </p>
           </div>
         </section>
 
+        {/* Section 2 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            2. Account Registration and Security Obligations
+            2. Eligibility and Account Registration
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Authenticity of Registration Information:
+              2.1 Eligibility
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              You must provide a valid email address and profile information legally owned by you upon registration, and keep it accurate and up-to-date.
+              You may use the Service only if you are legally permitted to enter into these Terms under the laws applicable to you.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              If you are under the age of majority in your jurisdiction, you may use the Service only where permitted by applicable law and, where required, with the consent of your parent or legal guardian.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Team may impose additional age or access restrictions for particular features.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Account Security Responsibilities:
+              2.2 Registration Information
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              You are responsible for maintaining the confidentiality of your account credentials. All orders and trading actions initiated through your account shall be deemed your own actions, and you bear full responsibility for them.
+              Where account registration is required, you agree to provide accurate and current information.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              You must provide an email address that you control and must keep your registration information reasonably up to date.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              You must not knowingly provide false, misleading, or fraudulent information.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. Prohibition of Sybil Accounts and Automated Bots:
+              2.3 Account Security
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              In principle, each user is restricted to one account. Malicious batch registration of disposable accounts, using automated scripts to farm login rewards, or manipulating market matching is strictly prohibited.
+              You are responsible for maintaining the confidentiality of your login credentials and for activities conducted through your account.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              If you believe that your account has been compromised or accessed without authorization, you should notify the Team as soon as reasonably possible.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Team will not be responsible for losses resulting from your failure to maintain reasonable account security, except to the extent otherwise required by applicable law.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              2.4 One Account Per User
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Unless the Team expressly permits otherwise, each person may maintain only one account.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              You must not create or operate multiple accounts for the purpose of obtaining additional rewards, circumventing restrictions, manipulating the market, or otherwise gaining an unfair advantage.
             </p>
           </div>
         </section>
 
+        {/* Section 3 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            3. Virtual Assets & Game Currency (TEE Tokens) Rules
+            3. Virtual Assets and Market Rules
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Zero Legal Tender Value:
+              3.1 TEE Tokens and Virtual Shares
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The &quot;TEE Tokens&quot;, virtual shares, weekly dividend allocations, and balance credits on this Platform are solely simulated game tokens. They hold zero fiat currency value, physical asset value, or cashable property rights.
+              TEE Tokens and virtual shares are fictional game assets created solely for use within the Service.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              They do not constitute money, securities, cryptocurrency, stored-value instruments, or property that may be redeemed for cash.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Strict Ban on Real-Money Trading (RMT):
+              3.2 No Real-Money Trading
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Users are strictly forbidden from selling, transferring, pledging, or trading TEE tokens, virtual shares, or accounts for real currency through any channel. Accounts caught violating this rule will be permanently frozen or terminated.
+              You must not sell, purchase, transfer, exchange, pledge, or otherwise trade:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>TEE Tokens;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>virtual shares;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>virtual dividends;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>virtual balances;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>accounts; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>other in-game assets</span>
+              </div>
+            </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+              for real money, cryptocurrency, goods, services, or anything of real-world value.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              This prohibition applies whether the transaction occurs on or off the Platform, including through third-party websites, social media, private messages, marketplaces, or other channels.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Team may suspend or terminate accounts involved in real-money trading and may reverse or invalidate virtual assets obtained through prohibited transactions.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. Asset Balancing and Management Discretion:
+              3.3 Market Simulation
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              To balance game mechanics, resolve ex-dividend settlements, deploy version updates, or fix bugs, the Team reserves the right to adjust virtual asset calculation formulas, initial capital, dividend rates, and distribution parameters at any time.
+              Market prices and trading activity are generated by the Platform&apos;s simulation and matching mechanisms.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Team may modify market rules, price limits, tick sizes, matching logic, order types, dividend calculations, or other game mechanics when reasonably necessary for:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>game balance;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>technical maintenance;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>security;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>bug fixes;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>fraud prevention;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>system performance; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>feature updates.</span>
+              </div>
+            </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+              Such changes may affect virtual prices, balances, rankings, or other game outcomes.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3.4 Virtual Dividends
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Any &ldquo;dividend&rdquo; distributed by the Platform is a Virtual Dividend and is solely a game reward or virtual credit.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Virtual Dividends are not cash payments, investment returns, interest, profit distributions, or claims against the Team or any third party.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Team may modify the calculation, eligibility requirements, timing, or amount of Virtual Dividends when reasonably necessary for the operation or balance of the Service.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3.5 Errors and Corrections
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Platform may occasionally contain technical, calculation, data-collection, or display errors.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Where reasonably necessary, the Team may correct erroneous transactions, prices, balances, dividends, rankings, or other virtual records.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Team may also roll back or restore virtual game data when required to correct material errors, security incidents, exploits, or technical failures.
             </p>
           </div>
         </section>
 
+        {/* Section 4 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            4. User Conduct and Prohibited Activities
+            4. Prohibited Conduct
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            When using this Service, you agree to comply with relevant internet standards and refrain from:
+            You agree not to use the Service to:
           </p>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Disrupting System Fairness:
+              4.1 Manipulate the Platform
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Exploiting program bugs, using third-party plugins, firing massive unauthorized API requests, conducting wash trades with oneself, or attempting to overload matching engines and servers.
+              You must not:
             </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>exploit bugs or unintended game mechanics;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>use unauthorized scripts, bots, plugins, or automation;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>submit excessive or unauthorized API requests;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>interfere with the matching engine or other Platform systems;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>conduct wash trades or coordinated transactions intended to manipulate prices or trading activity;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>create multiple accounts to circumvent restrictions;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>intentionally disrupt other users&apos; access to the Service; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>attempt to gain unauthorized access to the Platform or its underlying systems.</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Inappropriate Speech and Behavior:
+              4.2 Abuse Other Users or Third Parties
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Publishing hate speech, defamation, sexual harassment, obscenities, or malicious harassment and threats targeting any VTuber, viewer, or third party.
+              You must not use the Service to:
             </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>threaten, stalk, harass, or intimidate others;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>publish unlawful or seriously abusive content;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>engage in targeted harassment;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>impersonate another user, VTuber, talent, agency, Team member, or corporate representative;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>publish content intended to deceive users about an affiliation or endorsement; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>use the Platform to facilitate fraud or other unlawful activities.</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. Rights Infringement & Impersonation:
+              4.3 Circumvent Enforcement Measures
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Impersonating platform staff, VTuber talents, or corporate representatives to mislead or defraud others.
+              You must not attempt to circumvent an account suspension, termination, trading restriction, rate limit, security measure, or other enforcement action imposed by the Team.
             </p>
           </div>
         </section>
 
+        {/* Section 5 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            5. Intellectual Property Rights
+            5. Third-Party Content and Intellectual Property
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Platform Copyright:
+              5.1 Our Materials
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The source code, software architecture, UI design, database schema, and original text of the teeteeStock platform are owned by the Team.
+              Except for third-party materials, the original software, source code, UI design, database structure, graphics, documentation, text, and other original materials created for the Platform are owned by or licensed to the Team or the applicable rights holders.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Nothing in these Terms grants you ownership of such materials.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              You may not copy, modify, distribute, reverse engineer, publicly display, commercially exploit, or create derivative works from Platform materials except where permitted by applicable law or expressly authorized by the Team.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Respect for Third-Party Rights:
+              5.2 Third-Party Rights
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              VTuber names, tags, stream cover art, and public media cited belong to their original creators, talents, or affiliated agencies. Their citation is conducted under non-profit community fair use.
+              Names, trademarks, logos, artwork, character designs, images, videos, music, stream materials, and other content relating to VTubers, talents, agencies, and other third parties remain the property of their respective rights holders.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              teeteeStock does not claim ownership of third-party materials merely because they are referenced or displayed on the Platform.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Platform may reference publicly available information or third-party materials for fan-community, identification, commentary, informational, or entertainment purposes.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Nothing in these Terms is intended to represent that the Team has obtained rights that it does not possess.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              5.3 Intellectual Property Complaints
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              If you believe that material displayed on the Platform infringes your copyright, trademark, publicity right, or other legal right, please contact the Team through the designated contact channel and provide sufficient information for us to review the matter.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Where appropriate, the Team may remove, modify, or restrict access to disputed material while the matter is reviewed.
             </p>
           </div>
         </section>
 
+        {/* Section 6 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            6. Third-Party Services and Data Sources
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            The Service may rely on third-party platforms, APIs, websites, hosting providers, analytics services, authentication services, or publicly available data sources.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            The availability and accuracy of third-party services are outside the Team&apos;s complete control.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Third-party services may change their APIs, access policies, availability, content, or technical requirements without notice.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            As a result, information displayed on the Platform may be delayed, incomplete, unavailable, or inaccurate.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            The Team does not guarantee that data obtained from third-party sources will always be complete, current, or error-free.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Your use of third-party services may also be subject to the third party&apos;s own terms and privacy policies.
+          </p>
+        </section>
+
+        {/* Section 7 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            7. Privacy and Personal Information
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Your use of the Service may involve the collection and processing of personal information, such as account information, email addresses, login records, technical information, and usage information.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Our collection, use, retention, and protection of personal information are described in our Privacy Policy, which forms part of the rules governing your use of the Service.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Where applicable, personal information will be handled in accordance with the laws and regulations applicable to the Service, including Taiwan&apos;s Personal Data Protection Act.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            You should review the Privacy Policy before using the Service.
+          </p>
+        </section>
+
+        {/* Section 8 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            6. Disclaimers and Service Modifications
+            8. Service Availability and Disclaimers
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Service Provided &quot;As-Is&quot;:
+              8.1 Service Provided on an &ldquo;As Is&rdquo; Basis
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Service is provided on an &quot;as-is&quot; and &quot;as-available&quot; basis without warranties of uninterrupted service, instantaneous delivery, or absolute crawler precision.
+              To the maximum extent permitted by applicable law, the Service is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We do not guarantee that the Service will:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>always be available;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>operate without interruption;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>be free from bugs or errors;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>produce perfectly accurate calculations;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>provide real-time data at all times;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>remain compatible with every device or browser; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>remain unchanged indefinitely.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              8.2 Data and Calculation Accuracy
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Platform may use automated data collection, processing, calculations, and matching systems.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Such systems may contain errors or experience delays.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              You should not rely on Platform data for financial, commercial, legal, tax, or other real-world decisions.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Force Majeure & Limitation of Liability:
+              8.3 Maintenance and Suspension
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Team bears no monetary liability for delays, downtime, or virtual rollbacks caused by telecommunication failures, server maintenance, or force majeure events.
+              We may temporarily suspend or restrict access to all or part of the Service for:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>scheduled maintenance;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>emergency maintenance;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>security incidents;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>system upgrades;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>bug fixes;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>infrastructure failures;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>third-party service outages; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>other operational reasons.</span>
+              </div>
+            </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+              Where reasonably practicable, we may provide advance notice of scheduled maintenance.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. Account Sanction Discretion:
+              8.4 Force Majeure
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Team reserves the right to issue warnings, cancel pending orders, confiscate illicitly acquired TEE tokens, or terminate accounts of users reasonably judged to have breached these Terms.
+              The Team will not be responsible for delays or failures caused by circumstances beyond its reasonable control, including natural disasters, telecommunications failures, internet outages, cyberattacks, government actions, third-party service failures, infrastructure failures, or other force majeure events, to the extent permitted by applicable law.
             </p>
           </div>
         </section>
 
+        {/* Section 9 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            7. Amendments and Governing Law
+            9. Account Suspension and Termination
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Amendment Rights:
+              9.1 Suspension or Termination
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Team reserves the right to amend these Terms at any time. Continued use of the Service following amendments constitutes agreement to revised terms.
+              The Team may suspend, restrict, or terminate your account or access to the Service if we reasonably believe that you:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>violated these Terms;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>engaged in fraud or abuse;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>manipulated the Platform;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>used unauthorized automation;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>conducted prohibited real-money trading;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>compromised the security of the Service;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>infringed the rights of others; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>otherwise used the Service in a manner that creates a significant risk to the Platform, its users, or third parties.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              9.2 Enforcement Actions
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Depending on the circumstances, the Team may:
+            </p>
+            <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>issue a warning;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>cancel or reverse pending orders;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>remove improperly obtained virtual assets;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>reset affected game data;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>temporarily restrict trading;</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>suspend an account; or</span>
+              </div>
+              <div className="flex items-start gap-2 leading-relaxed">
+                <span className="shrink-0 select-none">●</span>
+                <span>permanently terminate an account.</span>
+              </div>
+            </div>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+              The Team will take reasonable measures to distinguish legitimate users from accounts involved in abuse or manipulation where technically and operationally practicable.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Applicable Law & Jurisdiction:
+              9.3 Account Review
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              These Terms shall be interpreted and governed in accordance with the laws of the Republic of China (Taiwan). Any disputes arising from these Terms shall be submitted to the Taiwan Taipei District Court as the court of first instance.
+              Where appropriate, users may contact the Team to request a review of an account restriction or termination.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Nothing in this section limits any rights that cannot lawfully be waived under applicable law.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              9.4 Effect of Termination
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Upon termination, you will no longer be entitled to access your account or virtual assets, except where otherwise required by applicable law.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Virtual assets are not redeemable for cash or other real-world value upon termination.
+            </p>
+          </div>
+        </section>
+
+        {/* Section 10 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            10. Changes to the Service
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We may add, remove, modify, or discontinue features of the Service from time to time.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            This may include changes to:
+          </p>
+          <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>market mechanics;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>virtual asset balances;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>dividend formulas;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>price limits;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>matching rules;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>rankings;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>charts;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>data sources; and</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>other game features.</span>
+            </div>
+          </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+            Where reasonably necessary, we may make such changes without prior notice, particularly where required for security, maintenance, bug fixes, or prevention of abuse.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We do not guarantee that any particular feature or game mechanic will remain available indefinitely.
+          </p>
+        </section>
+
+        {/* Section 11 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            11. Changes to These Terms
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We may update these Terms from time to time.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            If we make material changes, we will provide reasonable notice through the Platform or another appropriate channel where reasonably practicable.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            The updated Terms will become effective on the date specified in the notice.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Your continued use of the Service after the updated Terms become effective constitutes acceptance of the revised Terms, to the extent permitted by applicable law.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            If you do not agree to the revised Terms, you should stop using the Service.
+          </p>
+        </section>
+
+        {/* Section 12 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            12. Limitation of Liability
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            To the maximum extent permitted by applicable law, the Team will not be liable for indirect, incidental, special, consequential, or punitive damages, or for loss of data, virtual assets, expected benefits, or other intangible losses arising from your use of or inability to use the Service.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            This includes losses arising from:
+          </p>
+          <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>service interruptions;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>technical failures;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>incorrect or delayed data;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>calculation errors;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>third-party service failures;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>unauthorized access;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>account suspension or termination;</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>virtual asset rollback; or</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span>changes to game mechanics.</span>
+            </div>
+          </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em] mt-2">
+            Nothing in these Terms excludes or limits liability to the extent such exclusion or limitation is prohibited by applicable law.
+          </p>
+        </section>
+
+        {/* Section 13 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            13. Indemnification
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            To the extent permitted by applicable law, you agree to be responsible for losses, claims, liabilities, costs, and reasonable expenses arising from your unlawful use of the Service, your violation of these Terms, or your infringement of the rights of another person.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            This section does not require you to indemnify the Team for losses caused by the Team&apos;s own unlawful conduct or for liability that cannot legally be transferred to you.
+          </p>
+        </section>
+
+        {/* Section 14 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            14. Governing Law and Dispute Resolution
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            These Terms shall be governed by and construed in accordance with the laws of the Republic of China (Taiwan), without regard to conflict-of-law principles, except to the extent that mandatory laws applicable to a user require otherwise.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Nothing in these Terms is intended to deprive a consumer of mandatory rights or protections that cannot lawfully be excluded or waived.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            To the extent permitted by applicable law, disputes arising out of or relating to these Terms or the Service shall be submitted to the Taipei District Court, Taiwan, as the court of first instance.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Where applicable law provides a consumer with a different mandatory forum or dispute-resolution right, that right shall prevail.
+          </p>
+        </section>
+
+        {/* Section 15 */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-normal text-slate-100">
+            15. General Provisions
+          </h2>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              15.1 Severability
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              If any provision of these Terms is held to be invalid, illegal, or unenforceable, the remaining provisions will remain in effect to the extent permitted by law.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              15.2 No Waiver
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              A failure by the Team to enforce any provision of these Terms does not constitute a waiver of our right to enforce that provision later.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              15.3 Assignment
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              You may not transfer or assign your rights or obligations under these Terms without our prior written consent.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              The Team may transfer or assign its rights and obligations in connection with a restructuring, transfer of the Service, or other legitimate business purpose, subject to applicable law.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              15.4 Entire Agreement
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              These Terms, together with the Privacy Policy and any additional rules expressly incorporated into the Service, constitute the agreement between you and the Team concerning your use of the Service, except where additional written terms expressly apply.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              15.5 Language
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              If these Terms are provided in multiple languages, the version designated by the Team as the governing version will control to the extent permitted by applicable law.
+            </p>
+          </div>
+        </section>
+
+        {/* Section 16 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            16. Contact
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            If you have questions, complaints, intellectual property concerns, or requests relating to these Terms, please contact the teeteeStock development team through the contact information provided on the Platform.
+          </p>
+          <div className="pt-2 pl-[2em]">
+            <p className="text-sm font-normal text-slate-200">
+              teeteeStock Development Team
             </p>
           </div>
         </section>
