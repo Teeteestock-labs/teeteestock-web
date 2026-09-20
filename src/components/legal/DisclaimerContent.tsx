@@ -347,6 +347,7 @@ export default function DisclaimerContent() {
   if (lang === 'ja') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
+        {/* Header */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             免責事項
@@ -356,92 +357,164 @@ export default function DisclaimerContent() {
           </p>
         </div>
 
+        {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本免責事項は、teeteeStock（以下「本プラットフォーム」）を訪問・利用されるすべての利用者に適用されます。本プラットフォームを利用することで、本免責事項の全条項に同意したものとみなされます。
+            本免責事項は、teeteeStock（以下「本プラットフォーム」）を利用するすべての利用者に適用されます。本プラットフォームを利用することにより、本免責事項の内容に同意したものとみなされます。
           </p>
         </section>
 
+        {/* Section 一 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            一、非金融機関および投資リスクに関する免責
+            一、サービスの性質および投資に関する免責
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 金融規制対象外の模擬プラットフォーム：
+              1. 金融サービスではありません
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは非営利の同人ファンコミュニティによるエンターテインメント模擬プロジェクトであり、金融監督庁や政府機関の認可・監督を受ける証券会社、金融商品取引業者、投資顧問会社ではありません。
+              本プラットフォームは、VTuberを応援するファンコミュニティのための、非公式かつ非営利のエンターテインメント目的のシミュレーションサービスです。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              現実の証券取引所、証券会社、金融商品取引業者、投資顧問その他の金融機関が提供するサービスではなく、金融商品の販売、投資助言その他の金融サービスを提供するものではありません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本プラットフォームは、台湾その他の地域における金融監督当局から、証券取引または金融サービスを行うための認可・登録・免許等を受けたものではありません。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. 現実の投資判断への利用禁止：
+              2. 現実の投資判断には利用しないでください
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームで表示される銘柄コード、値動き、ローソク足チャート、1株あたり純資産（NAV）、および気配値は、すべてコミュニティ独自の模擬アルゴリズムによる計算結果であり、実際の金融市場における分析・参考価値は一切有しません。本サービス上の情報に基づく現実の投資損害について、本運営は一切の法的責任・賠償責任を負いません。
+              本プラットフォーム上に表示される銘柄コード、株価、チャート、1株あたり純資産（NAV）、気配値、取引データその他の情報は、本プラットフォーム独自のシミュレーションルールおよびアルゴリズムに基づいて生成されたものです。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              これらの情報は、現実の金融市場における価格、価値、業績その他の状況を示すものではなく、現実の投資判断のための情報として提供されるものでもありません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本プラットフォーム上の情報をもとに、利用者が現実の金融商品その他の資産について行った投資・取引等によって生じた損失または損害について、運営チームは責任を負いません。
             </p>
           </div>
         </section>
 
+        {/* Section 二 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            二、アルゴリズム・クローラーデータおよびシステム安定性に関する免責
+            二、外部データ、アルゴリズムおよびシステムに関する免責
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 外部データ収集と誤差：
+              1. 外部情報および自動処理による誤差
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              各概念株のNAVは、公開されている外部情報（YouTubeのライブ配信状況や公式活動）を自動アルゴリズムにより参照しています。外部APIの制限や通信遅延により、データの完全性、リアルタイム性、正確性を保証するものではありません。
+              各概念株のNAVその他の数値は、公開されている外部情報やVTuberの活動状況、配信・イベント等の情報を、本プラットフォーム独自のルールおよび自動処理によって反映しています。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              外部サービスの仕様変更、APIの利用制限、通信障害、取得遅延、データの欠損その他の事情により、情報の正確性、完全性、最新性またはリアルタイム性を保証するものではありません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              また、自動処理による判定や計算が、実際の活動内容や状況と一致しない場合があります。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. システム障害およびデータのロールバック：
+              2. システム障害およびデータのロールバック
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              定期メンテナンス、サーバー障害、バグ修正、またはサイバー攻撃等が発生した場合、本プラットフォームは事前の通知なくサービスの中断、仮想データの初期化やロールバックを行う権利を有します。これらに起因するいかなる仮想データ損失に対しても補償は行いません。
+              メンテナンス、サーバー障害、システム上の不具合、バグ修正、外部サービスの障害、サイバー攻撃その他の事情により、本プラットフォームは、事前の通知なくサービスの全部または一部を停止、変更または一時的に利用できない状態とする場合があります。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              また、必要に応じて、取引履歴、仮想資産、株価その他の仮想データを修正、初期化またはロールバックする場合があります。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              これらによって利用者の仮想資産、取引履歴その他のデータに影響が生じた場合であっても、運営チームは、現金その他による補償を行いません。
             </p>
           </div>
         </section>
 
+        {/* Section 三 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            三、二次創作・同人ファンコミュニティの性質および著作権表示
+            三、非公式ファンプロジェクトおよび知的財産権について
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 非公式ファンメイド企画：
+              1. 非公式のファンプロジェクト
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは独立した非営利の同人ファンプロジェクトであり、いかなるVTuber個人、グループ、または所属事務所（カバー株式会社、ANYCOLOR株式会社、Brave group等を含むがこれらに限定されません）とも公認、提携、協賛関係にはありません。
+              本プラットフォームは、VTuberを応援するファンコミュニティによって独立して運営される、非公式のファンプロジェクトです。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              特定のVTuber本人、VTuberグループ、所属事務所、企業その他の権利者によって運営、承認、後援、提携または公式認定されたものではありません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              これには、COVER株式会社、ANYCOLOR株式会社、Brave groupその他のVTuber関連企業・団体が含まれますが、これらに限りません。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. 引用・フェアユースおよび削除要請への対応：
+              2. 第三者の知的財産権について
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームで引用されているタレント名、ユニット名、公開配信サムネイル画像等の知的財産権・商標権は、すべて各権利者に帰属します。引用は非営利ファン活動における正当な範囲内で行われています。権利者様からの要請があった場合、速やかに事実確認を行い、対象コンテンツの削除対応を実施いたします。
+              本プラットフォーム上で使用または表示されるVTuberの名前、ユニット名、活動情報、配信情報、サムネイルその他の第三者に関するコンテンツについて、著作権、商標権その他の知的財産権が存在する場合、それらの権利は各権利者に帰属します。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本プラットフォームは、これらの権利を取得または所有するものではありません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              権利者または正当な権利を有する方から、掲載内容についてのご連絡や削除等の要請を受けた場合には、内容を確認したうえで、必要に応じて掲載内容の修正、非表示または削除等の対応を行います。
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3. 権利に関するお問い合わせ
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本プラットフォーム上のコンテンツについて、著作権、商標権その他の権利に関する問題がある場合は、運営チームまでご連絡ください。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              権利関係を確認するため、必要に応じて、対象となるコンテンツや権利関係を確認できる情報の提供をお願いする場合があります。
             </p>
           </div>
         </section>
 
+        {/* Section 四 */}
         <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            四、外部リンクおよび第三者サービスに関する免責
+            四、外部リンクおよび第三者サービスについて
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本プラットフォームには、第三者の外部サイト（YouTubeチャンネル、配信ページ等）へのリンクが含まれる場合があります。外部サイトのコンテンツやプライバシー規程は各運営者によって管理されており、本プラットフォームは外部サイトの利用によって生じた損害について一切責任を負いません。
+            本プラットフォームには、YouTubeその他の第三者が運営するウェブサイト、配信ページ、SNS等へのリンクが含まれる場合があります。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            これらの外部サービスは、それぞれの運営者が独自に提供・管理するものであり、本プラットフォームの管理下にはありません。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            外部サービスの内容、提供状況、利用規約、プライバシーポリシーその他の事項について、本プラットフォームが保証するものではありません。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            外部サービスの利用については、各サービスの利用規約およびプライバシーポリシー等をご確認ください。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            外部サービスの利用または利用できないことによって生じた損害について、運営チームは責任を負いません。
           </p>
         </section>
+
+        {/* Footer */}
+        <div className="border-t border-slate-800/80 pt-6">
+          <p className="text-sm font-normal text-slate-400 [text-indent:2em]">
+            teeteeStock開発チーム
+          </p>
+        </div>
       </div>
     );
   }
