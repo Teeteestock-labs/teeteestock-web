@@ -237,7 +237,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
         {/* 電子信箱 */}
         <div>
           <label className="block text-xs font-medium text-slate-300 mb-1.5">
-            電子郵件信箱
+            電子郵件信箱 (Email)
           </label>
           <div className="relative">
             <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -264,7 +264,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
           <div>
             <div className="flex justify-between items-center mb-1.5">
               <label className="block text-xs font-medium text-slate-300">
-                交易暱稱 <span className="text-slate-500 font-normal">(選填)</span>
+                交易暱稱 (Nickname) <span className="text-slate-500 font-normal">(選填)</span>
               </label>
             </div>
             <div className="relative">
@@ -273,7 +273,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="例如：超天醬單推人"
+                placeholder="請輸入暱稱"
                 className="w-full bg-slate-900/90 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-colors"
               />
             </div>
@@ -283,7 +283,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
         {/* 密碼 */}
         <div>
           <label className="block text-xs font-medium text-slate-300 mb-1.5">
-            登入密碼
+            登入密碼 (Password)
           </label>
           <div className="relative">
             <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -346,7 +346,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
         {activeTab === 'register' && (
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1.5">
-              確認密碼
+              確認密碼 (Confirm Password)
             </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
