@@ -9,101 +9,123 @@ export default function AboutContent() {
   if (lang === 'en') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
-        <div className="border-b border-slate-800/80 pb-6">
+        <div className="border-b border-slate-800/80 pb-6 space-y-1">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             About teeteeStock
           </h1>
-          <p className="text-xs font-normal text-slate-400 mt-1">
-            VTuber Concept Index & Community Virtual Simulation Exchange
+          <p className="text-xs sm:text-sm font-normal text-emerald-400 font-mono">
+            teeteeStock: A Virtual Exchange for VTuber Fans
           </p>
         </div>
 
-        <section className="space-y-3">
-          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            teeteeStock is a concept stock virtual simulation exchange designed exclusively for VTuber fans and community members.
-          </p>
-        </section>
-
-        <section className="space-y-3">
+        {/* Section 1 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            1. Platform Philosophy: Quantifying &quot;TeeTee&quot;
+            1. Platform Philosophy: Putting a Value on &ldquo;TeeTee&rdquo;
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            In Japanese VTuber culture, &quot;てぇてぇ (TeeTee)&quot; expresses the pure, heartwarming, and cherished bond and intimate interactions between partners, teammates, or favorite talents. We strongly believe that the shared excitement when talents collaborate on stream or sing duets holds genuine, indelible &quot;emotional value.&quot;
+            In Japanese VTuber culture, &ldquo;てぇてぇ (TeeTee)&rdquo; is that special feeling you get when two talents have a moment that just hits different.
           </p>
-          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            Whenever fans experience this spirit, the feeling often is: &quot;The value of this pair has hit the daily limit high!&quot; teeteeStock materializes this wonderful emotion—turning your favorite VTuber pairing/unit into simulated shares in an exchange. Here, your cheering is no longer a one-way experience; you can witness their growth and glory together through virtual shares!
-          </p>
+          <div className="space-y-2 pl-[2em] text-sm text-slate-300">
+            <p className="leading-relaxed">
+              A great collab. A sweet interaction. A duet that makes the whole chat go:
+            </p>
+            <blockquote className="my-2 py-2 px-4 rounded-xl bg-slate-900/90 border-l-4 border-emerald-500 text-emerald-400 font-mono text-sm tracking-wide font-bold">
+              &ldquo;THE TEE TEE IS REAL.&rdquo;
+            </blockquote>
+            <p className="leading-relaxed">
+              At teeteeStock, we believe those moments are worth celebrating.
+            </p>
+            <p className="leading-relaxed font-medium text-slate-200">
+              So why not give them a market?
+            </p>
+          </div>
         </section>
 
+        {/* Section 2 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            2. Core Features & Mechanisms
+            2. Core Features &amp; Market Mechanics
           </h2>
 
+          {/* Subsection A */}
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Real-World Dynamics Driving Fundamentals
+              Real-World Activities Drive Fundamental Value
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The fundamental &quot;Net Asset Value per Share (NAV)&quot; of each unit is directly connected to their real-world activities:
+              Each unit&apos;s Fundamental Value is influenced by their real-world activities:
             </p>
             <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Regular Duet Streams / Collabs: Boosts weekly fundamental bonus.</span>
+                <span><strong className="text-slate-200 font-normal">Regular Duet Streams &amp; Collabs:</strong> Add to the unit&apos;s weekly fundamental value.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Major 3D Live Performances: Triggers powerful value breakthroughs.</span>
+                <span><strong className="text-slate-200 font-normal">Major 3D Live Performances:</strong> Trigger major value increases.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Original Song Releases / Landmark Collabs: Unlocks massive NAV multiplier surges!</span>
+                <span><strong className="text-slate-200 font-normal">Original Songs &amp; Landmark Collaborations:</strong> Trigger significant fundamental value boosts.</span>
               </div>
             </div>
           </div>
 
+          {/* Subsection B */}
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Authentic Continuous Matching Engine & Order Depth
+              A Real-Time Matching Engine &amp; Order Book
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Far beyond simple score counters, teeteeStock features a trading engine modeled after modern financial markets:
+              teeteeStock goes beyond simple score-based systems with a trading engine inspired by modern financial markets:
             </p>
             <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Real-Time Quoting System: Live 5-tier order book depth for bid and ask.</span>
+                <span><strong className="text-slate-200 font-normal">Real-Time Quotes:</strong> Live five-level order book showing bids and asks.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Price Limit Controls (±20%) & Tick Intervals: Preserves orderly and stable market dynamics.</span>
+                <span><strong className="text-slate-200 font-normal">Price Limits &amp; Tick Sizes:</strong> &plusmn;20% price limits.</span>
               </div>
               <div className="flex items-start gap-2 leading-relaxed">
                 <span className="shrink-0 select-none">●</span>
-                <span>Intraday & Multi-Period Candlestick Charts: Supports 1m, 5m, Daily, Weekly, and Monthly charts with dividend-adjusted K-line modes.</span>
+                <span><strong className="text-slate-200 font-normal">Candlestick Charts:</strong> View 1-minute, 5-minute, daily, weekly, and monthly charts, with dividend-adjusted charting available.</span>
               </div>
             </div>
           </div>
 
+          {/* Subsection C */}
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. Weekly Cash Dividend Distributions
+              Weekly Cash Dividends
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Every weekend, ex-dividend settlements are calculated based on collaborative stream outcomes, with cash dividends distributed automatically. Adjusted cost tracking is provided to clearly inspect net holding returns after accounting for cumulative dividends.
+              Every weekend, dividend settlements are calculated based on the week&apos;s collaborative activities. Eligible shareholders automatically receive virtual cash dividends.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Dividend-adjusted cost tracking also lets you see your net holding performance after accounting for cumulative dividends.
             </p>
           </div>
         </section>
 
-        <section className="space-y-3">
+        {/* Section 3 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            3. Friendly Cheering Spirit
+            3. Built for Fun and Cheering
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            All trend charts and indices in this exchange are created solely for fan community entertainment. Please approach the market with a relaxed, cheerful mindset and enjoy cheering on your favorite talents!
+            teeteeStock is first and foremost a fan community experience.
           </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            All market prices, charts, and indices are designed purely for entertainment. There is no need to take the market too seriously&mdash;just relax, have fun, and enjoy cheering for your favorite VTuber pairings and units!
+          </p>
+          <div className="pt-2 pl-[2em]">
+            <p className="text-sm font-mono font-medium text-pink-400">
+              TeeTee goes up. You cheer. The market moves.
+            </p>
+          </div>
         </section>
       </div>
     );
