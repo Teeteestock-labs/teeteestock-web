@@ -18,8 +18,8 @@ const FORM_TEXT = {
     messageLabel: '訊息內容',
     messagePlaceholder: '請詳細填寫您欲諮詢、回報或建議之具體內容（至少 5 個字）...',
     submitNote: '※ 點擊送出後，表單將直接傳送至平台管理後台。',
-    submitting: '正在傳送至後台...',
-    submit: '送出訊息至後台',
+    submitting: '正在送出訊息...',
+    submit: '送出訊息',
     categories: [
       '系統異常與 Bug 回報',
       '帳號與資產相關問題',
