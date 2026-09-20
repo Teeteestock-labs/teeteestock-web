@@ -788,7 +788,8 @@ function DividendHistorySection({
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<Mode>('list');
+  const queryMode = searchParams.get('mode');
+  const mode: Mode = queryMode === 'asset' ? 'asset' : 'list';
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   const [isAdjustedCost, setIsAdjustedCost] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -819,17 +820,6 @@ function HomeContent() {
   const { user } = useAuth();
 
   const sortedMarketData = [...marketData].sort((a, b) => a.id.localeCompare(b.id));
-
-
-
-  useEffect(() => {
-    const queryMode = searchParams.get('mode');
-    if (queryMode === 'list' || queryMode === 'asset') {
-      setMode(queryMode);
-    } else {
-      setMode('list');
-    }
-  }, [searchParams]);
 
   const handleViewModeChange = (newViewMode: ViewMode) => {
     setViewMode(newViewMode);
