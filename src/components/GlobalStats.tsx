@@ -8,11 +8,11 @@ export default function GlobalStats() {
   const { user, isLoading, logout } = useAuth();
 
   return (
-    <div className="bg-[#000000] border-b border-[#2b2f36] px-3 py-1.5 flex justify-between items-center sticky top-0 z-30 text-xs select-none">
+    <div className="bg-[#000000] border-b border-[#2b2f36] px-3.5 py-2 flex justify-between items-center sticky top-0 z-30 select-none">
       <div className="flex items-center gap-2">
         <Link
           href="/"
-          className="text-base font-black tracking-tight text-white hover:text-pink-400 transition-colors font-mono"
+          className="text-2xl sm:text-[32px] font-black tracking-tight text-white hover:text-pink-400 transition-colors font-mono leading-none select-none"
         >
           teeteeStock
         </Link>

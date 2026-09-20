@@ -78,15 +78,6 @@ export async function GET(
       return response;
     }
 
-    if (provider === 'github') {
-      return NextResponse.redirect(
-        new URL(
-          `/login?notice=${encodeURIComponent('目前已開通 Google 與 Discord 快速登入，GitHub 快速登入即將開放！')}`,
-          baseUrl
-        )
-      );
-    }
-
     return NextResponse.redirect(new URL('/login', baseUrl));
   } catch (error) {
     console.error('[OAuth Init Error]:', error);
