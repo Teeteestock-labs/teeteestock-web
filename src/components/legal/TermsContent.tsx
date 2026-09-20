@@ -1026,6 +1026,7 @@ export default function TermsContent() {
   if (lang === 'ja') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
+        {/* Header */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             利用規約
@@ -1035,227 +1036,375 @@ export default function TermsContent() {
           </p>
         </div>
 
+        {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            teeteeStock（以下「本プラットフォーム」または「本サービス」）へようこそ。本サービスはteeteeStock開発チーム（以下「当チーム」）が運営しています。利用者の権利を保護するため、登録・利用前に本利用規約（以下「本規約」）をよくお読みください。
+            この利用規約（以下「本規約」といいます。）は、teeteeStock開発チーム（以下「運営チーム」といいます。）が提供・運営する「teeteeStock（てぇてぇ取引所）」（以下「本サービス」といいます。）の利用条件を定めるものです。
           </p>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            アカウントを登録、ログイン、または本サービスの機能を利用開始した時点で、本規約のすべての内容を理解し同意したものとみなされます。不同意の場合は、直ちに本サービスの利用を中止してください。
+            本サービスをご利用になる方（以下「ユーザー」といいます。）は、本規約および別途定める「プライバシーポリシー」をご確認のうえ、本サービスをご利用ください。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            ユーザーが本サービスに登録、ログイン、または本サービスの機能を利用した時点で、本規約に同意したものとみなします。本規約に同意いただけない場合は、本サービスをご利用いただけません。
           </p>
         </section>
 
+        {/* 第1条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第1条（適用）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. 本規約は、ユーザーと運営チームとの間における、本サービスの利用に関する一切の関係に適用されます。</p>
+            <p>2. 運営チームが本サービス上で別途定めるガイドライン、ルール、注意事項その他の個別の規定（以下「個別規定等」といいます。）は、本規約の一部を構成するものとします。</p>
+            <p>3. 本規約と個別規定等の内容が異なる場合は、特段の定めがない限り、本規約が優先して適用されます。</p>
+            <p>4. 未成年者が本サービスを利用する場合は、親権者その他の法定代理人の同意を得たうえで利用するものとします。</p>
+          </div>
+        </section>
+
+        {/* 第2条 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            一、サービスの性質（実際の金融商品取引ではありません）
+            第2条（本サービスの性質）
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. コミュニティエンターテインメント目的：
+              1. エンターテインメントを目的としたシミュレーション
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              teeteeStockは、VTuberリスナーとファンの交流と応援のために作られた概念株の模擬板寄せシミュレーションシステムです。実際の金融商品取引所ではありません。
+              teeteeStockは、VTuberのリスナーやファンが、好きなコンビ・ユニット・関係性などを「株化した」として楽しむための、仮想的な株式取引シミュレーションサービスです。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本サービスは、現実の証券取引所、金融商品取引サービス、投資サービスその他これらに類するものではありません。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. 投資価値および助言の不存在：
+              2. 実際の金融商品ではありません
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームで表示されるすべての銘柄コード、概念株、チャート、NAV、および気配値は、公開配信情報等に基づくシミュレーションデータです。投資助言や金融勧誘を構成するものではありません。
+              本サービス内で表示される銘柄、模擬株式、株価、NAV、気配値、チャート、指数、TEEその他の数値やデータは、すべて本サービス上のシミュレーションを目的としたものです。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              これらは現実の金融商品、証券、通貨、投資商品その他の資産を表すものではありません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本サービス上の情報は、投資判断を目的としたものではなく、投資助言、金融商品取引の勧誘、その他の金融サービスの提供を構成するものではありません。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. 非公式同人プロジェクトの表明：
+              3. 非公式のファンプロジェクト
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォームは非公式の同人ファンプロジェクトであり、VTuber事務所（カバー株式会社、ANYCOLOR株式会社等）やタレント本人とは一切の商業的提携・公認関係はありません。
+              本サービスは、VTuber文化やファンコミュニティを楽しむことを目的とした非公式のファンプロジェクトです。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本サービスは、特定のVTuber事務所、企業、タレント本人その他の権利者によって運営、承認、後援、提携または公式認定されたものではありません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              特に、COVER株式会社、ANYCOLOR株式会社その他のVTuber関連企業・事務所および所属タレントとは、別途明示されている場合を除き、公式な提携関係その他の関係を有するものではありません。
             </p>
           </div>
         </section>
 
+        {/* 第3条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第3条（アカウント登録）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. ユーザーは、本サービスの利用登録を行う際、正確かつ最新の情報を登録するものとします。</p>
+            <p>2. ユーザーは、登録した情報に変更が生じた場合、可能な範囲で速やかに情報を更新するものとします。</p>
+            <p>3. 運営チームは、以下のいずれかに該当すると判断した場合、利用登録を承認しない、または登録後にアカウントの利用を制限することがあります。</p>
+          </div>
+          <div className="space-y-1.5 pl-10 text-sm font-normal text-slate-300">
+            <p>(1) 登録情報に虚偽、誤りまたは不正確な情報が含まれている場合</p>
+            <p>(2) 過去に本規約に違反したことがある場合</p>
+            <p>(3) 複数アカウントの不正利用など、本サービスの公平性を損なうおそれがある場合</p>
+            <p>(4) その他、運営チームが本サービスの利用を適切でないと判断した場合</p>
+          </div>
+        </section>
+
+        {/* 第4条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第4条（アカウントおよび認証情報の管理）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. ユーザーは、自身のアカウントおよび認証情報を適切に管理する責任を負うものとします。</p>
+            <p>2. ユーザーは、自身のアカウントを第三者に貸与、譲渡、共有または利用させてはなりません。</p>
+            <p>3. ユーザーのアカウントを通じて行われた注文、取引、設定変更その他の操作は、当該ユーザーによる操作とみなします。</p>
+            <p>4. ユーザーの管理不十分、認証情報の漏洩、第三者による不正利用その他ユーザー側の事情によって生じた損害について、運営チームは、運営チームに故意または重大な過失がある場合を除き、責任を負わないものとします。</p>
+          </div>
+        </section>
+
+        {/* 第5条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第5条（複数アカウントおよび自動化行為）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. 原則として、ユーザー1人につき1つのアカウントを利用するものとします。</p>
+            <p>2. 以下のような行為は禁止します。</p>
+          </div>
+          <div className="space-y-1.5 pl-10 text-sm font-normal text-slate-300">
+            <p>(1) 大量のサブアカウントを作成または運用する行為</p>
+            <p>(2) 複数アカウントを利用して、ランキング、報酬、TEEその他の利益を不正に取得する行為</p>
+            <p>(3) ボット、自動化スクリプトその他の自動化された手段を利用して注文、ログイン、報酬取得その他の操作を行う行為</p>
+            <p>(4) 複数アカウントを利用した自作自演の取引、相場操縦その他市場の公平性を損なう行為</p>
+          </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            3. 運営チームは、不正利用の防止およびサービスの公平性を維持するため、必要な範囲でアカウントや取引データを確認することがあります。
+          </p>
+        </section>
+
+        {/* 第6条 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            二、アカウント登録および安全管理責任
+            第6条（仮想資産およびTEE）
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 登録情報の正確性：
+              1. 仮想資産としての性質
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              登録時は自身が正当に保有する有効なメールアドレスおよび情報を登録し、常に最新の状態を保つものとします。
+              本サービス内の模擬株式、TEE、配当その他の数値・ポイントは、すべて本サービス上のシミュレーションおよびゲーム体験のために提供される仮想的なものです。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              これらは現実の法定通貨、電子マネー、暗号資産、証券その他の金融資産ではありません。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. アカウントの管理義務：
+              2. 換金および譲渡の禁止
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              アカウントおよび認証情報の管理責任は利用者に帰属します。自身のアカウントを通じて行われた一切の注文・操作は、利用者本人の行為とみなされます。
+              TEE、模擬株式、アカウントその他本サービス内の資産について、現実の金銭その他の財産的利益との交換、売買、譲渡、貸与、担保設定その他これらに類する行為を行ってはなりません。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              いわゆるリアルマネートレード（RMT）も禁止します。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. 複数アカウント・ボット行為の禁止：
+              3. 残高・計算方法等の変更
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              原則として1人1アカウントとします。大量のサブアカウント作成や自動化スクリプトによる市場操作・ログインボーナス不正取得は固く禁止します。
+              運営チームは、サービスの運営、ゲームバランスの調整、システム変更その他の必要に応じて、模擬株式の計算方法、NAV、配当条件、TEEの付与条件その他の仕様を変更することがあります。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              これらの変更により、ユーザーの保有する仮想資産の数値や評価額等が変動する場合があります。
             </p>
           </div>
         </section>
 
-        <section className="space-y-6">
+        {/* 第7条 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            三、仮想資産およびゲーム内通貨（TEEコイン）に関する規定
-          </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. 法定通貨価値の不存在：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本プラットフォーム内の「TEEコイン」、模擬株式、配当金等はすべてゲーム内シミュレーション用途の仮想ポイントであり、現実の法定通貨価値や換金可能性はありません。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. リアルマネートレード（RMT）の全面禁止：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              いかなる手段によるTEEコインやアカウントの現金売買、譲渡、担保設定も厳禁とします。違反が確認された場合、当該アカウントを永久停止とします。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              3. バランス調整と管理権限：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              システムバランスの調整やアップデートに伴い、仮想資産の計算式や配当比率を改定する権利を当チームが留保します。
-            </p>
-          </div>
-        </section>
-
-        <section className="space-y-6">
-          <h2 className="text-xl font-normal text-slate-100">
-            四、利用者規律および禁止事項
+            第7条（禁止事項）
           </h2>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            本サービスの利用にあたり、以下の行為を行ってはなりません：
+            ユーザーは、本サービスの利用にあたり、以下の行為を行ってはなりません。
           </p>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. システムの公平性を損なう行為：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              バグの悪用、不正ツールの使用、過剰なAPIリクエストの送信、自己対当売買による相場操縦等。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. 不適切な発言・迷惑行為：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              ヘイトスピーチ、誹謗中傷、嫌がらせ、公序良俗に反する投稿、またはVTuberや他者への悪意ある攻撃。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              3. 権利侵害およびなりすまし：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              他者の知的財産権の無断侵害、運営スタッフやVTuber本人を詐称する行為。
-            </p>
+          <div className="space-y-1.5 pl-10 text-sm font-normal text-slate-300">
+            <p>1. 法令または公序良俗に違反する行為</p>
+            <p>2. 犯罪行為または犯罪行為につながるおそれのある行為</p>
+            <p>3. 本サービスのサーバー、ネットワークまたはシステムに過度な負荷を与える行為</p>
+            <p>4. DDoS攻撃その他、本サービスの運営を妨害する行為</p>
+            <p>5. バグ、仕様上の不具合または脆弱性を意図的に悪用する行為</p>
+            <p>6. 不正なツール、プログラム、スクリプトその他の手段を利用して、本サービスを不正に操作する行為</p>
+            <p>7. 自作自演の取引、相場操縦その他、市場の公平性を意図的に損なう行為</p>
+            <p>8. 複数アカウントを利用した報酬、TEEその他の不正取得</p>
+            <p>9. 他のユーザーの個人情報を不正に収集、公開または利用する行為</p>
+            <p>10. 他のユーザー、運営チーム、VTuber本人その他の第三者になりすます行為</p>
+            <p>11. 他者に対する嫌がらせ、脅迫、誹謗中傷その他の迷惑行為</p>
+            <p>12. 差別的、暴力的、露骨に性的またはその他他者に著しい不快感を与える内容を投稿または送信する行為</p>
+            <p>13. 他者の著作権、商標権、肖像権、プライバシーその他の権利または利益を侵害する行為</p>
+            <p>14. VTuber、タレント、企業、団体その他の第三者について、公式な関係があるかのように誤認させる行為</p>
+            <p>15. 本サービスを利用した営利目的の活動、広告、宣伝、勧誘その他運営チームが認めていない商業活動</p>
+            <p>16. その他、運営チームが本サービスの趣旨または運営上適切でないと判断する行為</p>
           </div>
         </section>
 
+        {/* 第8条 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            五、知的財産権の帰属
+            第8条（知的財産権）
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. プラットフォームの権利：
+              1. 本サービスに関する権利
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              teeteeStockのソースコード、UIデザイン、システム仕様、および文章の著作権は当チームに帰属します。
+              本サービスのプログラム、ソースコード、UIデザイン、ロゴ、文章、システム構成その他、本サービスに関して運営チームが作成したコンテンツおよび素材に関する著作権その他の権利は、運営チームまたは正当な権利者に帰属します。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本規約に基づく本サービスの利用は、これらの権利をユーザーに譲渡または許諾するものではありません。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. 第三者の権利尊重：
+              2. 第三者の権利
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              引用されているVTuber関連の商標・著作権は各権利者に帰属します。引用は非営利ファン活動におけるフェアユースの範囲で行われています。
+              本サービス上で取り扱われるVTuber、タレント、企業、キャラクター、名称、ロゴ、楽曲その他のコンテンツに関する知的財産権その他の権利は、それぞれの正当な権利者に帰属します。
             </p>
-          </div>
-        </section>
-
-        <section className="space-y-6">
-          <h2 className="text-xl font-normal text-slate-100">
-            六、免責事項およびサービスの変更・中断
-          </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. 現状有姿での提供：
-            </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本サービスは現状有姿（As-Is）で提供され、無中断性やエラーの完全な不存在を保証するものではありません。
+              本サービスは、これらの権利者との関係を不当に示したり、権利者の権利を侵害したりすることを意図するものではありません。
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. 免責範囲：
-            </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              通信障害、サーバー保守、天災等の不可抗力による仮想データの遅延やロールバックについて、金銭的賠償責任を負いません。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              3. 違反時の措置：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              利用規約への違反が認められた場合、当チームは予告なく警告、注文取消、アカウントの一時停止または永久剥奪を行うことができます。
+              権利者から適切な申し立てや削除要請等を受けた場合、運営チームは内容を確認のうえ、必要に応じて適切に対応します。
             </p>
           </div>
         </section>
 
-        <section className="space-y-6">
+        {/* 第9条 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            七、規約の変更および準拠法
+            第9条（サービスの変更・停止・中断）
           </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. 規約変更権：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              当チームは本規約を随時改定する権利を有します。改定後の規約は本プラットフォーム上に掲載された時点で効力を生じます。
-            </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            1. 運営チームは、以下の場合、本サービスの全部または一部を変更、停止または一時中断することがあります。
+          </p>
+          <div className="space-y-1.5 pl-10 text-sm font-normal text-slate-300">
+            <p>(1) サーバー、ネットワークその他のシステムの保守、更新または修理を行う場合</p>
+            <p>(2) システム障害、通信障害その他の技術的な問題が発生した場合</p>
+            <p>(3) 地震、台風、火災、停電その他の不可抗力が発生した場合</p>
+            <p>(4) セキュリティ上の問題または不正アクセス等への対応が必要な場合</p>
+            <p>(5) その他、運営チームが必要と判断した場合</p>
           </div>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>2. サービスの停止、中断、変更または終了により、ユーザーの仮想資産、取引履歴その他のデータに遅延、消失、ロールバックまたは不整合が発生する場合があります。</p>
+            <p>3. 運営チームは、故意または重大な過失がある場合を除き、これらによって生じた損害について責任を負わないものとします。</p>
+          </div>
+        </section>
 
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. 準拠法および管轄裁判所：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本規約の準拠法は中華民国法とします。本規約に起因する紛争については、台湾台北地方法院を第一審の専属的合意管轄裁判所とします。
+        {/* 第10条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第10条（アカウントの利用制限および停止）
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            1. 運営チームは、ユーザーが以下のいずれかに該当すると判断した場合、事前の通知なく、アカウントの利用制限、注文の取消し、仮想資産の調整、投稿内容の削除、一時停止またはアカウントの永久停止等の措置を行うことがあります。
+          </p>
+          <div className="space-y-1.5 pl-10 text-sm font-normal text-slate-300">
+            <p>(1) 本規約に違反した場合</p>
+            <p>(2) 不正な取引または市場操作が確認された場合</p>
+            <p>(3) バグやシステム上の不具合を悪用した場合</p>
+            <p>(4) 複数アカウントや自動化ツール等を利用して不正な利益を得た場合</p>
+            <p>(5) 第三者になりすました場合</p>
+            <p>(6) その他、本サービスの安全性、公平性または運営を著しく損なう行為を行った場合</p>
+          </div>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>2. 運営チームは、必要に応じて、不正に取得されたTEE、仮想資産その他のゲーム内データを無効化または修正することがあります。</p>
+            <p>3. 運営チームは、サービスの安全性や調査への影響を考慮し、措置の具体的な理由や調査方法の詳細を開示しない場合があります。</p>
+          </div>
+        </section>
+
+        {/* 第11条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第11条（免責事項）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. 本サービスは、現状有姿（As Is）で提供されます。</p>
+            <p>2. 運営チームは、本サービスについて、継続的に利用できること、エラーやバグが存在しないこと、データが完全かつ正確であること、ユーザーの特定の目的に適合すること等を保証するものではありません。</p>
+            <p>3. 本サービス上の株価、NAV、指数、チャート、配当その他のデータについて、その正確性、完全性、将来の結果等を保証するものではありません。</p>
+            <p>4. 本サービスは実際の金融商品取引ではないため、本サービス上の損益、価格変動、配当その他のシミュレーション結果について、現実の金銭的利益を保証するものではありません。</p>
+            <p>5. 通信障害、サーバー障害、メンテナンス、天災その他運営チームの合理的な支配を超える事情によって生じた損害について、運営チームは責任を負わないものとします。</p>
+            <p>6. ユーザーと第三者との間で、本サービスに関連して生じた取引、連絡、紛争その他の問題について、運営チームは、運営チームに故意または重大な過失がある場合を除き、責任を負わないものとします。</p>
+          </div>
+        </section>
+
+        {/* 第12条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第12条（サービス内容の変更および終了）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. 運営チームは、サービスの改善、運営上の都合、技術的な事情その他の理由により、本サービスの内容、仕様、機能または提供方法を変更することがあります。</p>
+            <p>2. 運営チームは、必要に応じて本サービスの全部または一部を終了することがあります。</p>
+            <p>3. 本サービスの変更または終了により、ユーザーが保有していた仮想資産、TEE、取引履歴その他のゲーム内データが利用できなくなる場合があります。</p>
+            <p>4. 本サービス終了時点で保有しているTEE、模擬株式その他の仮想資産について、現実の金銭その他の補償を行うものではありません。</p>
+          </div>
+        </section>
+
+        {/* 第13条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第13条（退会およびアカウント削除）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. ユーザーは、運営チームが定める方法により、いつでもアカウントの削除または退会を申請することができます。</p>
+            <p>2. アカウント削除後は、当該アカウントに関連する仮想資産、TEE、取引履歴その他のデータを利用できなくなる場合があります。</p>
+            <p>3. 個人情報の取扱いおよび削除については、別途定める「プライバシーポリシー」に従うものとします。</p>
+          </div>
+        </section>
+
+        {/* 第14条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第14条（個人情報の取扱い）
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            運営チームは、本サービスの利用によって取得する個人情報について、別途定める「プライバシーポリシー」に従い、適切に取り扱います。
+          </p>
+        </section>
+
+        {/* 第15条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第15条（本規約の変更）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. 運営チームは、必要に応じて本規約を変更することがあります。</p>
+            <p>2. 重要な変更を行う場合、運営チームは本サービス上への掲載その他適切な方法により、変更内容をユーザーに知らせるよう努めます。</p>
+            <p>3. 変更後の本規約は、本サービス上に掲載された時点または別途定める効力発生日から効力を生じるものとします。</p>
+            <p>4. 変更後も本サービスの利用を継続した場合、変更後の本規約に同意したものとみなします。</p>
+          </div>
+        </section>
+
+        {/* 第16条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第16条（通知および連絡）
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            ユーザーと運営チームとの間の通知または連絡は、本サービス上に設置するお問い合わせフォーム、登録されたメールアドレスその他運営チームが指定する方法により行うものとします。
+          </p>
+        </section>
+
+        {/* 第17条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第17条（権利義務の譲渡禁止）
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            ユーザーは、運営チームによる事前の書面による承諾なく、本規約上の地位または本規約に基づく権利もしくは義務を第三者に譲渡、移転、貸与または担保に供することはできません。
+          </p>
+        </section>
+
+        {/* 第18条 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            第18条（準拠法および管轄裁判所）
+          </h2>
+          <div className="space-y-2 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            <p>1. 本規約は、中華民国（台湾）の法律に準拠し、同法に従って解釈されるものとします。</p>
+            <p>2. 本規約または本サービスに関して、ユーザーと運営チームとの間で紛争が生じた場合、台湾台北地方裁判所（臺灣臺北地方法院）を第一審の専属的合意管轄裁判所とします。</p>
+          </div>
+          <div className="pt-2 pl-[2em]">
+            <p className="text-sm font-normal text-slate-200">
+              teeteeStock開発チーム
             </p>
           </div>
         </section>
