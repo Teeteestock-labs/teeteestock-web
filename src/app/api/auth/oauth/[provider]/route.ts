@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getBaseUrl, getGoogleAuthUrl } from '@/lib/oauth';
+import { getBaseUrl, getGoogleAuthUrl, getDiscordAuthUrl } from '@/lib/oauth';
 
 export async function GET(
   request: Request,
@@ -48,10 +48,40 @@ export async function GET(
       return response;
     }
 
-    if (provider === 'discord' || provider === 'github') {
+    if (provider === 'discord') {
+      const clientId = process.env.DISCORD_CLIENT_ID;
+      if (!clientId) {
+        return NextResponse.redirect(
+          new URL(`/login?error=${encodeURIComponent('Discord 登入服務尚未配置 Client ID')}`, baseUrl)
+        );
+      }
+
+      const discordAuthUrl = getDiscordAuthUrl(redirectUri, state);
+      const response = NextResponse.redirect(discordAuthUrl);
+
+      response.cookies.set('oauth_state', state, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 600
+      });
+
+      response.cookies.set('oauth_redirect', redirectTarget, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 600
+      });
+
+      return response;
+    }
+
+    if (provider === 'github') {
       return NextResponse.redirect(
         new URL(
-          `/login?notice=${encodeURIComponent(`目前已優先啟用 Google 快速登入，${provider === 'discord' ? 'Discord' : 'GitHub'} 即將開放！`)}`,
+          `/login?notice=${encodeURIComponent('目前已開通 Google 與 Discord 快速登入，GitHub 快速登入即將開放！')}`,
           baseUrl
         )
       );
