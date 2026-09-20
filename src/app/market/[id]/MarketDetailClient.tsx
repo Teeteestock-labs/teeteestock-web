@@ -623,28 +623,56 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             </div>
                         </div>
 
-                        {/* 頂部快捷按鈕列 (僅保留現價/漲停/跌停) */}
-                        <div className="grid grid-cols-3 border-b border-[#2B2F36] select-none text-xs font-bold bg-[#1E2329]/40">
+                        {/* 頂部快捷按鈕列 (現價 / 漲停 / 跌停) */}
+                        <div className="p-2.5 bg-[#12161c] border-b border-[#2B2F36] grid grid-cols-3 gap-2 select-none">
                             <button
                                 type="button"
                                 onClick={() => setOrderPrice(pair.price)}
-                                className="py-2.5 text-center text-[#EAECEF] border-r border-[#2B2F36] hover:bg-[#383f49] hover:text-white transition-all active:scale-95 bg-[#2B3139]"
+                                title={`填入現價 (${pair.price})`}
+                                className={`py-2 px-1.5 rounded-lg text-center font-bold text-xs transition-all duration-150 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-0.5 cursor-pointer border ${
+                                    orderPrice === pair.price
+                                        ? 'bg-slate-700/90 border-amber-400 text-amber-300 ring-1 ring-amber-400/50 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
+                                        : 'bg-[#22272f] hover:bg-[#2c323c] border-[#363c48] hover:border-slate-500 text-slate-200'
+                                }`}
                             >
-                                現價
+                                <span className="text-xs tracking-wider">現價</span>
+                                <span className="text-[10px] font-mono font-normal text-slate-400">
+                                    {pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setOrderPrice(ceiling)}
-                                className="py-2.5 text-center text-[#FF3B3B] border-r border-[#2B2F36] hover:bg-[#383f49] transition-all active:scale-95 bg-[#2B3139]"
+                                title={`填入漲停價 (${ceiling})`}
+                                className={`py-2 px-1.5 rounded-lg text-center font-bold text-xs transition-all duration-150 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-0.5 cursor-pointer border ${
+                                    orderPrice === ceiling
+                                        ? 'bg-red-900/60 border-red-500 text-red-200 ring-1 ring-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.25)]'
+                                        : 'bg-[#291417] hover:bg-[#36191d] border-[#4a2024] hover:border-red-500/70 text-[#FF4D4D]'
+                                }`}
                             >
-                                漲停
+                                <span className="text-xs tracking-wider flex items-center gap-0.5">
+                                    <span className="text-[9px]">▲</span> 漲停
+                                </span>
+                                <span className="text-[10px] font-mono font-normal text-red-400/80">
+                                    {ceiling.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setOrderPrice(floor)}
-                                className="py-2.5 text-center text-[#00FFA3] hover:bg-[#383f49] transition-all active:scale-95 bg-[#2B3139]"
+                                title={`填入跌停價 (${floor})`}
+                                className={`py-2 px-1.5 rounded-lg text-center font-bold text-xs transition-all duration-150 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-0.5 cursor-pointer border ${
+                                    orderPrice === floor
+                                        ? 'bg-emerald-900/60 border-emerald-400 text-emerald-200 ring-1 ring-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
+                                        : 'bg-[#0d231a] hover:bg-[#133024] border-[#184633] hover:border-emerald-500/70 text-[#00FFA3]'
+                                }`}
                             >
-                                跌停
+                                <span className="text-xs tracking-wider flex items-center gap-0.5">
+                                    <span className="text-[9px]">▼</span> 跌停
+                                </span>
+                                <span className="text-[10px] font-mono font-normal text-emerald-400/80">
+                                    {floor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
                             </button>
                         </div>
 
