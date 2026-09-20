@@ -9,6 +9,7 @@ export default function PrivacyContent() {
   if (lang === 'en') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
+        {/* Header */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             Privacy Policy
@@ -18,205 +19,329 @@ export default function PrivacyContent() {
           </p>
         </div>
 
+        {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            Welcome to teeteeStock exchange (&quot;the Platform&quot; or &quot;we&quot;). We attach great importance to your personal privacy and information security. To ensure that you can comfortably enjoy the VTuber concept matching simulation and fan community features provided on this Platform, we hereby outline our Privacy Policy (&quot;this Policy&quot;). By visiting, registering, or using this Platform, you are deemed to have read, understood, and agreed to this entire Policy.
+            Welcome to teeteeStock Exchange (&ldquo;teeteeStock,&rdquo; the &ldquo;Platform,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;).
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            teeteeStock is a fan-focused entertainment platform built around VTuber concept matching and simulated trading. We care about keeping the experience fun, simple, and respectful of your privacy.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            This Privacy Policy explains what information we collect, why we collect it, how we use it, and the choices you have over your information.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            By using teeteeStock, you acknowledge that you have read and understood this Privacy Policy.
           </p>
         </section>
 
+        {/* Section 1 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            1. Scope of Personal Data Collected
+            1. What Information We Collect
           </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We aim to collect only the information we need to run the Platform and provide its features.
+          </p>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Account Registration & Login Information:
+              1.1 Account Information
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              When you create an account, we only collect essential information required to sustain authentication functions, including your email address, irreversibly salted and hashed passwords (for local email accounts), or third-party authentication tokens/identifiers (Google, Discord) and customized display nickname and avatar.
+              When you create an account or sign in, we may collect:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>Your email address</li>
+              <li>Your password, if you use email and password sign-in</li>
+              <li>A third-party account identifier when you sign in with Google or Discord</li>
+              <li>Your display name</li>
+              <li>Your avatar</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Passwords for local accounts are stored using salted, one-way cryptographic hashing. We do not store them as plain text.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              You do not need to provide your real name, home address, or other unnecessary personal information to use a standard account.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Simulated Trading and Activity Records:
+              1.2 Simulated Trading and Activity
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              To maintain continuous matching calculations and weekly dividend settlements, our system logs your virtual shareholdings, order submissions, transaction history, TEE token balance, and daily check-in rewards.
+              Because teeteeStock includes a simulated trading system, we keep records needed to make that system work, such as:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>Virtual shareholdings</li>
+              <li>Orders and transaction history</li>
+              <li>TEE token balances</li>
+              <li>Daily check-in rewards</li>
+              <li>Simulated returns and other trading-related activity</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              This information allows us to maintain your portfolio, calculate market activity, and provide features such as weekly simulated dividends and matching calculations.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. Server Technical Logs:
+              1.3 Technical Information
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              When browsing the Platform, our servers automatically record connecting device IP addresses, browser types, operating systems, visit timestamps, and clickstream pathways. These data are strictly utilized to prevent malicious attacks, maintain server performance, and aggregate traffic patterns, and are never correlated with personal identities.
+              When you visit the Platform, our servers may automatically receive some basic technical information, such as:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>IP address</li>
+              <li>Browser type</li>
+              <li>Operating system</li>
+              <li>Date and time of access</li>
+              <li>Pages or features you use</li>
+              <li>General usage and clickstream information</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We use this information mainly to keep the Platform secure and reliable, troubleshoot problems, prevent abuse, and understand how the Platform is being used.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We do not use this information to build advertising profiles or sell it to advertisers.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              4. Non-Collection of Sensitive Financial Information:
+              1.4 Information We Don&apos;t Ask For
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              This Platform is purely a fan community entertainment simulation project and involves zero real money transactions. Therefore, we never actively request national ID numbers, real names, physical residential addresses, credit card numbers, or bank account credentials.
+              teeteeStock is an entertainment and fan-community simulation. It does not process real-money trades or payments.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Because of this, we do not ask you to provide:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>Government-issued ID numbers</li>
+              <li>Legal names</li>
+              <li>Home or mailing addresses</li>
+              <li>Credit card numbers</li>
+              <li>Bank account details</li>
+              <li>Real-money payment credentials</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Please avoid submitting sensitive information through the Platform unless we specifically ask for it for a reason explained in this Privacy Policy.
             </p>
           </div>
         </section>
 
+        {/* Section 2 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            2. Purpose of Data Utilization
+            2. How We Use Your Information
           </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We use the information we collect to run teeteeStock and keep it safe.
+          </p>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. User Verification & Account Security:
+              2.1 Account and Login
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Used to authenticate user identity, manage active sessions via HttpOnly tokens, and protect accounts from unauthorized access.
+              Your account information helps us:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>Sign you in</li>
+              <li>Keep your session active</li>
+              <li>Manage your account</li>
+              <li>Protect your account from unauthorized access</li>
+              <li>Detect suspicious or abusive activity</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Where appropriate, we use secure HttpOnly cookies or similar technologies to manage login sessions.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Matching Calculations & Asset Management:
+              2.2 Simulated Trading
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Used to execute concept stock order matching, calculate fluctuations in share NAV, compute investment return rates, and allocate weekly simulated dividends and TEE tokens.
+              We use your trading activity to:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>Process simulated orders</li>
+              <li>Maintain your virtual portfolio</li>
+              <li>Calculate simulated share values and NAV</li>
+              <li>Calculate simulated returns</li>
+              <li>Distribute weekly simulated dividends</li>
+              <li>Manage TEE tokens and rewards</li>
+              <li>Keep the Platform&apos;s market and matching systems consistent</li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              2.3 Keeping the Platform Safe
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We may use technical and activity information to help detect and prevent:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>Bots and automated abuse</li>
+              <li>Fake or duplicate accounts</li>
+              <li>Attempts to manipulate the simulated market</li>
+              <li>DDoS and other attacks</li>
+              <li>Activity that disrupts the Platform or other users</li>
+            </ul>
+          </div>
+        </section>
+
+        {/* Section 3 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            3. Cookies and Browser Storage
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Like many websites, teeteeStock uses cookies and browser storage technologies to make the Platform work properly.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            These technologies may help us:
+          </p>
+          <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+            <li>Keep you signed in</li>
+            <li>Maintain your session</li>
+            <li>Remember your preferences</li>
+            <li>Save settings such as language or display preferences</li>
+            <li>Support essential Platform features</li>
+          </ul>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            You can control cookies through your browser settings. Keep in mind that turning off certain cookies or browser storage features may affect things such as login and other parts of the Platform.
+          </p>
+        </section>
+
+        {/* Section 4 */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-normal text-slate-100">
+            4. How We Protect Your Information
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We take reasonable steps to protect the information we hold.
+          </p>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              4.1 Encryption and Password Security
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Connections to teeteeStock are protected using HTTPS/TLS.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              Passwords for local accounts are processed using salted, one-way cryptographic hashing before being stored. They are not stored in plain text.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. System Monitoring & Abuse Prevention:
+              4.2 Access to Data
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Used to detect and defend against automated scripts, multiple Sybil dummy accounts, and Distributed Denial of Service (DDoS) attempts.
+              Access to user and system data is limited to authorized people who need it for legitimate reasons, such as development, maintenance, troubleshooting, or security work.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We aim to keep access limited to what is reasonably necessary for those purposes.
             </p>
           </div>
         </section>
 
+        {/* Section 5 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            3. Use of Cookies and Local Storage Technologies
+            5. When We Share Information
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Maintaining Session State & Preferences:
+              5.1 We Don&apos;t Sell Your Personal Information
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              We utilize cookies and browser local storage to maintain session tokens, interface preferences (such as viewing modes and language selections), allowing seamless transitions across pages without repeatedly logging in.
+              We do not sell, rent, or lease your personal information to advertisers, marketing companies, or other businesses for their own marketing purposes.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Managing Settings:
+              5.2 Legal and Safety Reasons
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              You can modify or disable cookies at any time via your browser preferences. Please note that disabling cookies may impair certain features, such as staying logged in.
+              There may be situations where we need to disclose information, for example when it is reasonably necessary to:
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>Comply with applicable law</li>
+              <li>Respond to a valid subpoena, court order, or other lawful request</li>
+              <li>Respond to requests from government or judicial authorities</li>
+              <li>Protect the security or rights of teeteeStock or its users</li>
+              <li>Respond to an emergency involving a serious threat to someone&apos;s safety</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We aim to disclose only the information that is reasonably necessary for the relevant purpose.
             </p>
           </div>
         </section>
 
+        {/* Section 6 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            4. Information Security and Safeguards
+            6. Your Choices and Account Deletion
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. Transmission & Storage Encryption:
+              6.1 Updating Your Information
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Platform employs HTTPS/TLS encryption across all communications. User passwords are processed using irreversible, salted cryptographic hashing algorithms before being stored in the database.
+              You can manage certain account information directly through the Platform, including your display name and account settings.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. Strict Access Control:
+              6.2 Deleting Your Account
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              Only authorized core engineering personnel with strict operational requirements may access database records for system debugging and maintenance purposes.
+              If you decide to leave teeteeStock, you can contact us through our official contact channels and ask us to delete your account and associated personal information.
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              We will take reasonable steps to remove the applicable information from our active systems. Some information may need to be retained for legal, security, fraud-prevention, or other legitimate operational reasons.
             </p>
           </div>
         </section>
 
-        <section className="space-y-6">
+        {/* Section 7 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            5. Third-Party Sharing and Disclosures
+            7. Changes to This Policy
           </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. Never Sold or Rented:
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Platform will never sell, rent, lease, or distribute your personal data to any marketing agencies or commercial advertisers.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. Exceptions for Legal Compliance:
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              We may disclose necessary information only when compelled by valid legal subpoenas or official judicial requests, or in emergencies to protect the vital safety of individuals.
-            </p>
-          </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            As teeteeStock grows and changes, this Privacy Policy may change too.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            When we update it, we&apos;ll change the &ldquo;Last Updated&rdquo; date at the top of this page. Unless we say otherwise, the updated policy will take effect when it is posted on the Platform.
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            We recommend checking this page occasionally so you know what information we collect and how we use it.
+          </p>
         </section>
 
-        <section className="space-y-6">
+        {/* Section 8 */}
+        <section className="space-y-4">
           <h2 className="text-xl font-normal text-slate-100">
-            6. User Rights and Data Deletion
+            8. Contact Us
           </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. Access and Modification:
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              You may log in at any time to inspect and update your account nickname and settings.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. Right to Deletion (Right to Be Forgotten):
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              If you wish to terminate your account and have your personal information permanently deleted from our database, you may submit a request through our official contact channels.
-            </p>
-          </div>
-        </section>
-
-        <section className="space-y-6">
-          <h2 className="text-xl font-normal text-slate-100">
-            7. Policy Amendments and Contact Details
-          </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. Right to Amend:
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              The Platform reserves the right to amend this Privacy Policy at any time. Any changes become effective immediately upon posting to this website.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. Inquiries:
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              If you have any questions regarding this Privacy Policy or data privacy rights, feel free to reach out via our Contact Us page.
-            </p>
-          </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Have a question about privacy, your account, or how your information is handled?
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            Please reach out through our Contact Us page. We&apos;re happy to hear from you and will do our best to help.
+          </p>
         </section>
       </div>
     );
