@@ -350,6 +350,7 @@ export default function PrivacyContent() {
   if (lang === 'ja') {
     return (
       <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
+        {/* Header */}
         <div className="border-b border-slate-800/80 pb-6 space-y-2">
           <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
             プライバシーポリシー
@@ -359,203 +360,320 @@ export default function PrivacyContent() {
           </p>
         </div>
 
+        {/* Intro */}
         <section className="space-y-3">
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            teeteeStock（以下「本サービス」または「運営チーム」）へようこそ。運営チームはユーザーのプライバシーと個人情報の保護を極めて重視しています。VTuber模擬銘柄の模擬板寄せ取引やコミュニティ機能を安心してご利用いただくため、本プライバシーポリシー（以下「本ポリシー」）を定めます。本サービスの利用をもって、本ポリシーの全内容に同意したものとみなされます。
+            teeteeStock（以下「本サービス」または「本プラットフォーム」といいます。）では、ユーザーのプライバシーおよび個人情報の保護を大切にしています。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            本プライバシーポリシー（以下「本ポリシー」といいます。）は、本サービスにおいて取得する情報、その利用目的、管理方法およびユーザーの権利について定めるものです。
           </p>
         </section>
 
+        {/* 一、取得する情報 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            一、収集する個人情報の範囲
+            一、取得する情報
           </h2>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h3 className="text-base font-normal text-slate-200">
-              1. アカウント登録および認証情報：
+              1. アカウント登録およびログインに関する情報
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              アカウント作成時に、メールアドレス、不可逆的にハッシュ化されたパスワード、またはサードパーティ認証情報（Google、Discordの識別IDおよびアバター）、任意の表示ニックネーム等、ログイン維持に必要な最小限の情報を取得します。
+              アカウントの登録・ログイン時に、以下の情報を取得する場合があります。
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>メールアドレス</li>
+              <li>パスワードを安全な方法でハッシュ化した情報</li>
+              <li>Google、Discord等の外部認証サービスを利用した場合に提供されるユーザーID、メールアドレス、表示名、プロフィール画像等</li>
+              <li>ユーザーが任意で設定するニックネームその他のプロフィール情報</li>
+            </ul>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              取得する情報は、本サービスの提供およびアカウント管理に必要な範囲に限ります。
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-base font-normal text-slate-200">
+              2. 仮想資産およびサービス利用履歴
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本サービスの取引シミュレーション、TEEの付与、アカウント管理その他の機能を提供するため、以下の情報を記録します。
+            </p>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>保有する模擬銘柄および仮想資産の情報</li>
+              <li>注文および約定履歴</li>
+              <li>取引履歴</li>
+              <li>TEE残高</li>
+              <li>ログイン履歴および利用状況</li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3. アクセス情報およびサーバーログ
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本サービスへのアクセス時に、IPアドレス、ブラウザの種類、OS、アクセス日時、アクセス元その他の技術情報が自動的に記録される場合があります。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              これらの情報は、サービスの安定運用、不正アクセスや不正利用の防止、障害調査および統計的な分析等の目的で利用します。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. 模擬取引およびアクティビティ履歴：
+              4. 本サービスで原則として取得しない情報
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              約定エンジンの継続計算および週間配当金決算のため、保有銘柄残高、注文明細、約定履歴、TEEコイン残高、およびデイリーログイン実績を記録します。
+              本サービスでは、現実の金銭決済を行わないため、クレジットカード番号、銀行口座番号その他の決済情報を取得することはありません。
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              3. サーバー技術ログ：
-            </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              アクセス時に、IPアドレス、ブラウザ種別、OS、アクセス日時、ページ遷移経路が自動的に記録されます。これらは不正攻撃対策、サーバーパフォーマンス維持、統計分析のみに用いられ、個人を特定する目的では使用されません。
+              また、本サービスの通常利用において、本名、住所、マイナンバー等を登録する必要はありません。
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              4. 機密財務情報の非収集方針：
-            </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本サービスは非営利の同人エンターテインメント模擬企画であり、現実の金銭決済は一切行いません。マイナンバー、本名、現住所、クレジットカード番号、銀行口座番号等の機密性の高い個人財務情報を要求することは一切ありません。
+              ただし、ユーザーからのお問い合わせ、権利関係に関する申告その他の個別の手続きにおいて、ユーザーが自ら情報を提供した場合は、この限りではありません。
             </p>
           </div>
         </section>
 
+        {/* 二、個人情報の利用目的 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
             二、個人情報の利用目的
           </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            運営チームは、取得した情報を以下の目的で利用します。
+          </p>
+
+          <div className="space-y-3">
+            <h3 className="text-base font-normal text-slate-200">
+              1. 本サービスの提供および運営
+            </h3>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>アカウントの登録・ログイン・認証</li>
+              <li>セッションの維持</li>
+              <li>模擬銘柄の注文および約定処理</li>
+              <li>NAVその他のシミュレーションデータの計算</li>
+              <li>TEEその他の仮想資産の付与・管理</li>
+              <li>本サービスの機能提供および維持</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-base font-normal text-slate-200">
+              2. セキュリティおよび不正利用への対応
+            </h3>
+            <ul className="space-y-1.5 pl-10 text-sm font-normal text-slate-300 list-disc">
+              <li>不正アクセスの検知・防止</li>
+              <li>複数アカウントによる不正利用の確認</li>
+              <li>自動化ツールや不正なアクセスの検知</li>
+              <li>サービスへの過剰なアクセスや攻撃への対応</li>
+              <li>利用規約違反への対応</li>
+            </ul>
+          </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 会員認証とアカウント保護：
+              3. お問い合わせへの対応
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              ユーザーのログイン認証、セッション管理、および不正アクセスの防止に利用します。
+              ユーザーからのお問い合わせ、バグ報告、権利に関するご連絡その他のご相談に対応するために、必要な情報を利用します。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              必要に応じて、本人確認やお問い合わせ内容の確認を行う場合があります。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. 約定シミュレーションと仮想資産管理：
+              4. サービスの改善および障害対応
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              模擬銘柄の注文約定処理、NAV変動計算、損益計算、および週間配当金・TEEコインの付与処理に利用します。
+              本サービスの利用状況や技術情報を分析し、機能改善、パフォーマンス向上、障害調査およびサービスの安定運用に利用します。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              3. 不正対策およびシステム監視：
+              5. 重要なお知らせ
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              不正スクリプト、複数アカウントによるボーナス不正取得、DDoS攻撃等の検知・防御に利用します。
-            </p>
-          </div>
-        </section>
-
-        <section className="space-y-6">
-          <h2 className="text-xl font-normal text-slate-100">
-            三、クッキー（Cookie）およびローカルストレージの利用
-          </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. ログイン状態と設定の保持：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              セッション認証情報、表示モード、言語選択設定を保持するためにブラウザのCookieおよびローカルストレージを利用します。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. ブラウザによる設定管理：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              ユーザーはブラウザ設定によりCookieの無効化や削除が可能です。ただし、無効化によりログイン維持等の一部の機能が正常に動作しない場合があります。
-            </p>
-          </div>
-        </section>
-
-        <section className="space-y-6">
-          <h2 className="text-xl font-normal text-slate-100">
-            四、情報セキュリティおよび安全管理措置
-          </h2>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              1. 暗号化通信とパスワード管理：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              全通信においてHTTPS（TLS）暗号化を適用しています。パスワードは不可逆的なソルト付きハッシュ化処理を施してデータベースに格納されます。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-normal text-slate-200">
-              2. アクセス権限の厳格化：
-            </h3>
-            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              システム保守・障害対応に必要な最小限の担当者のみが厳格な管理下でデータベースにアクセスします。
+              メンテナンス、サービスの変更、セキュリティ上の重要なお知らせその他、本サービスの利用に必要な情報をお知らせするために利用します。
             </p>
           </div>
         </section>
 
+        {/* 三、Cookieおよびローカルストレージについて */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            五、第三者提供および開示の制限
+            三、Cookieおよびローカルストレージについて
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 個人情報の売却・譲渡禁止：
+              1. 利用目的
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              運営チームは、ユーザーの個人情報をマーケティング業者や第三者に売却、賃貸、または譲渡することは一切ありません。
+              本サービスでは、ログイン状態の維持、表示設定、言語設定その他の機能を提供するため、Cookieおよびブラウザのローカルストレージを利用する場合があります。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. 法令に基づく例外開示：
+              2. Cookie等の管理
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              法令に基づく裁判所・警察等の公的機関からの正当な要請がある場合、または生命・財産保護のために緊急を要する場合に限り、必要最小限の情報を提供することがあります。
+              ユーザーは、ブラウザの設定によりCookieを削除または無効化することができます。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              ただし、Cookie等を無効にした場合、ログイン状態の維持など、本サービスの一部の機能が正常に利用できなくなる場合があります。
             </p>
           </div>
         </section>
 
+        {/* 四、情報の安全管理 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            六、ユーザーの権利およびデータ削除（忘れられる権利）
+            四、情報の安全管理
           </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            運営チームは、取得した個人情報について、漏えい、滅失、毀損その他の不正な取扱いを防止するため、適切な安全管理措置を講じます。
+          </p>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 情報の確認と修正：
+              1. 通信の暗号化
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              ユーザーはいつでもログインし、自身のニックネームや設定情報を確認・変更できます。
+              本サービスでは、HTTPS（TLS）による暗号化通信を利用しています。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. アカウントおよびデータの完全削除：
+              2. パスワードの管理
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              サービスの利用終了および個人情報の完全削除を希望される場合、公式のお問い合わせ窓口より申請いただけます。本人確認の上、速やかに削除処理を実施します。
+              ユーザーのパスワードは、そのままの状態で保存せず、安全な方法でハッシュ化して管理します。
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3. アクセス権限の管理
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              個人情報へのアクセスは、本サービスの運営、保守または障害対応に必要な範囲に限定し、適切に管理します。
             </p>
           </div>
         </section>
 
+        {/* 五、第三者への提供および業務委託 */}
         <section className="space-y-6">
           <h2 className="text-xl font-normal text-slate-100">
-            七、プライバシーポリシーの改定およびお問い合わせ先
+            五、第三者への提供および業務委託
           </h2>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              1. 改定手続き：
+              1. 個人情報の販売・貸与について
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              当運営は本ポリシーを随時改定する権利を有します。改定後の内容は本ウェブサイト上に掲載された時点で有効となります。
+              運営チームは、ユーザーの個人情報を販売、貸与またはマーケティング目的で第三者に提供することはありません。
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-base font-normal text-slate-200">
-              2. お問い合わせ先：
+              2. サービス提供に必要な業務委託
             </h3>
             <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-              本ポリシーまたは個人情報管理に関するご質問は、本プラットフォームの「お問い合わせ」フォームよりご連絡ください。
+              本サービスの運営に必要な範囲で、サーバー、メール配信、認証、アクセス解析その他のサービスを提供する第三者に対し、個人情報の取扱いを委託する場合があります。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              この場合、運営チームは、必要な範囲で適切に情報を取り扱うよう管理します。
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3. 法令等に基づく開示
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              法令に基づく要請がある場合、裁判所、警察その他の公的機関から正当な手続きにより情報の提供を求められた場合、または生命、身体、財産その他の重要な権利利益を保護するために必要な場合には、必要な範囲で情報を提供することがあります。
+            </p>
+          </div>
+        </section>
+
+        {/* 六、ユーザーによる情報の確認・訂正・削除 */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-normal text-slate-100">
+            六、ユーザーによる情報の確認・訂正・削除
+          </h2>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              1. 登録情報の確認・変更
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              ユーザーは、本サービス上で提供される機能を通じて、自身のニックネームその他の設定情報を確認・変更できる場合があります。
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              2. 個人情報に関するお問い合わせ
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              自身の個人情報について、確認、訂正、削除その他のご要望がある場合は、本サービスの「お問い合わせ」フォームよりご連絡ください。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              本人確認等、必要な確認を行ったうえで、法令および本サービスの運営上必要な範囲において対応します。
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-base font-normal text-slate-200">
+              3. アカウントの削除
+            </h3>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              アカウントの削除を希望する場合は、「お問い合わせ」フォームよりご連絡ください。
+            </p>
+            <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+              アカウント削除後も、法令上保存が必要な情報、セキュリティ上の理由から一定期間保存する情報、または匿名化・統計化された情報については、直ちに削除されない場合があります。
+            </p>
+          </div>
+        </section>
+
+        {/* 七、プライバシーポリシーの変更 */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            七、プライバシーポリシーの変更
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            運営チームは、法令の変更、本サービスの内容変更その他の事情に応じて、本ポリシーを変更する場合があります。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            変更後の本ポリシーは、本サービス上に掲載した時点または別途定める時点から適用されます。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            重要な変更がある場合には、本サービス上でお知らせする場合があります。
+          </p>
+        </section>
+
+        {/* 八、お問い合わせ */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-slate-100">
+            八、お問い合わせ
+          </h2>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            本ポリシーまたは個人情報の取扱いに関するお問い合わせは、本サービスの「お問い合わせ」フォームよりご連絡ください。
+          </p>
+          <div className="pt-2 pl-[2em]">
+            <p className="text-sm font-normal text-slate-200">
+              teeteeStock開発チーム
             </p>
           </div>
         </section>
