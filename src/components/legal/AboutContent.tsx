@@ -307,100 +307,185 @@ export default function AboutContent() {
   // 預設繁體中文 (zh)
   return (
     <div className="bg-[#0a111a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-8 font-normal text-slate-300">
-      <div className="border-b border-slate-800/80 pb-6">
+      {/* Header */}
+      <div className="border-b border-slate-800/80 pb-6 space-y-1">
         <h1 className="text-xl sm:text-2xl font-normal tracking-tight text-white">
-          關於 teeteeStock
+          teeteeStock（貼貼交易所）
         </h1>
-        <p className="text-xs font-normal text-slate-400 mt-1">
-          VTuber 概念指數與社群娛樂虛擬撮合交易所
+        <p className="text-xs sm:text-sm font-normal text-slate-400">
+          專為 VTuber 觀眾打造的概念股虛擬交易所。
         </p>
       </div>
 
+      {/* Intro */}
       <section className="space-y-3">
+        <div className="space-y-1 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          <p>喜歡的組合今天又貼在一起了？</p>
+          <p>這次的「貼貼」有沒有漲停？</p>
+        </div>
         <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-          teeteeStock（貼貼交易所）是專為 VTuber 觀眾所打造的概念股虛擬交易所。
+          在 teeteeStock，你可以把那些讓你忍不住喊出「這組合漲停了吧！」的瞬間，變成一場有趣的虛擬市場遊戲。
         </p>
       </section>
 
-      <section className="space-y-3">
+      {/* Section 1 */}
+      <section className="space-y-4">
         <h2 className="text-xl font-normal text-slate-100">
-          一、平台理念：將「貼貼」數值化
+          一、我們想做的事：把「貼貼」變成看得見的數字
         </h2>
         <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-          在日語裡，「てぇてぇ（TeeTee）」主要以 VTuber 社群中，用來形容「同伴、成員或推的角色之間感情融洽、互動親密」象徵著兩位之間真摯、珍貴且令人心動的互動。我們深信，粉絲們每一次因直播同台而激動、因雙人合唱而感動的情緒，都具有真實且不可磨滅的「精神價值」。
+          在 VTuber 社群裡，「てぇてぇ（TeeTee）」是一個用來形容兩位角色之間親密互動、深厚羈絆，以及那種讓粉絲忍不住感到「好珍貴、好喜歡」的美好瞬間。
+        </p>
+        <div className="space-y-1 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          <p>可能是一場直播中的默契互動，</p>
+          <p>可能是一首雙人合唱，</p>
+          <p>也可能只是兩個人不經意的一句話。</p>
+        </div>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          對粉絲來說，這些瞬間都有著特別的價值。
         </p>
         <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-          而每次感受到這個精神時，總會想說：「這兩人的價值已經漲停！」。因此，TeeteeStock 將這種美好的情感具象化——讓您推的每一組 VTuber CP / 組合化身為交易所中的個股。在這裡，您的應援不再只是單向的觀看，而是能透過虛擬股份共同見證她們的成長與榮耀！
+          而每當看到這種場景，我們總會忍不住想：
+        </p>
+        <div className="py-2 pl-[2em] text-sm text-slate-200 font-normal leading-relaxed">
+          <p>「這兩個人的股票是不是已經漲停了？」</p>
+        </div>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          於是，teeteeStock 就這樣誕生了。
+        </p>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          我們把 VTuber 的 CP、組合與各種「貼貼」關係，變成可以在交易所裡持有的<strong className="font-normal text-slate-100">概念股</strong>。
+        </p>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          在這裡，應援不只是單純地觀看與等待下一次聯動；你也可以透過虛擬股份，陪著喜歡的組合一起經歷每一次活動、每一次波動，以及每一個值得記住的瞬間。
+        </p>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          當然，這裡沒有真的錢，也不用擔心賠錢。
+        </p>
+        <p className="text-sm font-normal text-slate-200 leading-relaxed [text-indent:2em]">
+          我們只是想把「貼貼」這件事，變成一場大家可以一起玩的遊戲。
         </p>
       </section>
 
+      {/* Section 2 */}
       <section className="space-y-6">
         <h2 className="text-xl font-normal text-slate-100">
-          二、核心特色與運作機制
+          二、怎麼玩？看看你的推今天有沒有漲
         </h2>
 
-        <div className="space-y-2">
+        {/* 2.1 */}
+        <div className="space-y-3">
           <h3 className="text-base font-normal text-slate-200">
-            1. 現實連動驅動基本面
+            1. VTuber 的活動，會影響「基本面」
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            各組合的基本面「每股淨值 」與其在現實中的活動緊密連動：
+            每個組合都有自己的基本價值。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            而這個數字並不是一成不變的——當你喜歡的組合有新的活動，市場也會跟著發生變化。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            例如：
           </p>
           <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
             <div className="flex items-start gap-2 leading-relaxed">
               <span className="shrink-0 select-none">●</span>
-              <span>普通雙人直播 / 聯動：推升當週基本面加成。</span>
+              <span className="text-slate-200">普通雙人直播／聯動</span>
             </div>
             <div className="flex items-start gap-2 leading-relaxed">
               <span className="shrink-0 select-none">●</span>
-              <span>重大 3D 節目同台：帶來強力的價值突破。</span>
+              <span className="text-slate-200">重大 3D 節目同台</span>
             </div>
             <div className="flex items-start gap-2 leading-relaxed">
               <span className="shrink-0 select-none">●</span>
-              <span>原創曲發布 / 重大聯動活動：引爆超高淨值倍率！</span>
+              <span className="text-slate-200">原創曲發布／大型聯動活動</span>
             </div>
           </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            等等，會影響基本價值變化的各種活動。
+          </p>
         </div>
 
-        <div className="space-y-2">
+        {/* 2.2 */}
+        <div className="space-y-3">
           <h3 className="text-base font-normal text-slate-200">
-            2. 真實連續撮合引擎與盤口深度
+            2. 不只是看看分數，真的可以「掛單」玩玩看
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            非單純的數字遊戲，teeteeStock 擁有比照現代股票市場的交易模式：
+            teeteeStock 不只是把大家的貼貼程度換成一個分數而已。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            我們做了一套參考真實股票市場設計的虛擬交易系統，讓你可以實際掛單、買進、賣出，看看自己看好的組合在市場裡會有什麼樣的表現。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            你可以看到：
           </p>
           <div className="text-sm font-normal text-slate-300 space-y-1.5 pl-[2em]">
             <div className="flex items-start gap-2 leading-relaxed">
               <span className="shrink-0 select-none">●</span>
-              <span>即時報價系統：提供即時買賣五檔深度掛單。</span>
+              <span className="text-slate-200">即時買賣五檔</span>
             </div>
             <div className="flex items-start gap-2 leading-relaxed">
               <span className="shrink-0 select-none">●</span>
-              <span>漲跌停限制 (±20%) 與檔位規則：維持市場價格穩定有序。</span>
+              <span className="text-slate-200">漲跌停限制（&plusmn;20%）與檔位規則</span>
             </div>
             <div className="flex items-start gap-2 leading-relaxed">
               <span className="shrink-0 select-none">●</span>
-              <span>分時走勢與多週期 K 線圖：支援 1 分、5 分、日線、週線與月線，以及「還原 K 線」等功能。</span>
+              <span className="text-slate-200">分時走勢與 K 線圖</span>
+            </div>
+            <div className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 select-none">●</span>
+              <span className="text-slate-200">還原 K 線</span>
             </div>
           </div>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            可以認真研究市場，也可以只想看自己的推「今天到底有沒有漲」。
+          </p>
         </div>
 
-        <div className="space-y-2">
+        {/* 2.3 */}
+        <div className="space-y-3">
           <h3 className="text-base font-normal text-slate-200">
-            3. 每週現金股利發放
+            3. TEE 配息
           </h3>
           <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-            每週定期根據各組合當週聯動結果除息結算，並固定發放股利。支援「還原成本」計算，得以清楚檢視扣除歷年配息後的真實持倉損益。
+            我們會根據各組合的聯動與活動發放<strong className="font-normal text-slate-200">虛擬配息 TEE</strong>。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            teeteeStock 也提供<strong className="font-normal text-slate-200">「還原成本」</strong>功能。
+          </p>
+          <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+            它會把過去收到的配息一起考慮進去，讓你更容易看懂自己的實際持倉表現，以及一路陪著這組 CP 到現在，究竟累積了多少成果。
           </p>
         </div>
       </section>
 
-      <section className="space-y-3">
+      {/* Section 3 */}
+      <section className="space-y-4">
         <h2 className="text-xl font-normal text-slate-100">
-          三、友善應援宗旨
+          三、最重要的事：開心推就好
         </h2>
         <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
-          本交易所之走勢與指數僅供粉絲娛樂同歡，請帶著輕鬆、愉快的心情享受應援與市場波動的樂趣！
+          teeteeStock 的股價、指數與各種市場數據，都是為了<strong className="font-normal text-slate-200">粉絲娛樂與社群互動</strong>而設計的。
+        </p>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          這裡沒有真的錢，也不是投資建議。
+        </p>
+        <div className="space-y-1 text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          <p>你可以認真研究 K 線、研究五檔、研究市場；</p>
+          <p>也可以單純因為「今天這兩個人又貼了」就開心買一張。</p>
+        </div>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          沒有標準答案。
+        </p>
+        <p className="text-sm font-normal text-slate-200 leading-relaxed [text-indent:2em]">
+          看到喜歡的組合一起出現，就值得開心。
+        </p>
+        <p className="text-sm font-normal text-slate-300 leading-relaxed [text-indent:2em]">
+          希望 teeteeStock 能成為一個讓大家一邊追 VTuber、一邊玩玩市場，偶爾因為一句「我買xxx連漲三根」而忍不住笑出來的小地方。
+        </p>
+        <p className="text-sm font-normal text-slate-200 leading-relaxed [text-indent:2em]">
+          祝各位推活愉快，也祝大家天天貼貼。
         </p>
       </section>
     </div>
