@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { MarketStatus, EventType, ReviewStatus } from '@/types/enums';
+import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 
 const WARNING_LINE = 10;          // 警戒線
 const DELISTING_LINE = 5;         // 下市線
 const MIN_VALUE = 0.1;            // 淨值/價格最低值
 
 export async function GET() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  if (session !== getExpectedAuthToken()) {
+    return NextResponse.json({ error: '未授權' }, { status: 401 });
+  }
   try {
     const pairs = await prisma.cpPairs.findMany({
       where: { status: { not: MarketStatus.DELISTED } }

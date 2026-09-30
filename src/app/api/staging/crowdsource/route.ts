@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { EventType, ReviewStatus } from '@/types/enums';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
+    // 安全修復：需要登入才能投稿事件
+    const authUser = await getAuthenticatedUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: '請先登入才能投稿事件。' }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { pairId, eventType, url, rawText, userId } = body;
+    const { pairId, eventType, url, rawText } = body;
 
     if (!pairId || !eventType || !url || !rawText) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -44,7 +51,7 @@ export async function POST(request: Request) {
         url,
         type,
         title: rawText,
-        reporter: userId || 'USER_ID',
+        reporter: authUser.id,
         status: ReviewStatus.PENDING,
         createdAt: body.createdAt ? new Date(body.createdAt) : undefined
       }

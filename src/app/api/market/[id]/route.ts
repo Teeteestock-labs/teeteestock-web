@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { checkAndTickMarketStatus } from '@/services/settlementService';
 
 export async function GET(
   request: Request,
@@ -8,6 +9,7 @@ export async function GET(
   try {
     const resolvedParams = await params;
     const dbId = resolvedParams.id.toUpperCase();
+    const marketStatus = await checkAndTickMarketStatus(new Date());
 
     const pair = await prisma.cpPairs.findUnique({
       where: { id: dbId }
@@ -24,7 +26,8 @@ export async function GET(
       openingPrice: pair.openingPrice,
       todayOpenPrice: pair.todayOpenPrice,
       status: pair.status,
-      warningWeeks: pair.warningWeeks
+      warningWeeks: pair.warningWeeks,
+      marketStatus
     });
   } catch (error) {
     console.error('Error fetching market detail:', error);

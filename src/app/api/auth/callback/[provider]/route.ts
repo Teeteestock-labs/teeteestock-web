@@ -77,7 +77,10 @@ export async function GET(
       const tokenData = await exchangeDiscordCode(code, redirectUri);
       const profile = await getDiscordUserProfile(tokenData.access_token);
 
-      const email = (profile.email || `${profile.id}@discord.teeteestock.com`).toLowerCase().trim();
+      // 安全修復：未驗證的 Discord email 不可信，改用安全的 fallback 避免帳號劫持
+      const email = (profile.verified && profile.email)
+        ? profile.email.toLowerCase().trim()
+        : `${profile.id}@discord.teeteestock.com`;
 
       profileData = {
         provider: 'discord',
@@ -152,7 +155,8 @@ export async function GET(
     );
 
     // 6. 設定 Cookie 並導回使用者原本目標頁面
-    const safeRedirect = redirectTarget.startsWith('/') ? redirectTarget : '/';
+    // 安全修復：防止 open redirect（//evil.com 以 / 開頭但會跳轉外部）
+    const safeRedirect = (redirectTarget.startsWith('/') && !redirectTarget.startsWith('//')) ? redirectTarget : '/';
     const response = NextResponse.redirect(new URL(safeRedirect, baseUrl));
 
     response.cookies.set({

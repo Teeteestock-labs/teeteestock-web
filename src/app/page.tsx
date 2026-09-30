@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, memo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTee } from "@/context/TeeContext";
@@ -96,7 +96,7 @@ const renderMiniKBar = (
   );
 };
 
-function TickerItem({ pair, viewMode }: TickerItemProps) {
+const TickerItem = memo(function TickerItem({ pair, viewMode }: TickerItemProps) {
   const router = useRouter();
   const [flashClass, setFlashClass] = useState("");
   const prevPriceRef = useRef(pair.price);
@@ -433,7 +433,7 @@ function TickerItem({ pair, viewMode }: TickerItemProps) {
       </div>
     </Link>
   );
-}
+});
 
 // ── Asset Donut Chart Component ──
 const SLICE_COLORS = [

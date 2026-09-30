@@ -17,8 +17,9 @@ export async function POST(request: Request) {
 
     const authUser = await getAuthenticatedUser(request);
     const body = await request.json().catch(() => ({}));
-    const { orderId, userId } = body as { orderId: string; userId?: string };
-    const targetUserId = authUser?.id || (userId && userId !== 'default_player' ? userId : 'default_player');
+    const { orderId } = body as { orderId: string; userId?: string };
+    // 安全修復：未驗證的請求一律強制使用 default_player，不信任 body.userId
+    const targetUserId = authUser?.id || 'default_player';
 
     if (!orderId) {
       return NextResponse.json({ error: 'Missing orderId' }, { status: 400 });

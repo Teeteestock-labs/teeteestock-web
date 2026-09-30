@@ -144,6 +144,7 @@ export async function getDiscordUserProfile(accessToken: string) {
     username: data.username,
     name: data.global_name || data.username,
     email: data.email,
-    avatar: avatarUrl
+    avatar: avatarUrl,
+    verified: data.verified ?? false
   };
 }

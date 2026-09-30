@@ -119,13 +119,28 @@ interface RateLimitRecord {
   resetTime: number;
 }
 
+// ⚠️ In-memory rate limiter：僅適用於 single-instance 部署。Serverless 環境需改用 Redis/DB。
 const rateLimitMap = new Map<string, RateLimitRecord>();
+let lastCleanup = Date.now();
+
+function cleanupExpiredEntries() {
+  const now = Date.now();
+  // 每 60 秒清理一次過期記錄，防止 memory leak
+  if (now - lastCleanup < 60000) return;
+  lastCleanup = now;
+  for (const [key, record] of rateLimitMap) {
+    if (now > record.resetTime) {
+      rateLimitMap.delete(key);
+    }
+  }
+}
 
 export function checkRateLimit(key: string, maxAttempts = 5, windowMs = 60000): {
   allowed: boolean;
   remaining: number;
   resetMs: number;
 } {
+  cleanupExpiredEntries();
   const now = Date.now();
   const record = rateLimitMap.get(key);
 

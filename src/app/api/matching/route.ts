@@ -36,18 +36,20 @@ export async function POST(request: Request) {
       }, { status: 200 });
     }
 
-    const results = await prisma.$transaction(async (tx) => {
-      // 1. 撈取目前所有未下市的 CP 組合
-      const pairs = await tx.cpPairs.findMany({
-        where: {
-          status: { not: MarketStatus.DELISTED },
-          id: { not: 'hololive' }
-        },
-      });
+    // 1. 撈取目前所有未下市的 CP 組合
+    const pairs = await prisma.cpPairs.findMany({
+      where: {
+        status: { not: MarketStatus.DELISTED },
+        id: { not: 'hololive' }
+      },
+    });
 
-      const matchedPairsLog: any[] = [];
+    const matchedPairsLog: any[] = [];
 
-      for (const pair of pairs) {
+    // 每個 CP 組合獨立 transaction，避免一對失敗導致全市場回滾
+    for (const pair of pairs) {
+      try {
+      const pairResult = await prisma.$transaction(async (tx) => {
         // 2. 撈取特定 pairId 的所有未成交委託單 (此時已包含 18:45 時 MARKET_MAKER 部署的委託單)，依據 createdAt ASC 排序以執行時間優先原則
         const dbOrders = await tx.orderBook.findMany({
           where: { pairId: pair.id },
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
         });
 
         if (dbOrders.length === 0) {
-          continue; // 沒有委託單，直接看下一個 CP
+          return null; // 沒有委託單，直接看下一個 CP
         }
 
         // 分離為買單與賣單
@@ -111,7 +113,7 @@ export async function POST(request: Request) {
             status: 'NO_MATCH',
             message: '流標：買賣盤口無價格交集或無委託單。',
           });
-          continue;
+          return null;
         }
 
         // 取出 MatchVolume 最大值對應的價格候選
@@ -178,12 +180,16 @@ export async function POST(request: Request) {
             // Cancel the older order (Cancel Oldest strategy)
             const isBuyOlder = bOrder.createdAt.getTime() < sOrder.createdAt.getTime();
             if (isBuyOlder) {
-              await tx.orderBook.delete({ where: { id: bOrder.id } });
+              try {
+                await tx.orderBook.delete({ where: { id: bOrder.id } });
+              } catch { /* 訂單可能已被用戶撤銷 */ }
               console.log(`[🛡️ SMP] Self-match detected for user ${bOrder.userId} on ${pair.id}. Cancelled older BUY order ${bOrder.id}`);
               bOrder.isCancelled = true;
               buyIdx++;
             } else {
-              await tx.orderBook.delete({ where: { id: sOrder.id } });
+              try {
+                await tx.orderBook.delete({ where: { id: sOrder.id } });
+              } catch { /* 訂單可能已被用戶撤銷 */ }
               console.log(`[🛡️ SMP] Self-match detected for user ${sOrder.userId} on ${pair.id}. Cancelled older SELL order ${sOrder.id}`);
               sOrder.isCancelled = true;
               sellIdx++;
@@ -213,6 +219,19 @@ export async function POST(request: Request) {
             // 計算金額
             // 買方實扣金額 = finalPrice * matchVol
             const buyerCost = parseFloat((finalPrice * matchVol).toFixed(2));
+
+            // 安全防護：檢查買方餘額是否足夠（MARKET_MAKER 除外）
+            if (buyerId !== 'MARKET_MAKER') {
+              const buyerAccCheck = await tx.userAccount.findUnique({
+                where: { userId: buyerId }
+              });
+              const currentBalance = buyerAccCheck ? Number(buyerAccCheck.balance) : 0;
+              if (currentBalance < buyerCost) {
+                console.warn(`[Matching] 買方餘額不足，跳過撮合。買方: ${buyerId}, 餘額: ${currentBalance}, 需要: ${buyerCost}`);
+                continue;
+              }
+            }
+
             await tx.userAccount.update({
               where: { userId: buyerId },
               data: { balance: { decrement: buyerCost } },
@@ -316,26 +335,34 @@ export async function POST(request: Request) {
         // 為了確保佇列指針更新的順序，我們處理剩餘尚未完全成交但有部分成交且未被撤銷的單
         for (const bo of buyQueue) {
           if (!bo.isCancelled && bo.remainingVolume !== bo.volume) {
-            if (bo.remainingVolume === 0) {
-              await tx.orderBook.delete({ where: { id: bo.id } });
-            } else {
-              await tx.orderBook.update({
-                where: { id: bo.id },
-                data: { volume: bo.remainingVolume },
-              });
+            try {
+              if (bo.remainingVolume === 0) {
+                await tx.orderBook.delete({ where: { id: bo.id } });
+              } else {
+                await tx.orderBook.update({
+                  where: { id: bo.id },
+                  data: { volume: bo.remainingVolume },
+                });
+              }
+            } catch {
+              console.warn(`[Matching] 訂單 ${bo.id} 已被撤銷或不存在，跳過清理。`);
             }
           }
         }
 
         for (const so of sellQueue) {
           if (!so.isCancelled && so.remainingVolume !== so.volume) {
-            if (so.remainingVolume === 0) {
-              await tx.orderBook.delete({ where: { id: so.id } });
-            } else {
-              await tx.orderBook.update({
-                where: { id: so.id },
-                data: { volume: so.remainingVolume },
-              });
+            try {
+              if (so.remainingVolume === 0) {
+                await tx.orderBook.delete({ where: { id: so.id } });
+              } else {
+                await tx.orderBook.update({
+                  where: { id: so.id },
+                  data: { volume: so.remainingVolume },
+                });
+              }
+            } catch {
+              console.warn(`[Matching] 訂單 ${so.id} 已被撤銷或不存在，跳過清理。`);
             }
           }
         }
@@ -419,15 +446,23 @@ export async function POST(request: Request) {
           totalVolume: actualTradedVolume,
           tradesCount: tradesCreated.length,
         });
-      }
 
-      return matchedPairsLog;
-    }, { timeout: 25000 });
+        return true;
+      }, { timeout: 15000 });
+      } catch (pairError) {
+        console.error(`[Matching] Pair ${pair.id} 撮合失敗，已單獨回滾:`, pairError);
+        matchedPairsLog.push({
+          pairId: pair.id,
+          status: 'ERROR',
+          error: pairError instanceof Error ? pairError.message : String(pairError),
+        });
+      }
+    }
 
   return NextResponse.json(serializeBigInt({
     success: true,
     message: '撮合執行完成',
-    results,
+    results: matchedPairsLog,
   }), { status: 200 });
 
   } catch (error) {

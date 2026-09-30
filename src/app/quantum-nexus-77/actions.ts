@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { ReviewStatus } from '@/types/enums';
 import { runPoll } from '@/cron/crawler';
 import { runDailyRolloverOrSettlement } from '@/services/settlementService';
+import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 
 function safeRevalidatePath(path: string) {
   try {
@@ -14,8 +16,17 @@ function safeRevalidatePath(path: string) {
   }
 }
 
+/** 所有管理員 Server Action 必須先通過此驗證 */
+async function requireAdmin() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  if (session !== getExpectedAuthToken()) {
+    throw new Error('未授權：需要管理員權限。');
+  }
+}
 
 export async function approveEvent(id: string, type: string, reason?: string) {
+  await requireAdmin();
   const event = await prisma.teeteeEvents.findUnique({ where: { id } });
   if (!event || event.status !== ReviewStatus.PENDING) return;
 
@@ -53,6 +64,7 @@ export async function approveEvent(id: string, type: string, reason?: string) {
 }
 
 export async function rejectEvent(id: string, reason?: string) {
+  await requireAdmin();
   await prisma.teeteeEvents.update({
     where: { id },
     data: { 
@@ -66,6 +78,7 @@ export async function rejectEvent(id: string, reason?: string) {
 
 
 export async function triggerSettlement() {
+  await requireAdmin();
   try {
     await runDailyRolloverOrSettlement({ forceAction: 'settle' });
     safeRevalidatePath('/admin');
@@ -78,6 +91,7 @@ export async function triggerSettlement() {
 }
 
 export async function triggerCrawler() {
+  await requireAdmin();
   try {
     const result = await runPoll();
     safeRevalidatePath('/admin');
@@ -90,6 +104,7 @@ export async function triggerCrawler() {
 }
 
 export async function updateAdminAdjust(pairId: string, value: number, reason: string, url: string) {
+  await requireAdmin();
   if (value === 0) {
     throw new Error('微調加成百分比不能為 0！');
   }
@@ -138,6 +153,7 @@ export async function updateAdminAdjust(pairId: string, value: number, reason: s
 }
 
 export async function approveOneAndRejectOthers(approvedId: string, rejectIds: string[], type: string, approvedReason?: string, rejectReason?: string) {
+  await requireAdmin();
   await prisma.$transaction(async (tx) => {
     // 1. Approve the selected event and update its type and reason
     const event = await tx.teeteeEvents.findUnique({ where: { id: approvedId } });
@@ -183,6 +199,7 @@ export async function approveOneAndRejectOthers(approvedId: string, rejectIds: s
 }
 
 export async function rejectMultipleEvents(ids: string[], reason?: string) {
+  await requireAdmin();
   await prisma.teeteeEvents.updateMany({
     where: { id: { in: ids } },
     data: { 
@@ -202,6 +219,7 @@ export async function updateProcessedEvent(
   status: string,
   reason: string
 ) {
+  await requireAdmin();
   if (!title || title.trim() === '') {
     throw new Error('標題不能為空！');
   }
@@ -259,6 +277,7 @@ export async function updateProcessedEvent(
 }
 
 export async function deleteProcessedEvent(id: string) {
+  await requireAdmin();
   await prisma.teeteeEvents.delete({
     where: { id }
   });
@@ -267,6 +286,7 @@ export async function deleteProcessedEvent(id: string) {
 }
 
 export async function dispatchEventToCP(eventId: string, targetPairId: string) {
+  await requireAdmin();
   const current = await prisma.teeteeEvents.findUnique({ where: { id: eventId } });
   const existingReason = current?.reason ? current.reason : '';
   const targetUpper = targetPairId.toUpperCase();
@@ -289,6 +309,7 @@ export async function dispatchEventToCP(eventId: string, targetPairId: string) {
 }
 
 export async function updateInquiryStatus(id: string, status: string) {
+  await requireAdmin();
   await prisma.contactInquiry.update({
     where: { id },
     data: { status },
@@ -298,6 +319,7 @@ export async function updateInquiryStatus(id: string, status: string) {
 }
 
 export async function deleteInquiry(id: string) {
+  await requireAdmin();
   await prisma.contactInquiry.delete({
     where: { id },
   });

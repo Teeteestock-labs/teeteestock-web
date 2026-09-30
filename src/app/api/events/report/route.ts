@@ -28,13 +28,16 @@ export async function POST(request: Request) {
 
     const dbPairId = PAIR_ID_MAP[pairId.toLowerCase()] || pairId;
 
-    // Basic URL validation matching frontend patterns
-    const lowerUrl = url.toLowerCase().trim();
-    const isValidPlatform = 
-      lowerUrl.includes('youtube.com') || 
-      lowerUrl.includes('youtu.be') || 
-      lowerUrl.includes('x.com') || 
-      lowerUrl.includes('twitter.com');
+    // URL 驗證：解析 hostname 防止 .includes() 繞過（如 evil.com?ref=youtube.com）
+    let isValidPlatform = false;
+    try {
+      const parsedUrl = new URL(url.trim());
+      const hostname = parsedUrl.hostname.toLowerCase();
+      const ALLOWED_HOSTS = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'];
+      isValidPlatform = ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h));
+    } catch {
+      // URL 解析失敗
+    }
 
     if (!isValidPlatform) {
       return NextResponse.json({ error: 'Only YouTube or X/Twitter URLs are allowed' }, { status: 400 });

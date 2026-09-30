@@ -214,8 +214,8 @@ export async function runDailyRolloverOrSettlement(options?: {
     }
   }
 
-  // Guard against duplicate settlement (only for automatic background runs when forceAction is not provided)
-  if (action === 'settle' && !options?.forceAction) {
+  // Guard against duplicate settlement（無論自動或手動觸發皆適用）
+  if (action === 'settle') {
     const anyPair = await prisma.cpPairs.findFirst({
       where: { lastSettledAt: { not: null } },
       orderBy: { lastSettledAt: 'desc' }
@@ -237,7 +237,7 @@ export async function runDailyRolloverOrSettlement(options?: {
     // ── Scenario 1: Weekday Rollover (Tue-Sat 24:00) ──
     const results = await prisma.$transaction(async (tx) => {
       const pairs = await tx.cpPairs.findMany({
-        where: { status: { not: MarketStatus.DELISTED } }
+        where: { status: { not: MarketStatus.DELISTED }, id: { not: 'hololive' } }
       });
 
       const rolloverLogs = [];
@@ -257,9 +257,10 @@ export async function runDailyRolloverOrSettlement(options?: {
         // Expire all pending orders first
         await expireAndRefundOrders(tx, pair.id);
 
-        // Delete all trades for this pair to clear the transaction history for the new day
+        // 保留歷史交易記錄（供 firstBoughtAt 等查詢使用），僅清理 30 天前的舊資料
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         await tx.trades.deleteMany({
-          where: { pairId: pair.id }
+          where: { pairId: pair.id, createdAt: { lt: thirtyDaysAgo } }
         });
 
         // Write closingPrice directly to currentPrice, openingPrice, last_close_price and next_open_price, and reset todayOpenPrice
@@ -293,7 +294,7 @@ export async function runDailyRolloverOrSettlement(options?: {
     // ── Scenario 2: Sunday Settlement (Sun 24:00) ──
     const result = await prisma.$transaction(async (tx) => {
       const pairs = await tx.cpPairs.findMany({
-        where: { status: { not: MarketStatus.DELISTED } }
+        where: { status: { not: MarketStatus.DELISTED }, id: { not: 'hololive' } }
       });
 
       const settlementLogs: any[] = [];
@@ -372,9 +373,10 @@ export async function runDailyRolloverOrSettlement(options?: {
         // 7. Expire all pending orders first (refunds to players)
         await expireAndRefundOrders(tx, latestPair.id);
 
-        // Delete all trades for this pair to clear the transaction history for the new week
+        // 保留歷史交易記錄（供 firstBoughtAt 等查詢使用），僅清理 30 天前的舊資料
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         await tx.trades.deleteMany({
-          where: { pairId: latestPair.id }
+          where: { pairId: latestPair.id, createdAt: { lt: thirtyDaysAgo } }
         });
 
         // 8. Update CP Pair in database (write currentPrice, openingPrice, last_close_price, next_open_price, and reset todayOpenPrice)
@@ -555,7 +557,7 @@ export async function runDailyRolloverOrSettlement(options?: {
 export async function runPreMarketMMDeployment(_now: Date = new Date()) {
   const result = await prisma.$transaction(async (tx) => {
     const pairs = await tx.cpPairs.findMany({
-      where: { status: { not: MarketStatus.DELISTED } }
+      where: { status: { not: MarketStatus.DELISTED }, id: { not: 'hololive' } }
     });
 
     const updatedPairs = [];
@@ -659,12 +661,12 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
 
   // 2. Transition from CLOSED/SETTLING to CLOSED_SETTLED (Daily Rollover / Weekly Settlement at 18:30)
   if ((currentStatus === 'CLOSED' || currentStatus === 'SETTLING') && clockStatus === 'ROLLOVER') {
-    console.log(`[State Machine] Transitioning ${currentStatus} -> CLOSED_SETTLED (Executing Rollover/Settlement) at ${now.toISOString()}`);
+    console.log(`[State Machine] Transitioning ${currentStatus} -> SETTLING (Executing Rollover/Settlement) at ${now.toISOString()}`);
     
-    // Atomic check-and-set
+    // Atomic check-and-set: 先設為 SETTLING 表示進行中
     const updatedSettled = await prisma.systemConfig.updateMany({
       where: { id: 1, marketStatus: currentStatus },
-      data: { marketStatus: 'CLOSED_SETTLED' }
+      data: { marketStatus: 'SETTLING' }
     });
     
     if (updatedSettled.count > 0) {
@@ -673,8 +675,19 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
         const sysConf = await prisma.systemConfig.findUnique({ where: { id: 1 } });
         const action: 'settle' | 'rollover' = (sysConf?.pendingDividendSettle) ? 'settle' : 'rollover';
         await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
+        // 成功後才轉換到 CLOSED_SETTLED
+        await prisma.systemConfig.updateMany({
+          where: { id: 1, marketStatus: 'SETTLING' },
+          data: { marketStatus: 'CLOSED_SETTLED' }
+        });
       } catch (err) {
         console.error('[Rollover/Settlement Error]:', err);
+        // 失敗時回滾到 CLOSED，讓下次 tick 可以重試
+        await prisma.systemConfig.updateMany({
+          where: { id: 1, marketStatus: 'SETTLING' },
+          data: { marketStatus: 'CLOSED' }
+        });
+        return 'CLOSED';
       }
       return 'CLOSED_SETTLED';
     }
@@ -720,7 +733,7 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
         const hoursSinceLastSettle = anySettledPair?.lastSettledAt
           ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
           : 999;
-        const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes < 1110);
+        const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes >= 1110);
         const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
         await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
       } catch (err) {
@@ -753,7 +766,7 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
           const hoursSinceLastSettle = anySettledPair?.lastSettledAt
             ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
             : 999;
-          const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes < 1110);
+          const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes >= 1110);
           const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
           await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
         } catch (err) {
@@ -817,6 +830,16 @@ export async function stageManualDividendSettlement() {
     throw new Error(`除息功能尚在冷卻中（156小時冷卻機制），距離下次可除息尚需 ${hours} 小時 ${mins} 分鐘。`);
   }
 
+  // 原子鎖：防止並發觸發（使用 pendingDividendSettle 作為互斥鎖）
+  const lockResult = await prisma.systemConfig.updateMany({
+    where: { id: 1, pendingDividendSettle: false },
+    data: { pendingDividendSettle: true }
+  });
+  if (lockResult.count === 0) {
+    throw new Error('除息排程已在進行中，請勿重複觸發。');
+  }
+
+  try {
   const stagedResults = await prisma.$transaction(async (tx) => {
     const pairs = await tx.cpPairs.findMany({
       where: { status: { not: MarketStatus.DELISTED } }
@@ -890,4 +913,12 @@ export async function stageManualDividendSettlement() {
     message: '已成功試算除息參考價並完成暫存！股利發放、單簿清空與實際價格調整將於週二 18:30 (ROLLOVER) 自動劃轉生效。',
     stagedResults
   };
+  } catch (err) {
+    // 失敗時釋放原子鎖，允許重試
+    await prisma.systemConfig.updateMany({
+      where: { id: 1 },
+      data: { pendingDividendSettle: false }
+    });
+    throw err;
+  }
 }

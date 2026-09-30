@@ -12,6 +12,18 @@ export async function GET(request: Request) {
     const currentUserId = authUser?.id || 'default_player';
     const now = new Date();
     const marketStatus = await checkAndTickMarketStatus(now);
+
+    // 結算進行中時凍結回傳，避免讀到半結算的髒資料
+    if (marketStatus === 'SETTLING') {
+      return NextResponse.json({
+        success: true,
+        pairs: [],
+        orders: [],
+        marketStatus: 'SETTLING',
+        message: '結算作業進行中，資料暫時凍結。'
+      });
+    }
+
     const activeTrading = getActiveTradingDay(now);
     const { startUTC, endUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);
 
@@ -75,15 +87,17 @@ export async function GET(request: Request) {
       // Aggregate 1-minute K-lines into 300 1-minute buckets (19:00 to 24:00)
       const chartPoints = new Array(300).fill(null);
 
+      // 效能優化：DateTimeFormat 只建立一次，避免在迴圈內重複實例化
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Taipei',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false
+      });
+
       p.klineHistory.forEach(h => {
         const date = new Date(h.timestamp);
         
-        const formatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'Asia/Taipei',
-          hour: 'numeric',
-          minute: 'numeric',
-          hour12: false
-        });
         const parts = formatter.formatToParts(date);
         let hour = parseInt(parts.find(x => x.type === 'hour')?.value || '19', 10);
         const minute = parseInt(parts.find(x => x.type === 'minute')?.value || '0', 10);
@@ -101,7 +115,7 @@ export async function GET(request: Request) {
         }
         
         let index = minutesSince1900;
-        if (index >= 300) index = 299;
+        if (index >= 300 || index < 0) return; // 超出 19:00-24:00 範圍，忽略
         
         if (index >= 0) {
           chartPoints[index] = {
@@ -238,8 +252,10 @@ export async function GET(request: Request) {
       };
     });
 
-    // Query pending orders from OrderBook table
-    const dbOrders = await prisma.orderBook.findMany();
+    // Query pending orders from OrderBook table（僅查詢活躍交易對）
+    const dbOrders = await prisma.orderBook.findMany({
+      where: { pairId: { in: pairs.map(p => p.id) } }
+    });
     const mappedOrders = dbOrders.map(o => ({
       id: o.id,
       pairId: o.pairId,
@@ -247,7 +263,7 @@ export async function GET(request: Request) {
       price: o.price,
       amount: o.volume,
       isUser: o.userId === currentUserId,
-      botId: o.userId !== currentUserId ? o.userId : undefined,
+      botId: o.userId !== currentUserId ? true : undefined,
       timestamp: o.createdAt.getTime()
     }));
 

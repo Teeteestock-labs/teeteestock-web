@@ -65,10 +65,8 @@ export async function POST(request: Request) {
       type = EventType.STREAM_3D;
     }
 
-    let status = ReviewStatus.PENDING;
-    if (body.status === ReviewStatus.APPROVED || body.status === ReviewStatus.REJECTED || body.status === ReviewStatus.PENDING) {
-      status = body.status;
-    }
+    // 安全修復：外部 API 建立的事件一律為 PENDING，僅管理員審核可設為 APPROVED
+    const status = ReviewStatus.PENDING;
 
     const event = await prisma.teeteeEvents.create({
       data: {

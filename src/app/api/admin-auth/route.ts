@@ -3,6 +3,9 @@ import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || '8a0925685d4fe09c7c7181a3f1e4ff44';
+if (!process.env.ADMIN_SECRET_KEY) {
+  console.warn('[SECURITY WARNING] ADMIN_SECRET_KEY 未設定，使用預設值。請在生產環境設定安全的密鑰！');
+}
 export const AUTH_COOKIE_NAME = 'teetee_admin_session';
 
 export function getExpectedAuthToken() {

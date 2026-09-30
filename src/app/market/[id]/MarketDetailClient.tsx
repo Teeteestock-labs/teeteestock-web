@@ -6,10 +6,16 @@ import { teeteePair } from "@/app/types";
 import { useTee } from "@/context/TeeContext";
 import { useAuth } from "@/context/AuthContext";
 import { getTeeTeeNews } from "./actions";
-import CandlestickChart from "@/components/CandlestickChart";
 import TickerTape from "@/components/TickerTape";
 import { alignToTick, getTickSize } from "@/utils/validatePrice";
 import BottomNav from "@/components/BottomNav";
+
+import ChartSection from "./components/ChartSection";
+import OrderPanel from "./components/OrderPanel";
+import OrderHistoryPanel from "./components/OrderHistoryPanel";
+import TradeTickerPanel from "./components/TradeTickerPanel";
+import NewsReportSection from "./components/NewsReportSection";
+import NotificationBanner, { NotificationType, BannerNotification } from "./components/NotificationBanner";
 
 const PAIR_ID_MAP: Record<string, string> = {
   'micomet': 'MCMT',
@@ -121,29 +127,6 @@ export default function MarketDetailClient({ id }: { id: string }) {
         });
     }, [rawDisplayData, isAdjustedKline, dividends, activeTab]); 
 
-
-
-    if(!pair){
-        return(
-            <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center">
-                <h1 className="text-2xl text-[#FF3B3B] mb-4 font-black">找不到該交易對</h1>
-                <Link href="/" className="text-[#848E9C] hover:text-white transition-colors border-b border-dotted">返回交易大廳</Link>
-            </div>
-        );
-    }
-
-    const { bids, asks } = getOrderBook(pair.id);
-
-    type NotificationType = 'buy_submit' | 'sell_submit' | 'match_deal' | 'failed';
-    interface BannerNotification {
-        id: string;
-        type: NotificationType;
-        price: number;
-        amount: number;
-        message?: string;
-        isFading: boolean;
-    }
-
     const [notifications, setNotifications] = useState<BannerNotification[]>([]);
     const prevOrdersRef = useRef<any[]>([]);
     const cancelledOrderIdsRef = useRef<Set<string>>(new Set());
@@ -173,7 +156,6 @@ export default function MarketDetailClient({ id }: { id: string }) {
         setNotifications(prev => prev.filter(n => n.id !== notifId));
     };
 
-    // Auto-detect filled orders (成交) from order book changes
     useEffect(() => {
         if (!pair) return;
         if (!orders) {
@@ -190,11 +172,9 @@ export default function MarketDetailClient({ id }: { id: string }) {
                     if (cancelledOrderIdsRef.current.has(oldOrder.id)) {
                         cancelledOrderIdsRef.current.delete(oldOrder.id);
                     } else {
-                        // Fully filled!
                         addNotification('match_deal', oldOrder.price, oldOrder.amount);
                     }
                 } else if (newOrder.amount < oldOrder.amount) {
-                    // Partially filled
                     const filledVol = oldOrder.amount - newOrder.amount;
                     addNotification('match_deal', oldOrder.price, filledVol);
                 }
@@ -206,6 +186,17 @@ export default function MarketDetailClient({ id }: { id: string }) {
     useEffect(() => {
         getTeeTeeNews(id).then(data => setNewsList(data));
     }, [id]);
+
+    if(!pair){
+        return(
+            <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center">
+                <h1 className="text-2xl text-[#FF3B3B] mb-4 font-black">找不到該交易對</h1>
+                <Link href="/" className="text-[#848E9C] hover:text-white transition-colors border-b border-dotted">返回交易大廳</Link>
+            </div>
+        );
+    }
+
+    const { bids, asks } = getOrderBook(pair.id);
 
     const paddedBids = [...bids.slice(0, 5)];
     while (paddedBids.length < 5) {
@@ -250,7 +241,6 @@ export default function MarketDetailClient({ id }: { id: string }) {
         setAmount(amount + 1);
     };
 
-    // Calculate total bid/ask volume and ratio
     const totalBidVol = paddedBids.reduce((acc, b) => acc + (b?.amount || 0), 0);
     const totalAskVol = paddedAsks.reduce((acc, a) => acc + (a?.amount || 0), 0);
     const bidRatio = totalBidVol + totalAskVol > 0 ? (totalBidVol / (totalBidVol + totalAskVol)) * 100 : 50;
@@ -343,7 +333,6 @@ export default function MarketDetailClient({ id }: { id: string }) {
     const isUp = pair.change24h >= 0;
     const priceDiff = pair.price - (pair.yesterdayPrice || pair.price);
 
-    // Calculate today's high and low prices from history points
     const historyPoints = pair.history || [];
     const validKBarPoints = historyPoints.filter(pt => pt !== null);
     const firstTradeIdx = validKBarPoints.findIndex(pt => pt.volume > 0);
@@ -358,16 +347,13 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
     const yesterdayPrice = pair.yesterdayPrice || pair.price;
 
-    // Amplitude: (最高 - 最低) / 昨收 * 100
     const amplitude = yesterdayPrice > 0 ? ((highVal - lowVal) / yesterdayPrice) * 100 : 0;
 
-    // Average Price (VWAP) calculation
     const todayTrades = pair.recentTrades || [];
     const totalTradeVol = todayTrades.reduce((sum, t) => sum + t.amount, 0);
     const totalTradeVal = todayTrades.reduce((sum, t) => sum + (t.price * t.amount), 0);
     const avgPrice = totalTradeVol > 0 ? (totalTradeVal / totalTradeVol) : null;
 
-    // Helpers to compare against yesterday's close price
     const getCompareColor = (val: number | null | undefined) => {
         if (val === null || val === undefined) return 'text-gray-400';
         if (val > yesterdayPrice) return 'text-[#FF3B3B]'; // Red
@@ -379,21 +365,19 @@ export default function MarketDetailClient({ id }: { id: string }) {
         <div className="min-h-screen bg-slate-950 flex flex-col pb-20">
             <TickerTape />
             <main className="flex-1 text-[#EAECEF] pt-2 px-4 pb-4 md:pt-3 md:px-6 md:pb-6 font-sans">
-            {/* 頂部導覽 */}
-            <div className="max-w-[1600px] w-full mx-auto mb-3 flex justify-end items-center border-b border-[#2B2F36]/60 pb-1.5">
-                <div className="text-[10px] text-[#848E9C] font-mono">
-                    MARKET: {marketStatus === 'OPEN' ? <span className="text-[#00FFA3]">OPEN</span> : <span className="text-[#FF3B3B]">CLOSED</span>}
+                <div className="max-w-[1600px] w-full mx-auto mb-3 flex justify-end items-center border-b border-[#2B2F36]/60 pb-1.5">
+                    <div className="text-[10px] text-[#848E9C] font-mono">
+                        MARKET: {marketStatus === 'OPEN' ? <span className="text-[#00FFA3]">OPEN</span> : <span className="text-[#FF3B3B]">CLOSED</span>}
+                    </div>
                 </div>
-            </div>
 
-            {marketStatus !== 'OPEN' && marketStatus !== 'PRE_MARKET' && marketStatus !== 'MAINTENANCE' && (
-                <div className="max-w-[1600px] w-full mx-auto mb-6 bg-red-500/20 text-red-500 text-center py-2 text-sm font-bold animate-pulse rounded border border-red-500/50">
-                    ⚠️ 交易所目前處於非營運時段，開盤時間為週二至週日 19:00 - 24:00 (18:45 開放盤前掛單)。 ⚠️
-                </div>
-            )}
+                {marketStatus !== 'OPEN' && marketStatus !== 'PRE_MARKET' && marketStatus !== 'MAINTENANCE' && (
+                    <div className="max-w-[1600px] w-full mx-auto mb-6 bg-red-500/20 text-red-500 text-center py-2 text-sm font-bold animate-pulse rounded border border-red-500/50">
+                        ⚠️ 交易所目前處於非營運時段，開盤時間為週二至週日 19:00 - 24:00 (18:45 開放盤前掛單)。 ⚠️
+                    </div>
+                )}
 
-            <div className="max-w-[1600px] w-full mx-auto space-y-4">
-                    {/* 標題卡片 - 仿看盤軟體頂部 */}
+                <div className="max-w-[1600px] w-full mx-auto space-y-4">
                     <div className="sticky top-0 z-30 bg-[#181A20]/95 backdrop-blur-sm border border-[#2B2F36] p-5 rounded flex flex-row items-center justify-between gap-4 shadow-xl">
                         <div className="flex items-center gap-4 min-w-0">
                             <div className="min-w-0">
@@ -428,13 +412,11 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
                             return (
                                 <div className="flex items-center gap-5 flex-shrink-0 select-none">
-                                    {/* 成交量區 */}
                                     <div className={volumeContainerClass}>
                                         <span className="leading-none">成交量</span>
                                         <span className="leading-none mt-1">{pair.todayVolume.toLocaleString()}</span>
                                     </div>
 
-                                    {/* 價格與漲跌區 */}
                                     <div className={containerClass}>
                                         <p className={priceClass}>
                                             {pair.price.toFixed(2)}
@@ -449,878 +431,104 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         })()}
                     </div>
 
-                    {/* 技術分析圖表 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded h-96 flex flex-col overflow-hidden shadow-xl">
-                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center text-xs font-bold select-none">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] animate-pulse shadow-[0_0_8px_#38BDF8]" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">技術分析圖表</h3>
-                            </div>
-                            <div className="flex gap-4">
-                                <span 
-                                    onClick={() => setActiveTab('time')}
-                                    className={`pb-0.5 cursor-pointer transition-colors ${activeTab === 'time' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                                >
-                                    分時圖
-                                </span>
-                                <span 
-                                    onClick={() => setActiveTab('k')}
-                                    className={`pb-0.5 cursor-pointer transition-colors ${activeTab === 'k' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                                >
-                                    K線圖
-                                </span>
-                                <span 
-                                    onClick={() => setActiveTab('detail')}
-                                    className={`pb-0.5 cursor-pointer transition-colors ${activeTab === 'detail' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                                >
-                                    詳細
-                                </span>
-                            </div>
-                        </div>
+                    <ChartSection 
+                        pair={pair}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        chartRange={chartRange}
+                        setChartRange={setChartRange}
+                        klinePeriod={klinePeriod}
+                        setKlinePeriod={setKlinePeriod}
+                        isAdjustedKline={isAdjustedKline}
+                        setIsAdjustedKline={setIsAdjustedKline}
+                        displayData={displayData}
+                        loadingChart={loadingChart}
+                        yesterdayPrice={yesterdayPrice}
+                        ceiling={ceiling}
+                        floor={floor}
+                        highVal={highVal}
+                        lowVal={lowVal}
+                        amplitude={amplitude}
+                        avgPrice={avgPrice}
+                        getCompareColor={getCompareColor}
+                    />
 
-                        {activeTab !== 'detail' && (
-                            <div className="border-b border-[#2B2F36] px-3 py-1.5 flex items-center justify-between text-[9px] font-normal text-[#848E9C] bg-[#1E2329]/50 select-none">
-                                <div className="flex gap-2 items-center">
-                                    {activeTab === 'time' ? (
-                                        // 分時圖區間按鈕
-                                        (['1D', '1W', '1M', '6M', 'YTD', '1Y', '5Y'] as const).map((r) => {
-                                            const labelMap = {
-                                                '1D': '當日',
-                                                '1W': '1周',
-                                                '1M': '1個月',
-                                                '6M': '6月',
-                                                'YTD': '本年迄今',
-                                                '1Y': '1年',
-                                                '5Y': '5年'
-                                            };
-                                            return (
-                                                <span 
-                                                    key={r}
-                                                    onClick={() => setChartRange(r)}
-                                                    className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${chartRange === r ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
-                                                >
-                                                    {labelMap[r]}
-                                                </span>
-                                            );
-                                        })
-                                    ) : (
-                                        // K線圖週期按鈕
-                                        (['1m', '5m', '1D', '1W', '1M'] as const).map((p) => {
-                                            const labelMap = {
-                                                '1m': isAdjustedKline ? '還原1分' : '1分k',
-                                                '5m': isAdjustedKline ? '還原5分' : '5分k',
-                                                '1D': isAdjustedKline ? '還原日' : '日k',
-                                                '1W': isAdjustedKline ? '還原周' : '周k',
-                                                '1M': isAdjustedKline ? '還原月' : '月k'
-                                            };
-                                            return (
-                                                <span 
-                                                    key={p}
-                                                    onClick={() => setKlinePeriod(p)}
-                                                    className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:text-white ${klinePeriod === p ? 'bg-[#FF69B4]/10 text-[#FF69B4] font-bold border border-[#FF69B4]/25' : 'hover:bg-[#2B2F36]'}`}
-                                                >
-                                                    {labelMap[p]}
-                                                </span>
-                                            );
-                                        })
-                                    )}
-                                </div>
+                    <OrderPanel 
+                        pair={pair}
+                        paddedBids={paddedBids}
+                        paddedAsks={paddedAsks}
+                        maxQty={maxQty}
+                        bidRatio={bidRatio}
+                        totalBidVol={totalBidVol}
+                        totalAskVol={totalAskVol}
+                        orderPrice={orderPrice}
+                        setOrderPrice={setOrderPrice}
+                        amount={amount}
+                        setAmount={setAmount}
+                        handleIncrement={handleIncrement}
+                        handleDecrement={handleDecrement}
+                        handleAmountIncrement={handleAmountIncrement}
+                        handleAmountDecrement={handleAmountDecrement}
+                        handleAction={handleAction}
+                        balance={balance}
+                        availableBalance={availableBalance}
+                        myHolding={myHolding}
+                        totalHolding={totalHolding}
+                        avgCost={avgCost}
+                        profitLoss={profitLoss}
+                        profitPercentage={profitPercentage}
+                        estimatedTotal={estimatedTotal}
+                        ceiling={ceiling}
+                        floor={floor}
+                        refPrice={refPrice}
+                        isSubmitting={isSubmitting}
+                        marketStatus={marketStatus}
+                    />
 
-                                {/* K線圖專用：右側還原/原始切換按鈕 */}
-                                {activeTab === 'k' && (
-                                    <button
-                                        onClick={() => setIsAdjustedKline(!isAdjustedKline)}
-                                        className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all flex items-center gap-1.5 select-none border cursor-pointer ${
-                                            isAdjustedKline
-                                                ? 'bg-[#FF69B4]/20 text-[#FF69B4] border-[#FF69B4]/50 shadow-[0_0_8px_rgba(255,105,180,0.3)] font-black'
-                                                : 'bg-[#2B2F36]/60 text-[#848E9C] border-transparent hover:text-white hover:bg-[#2B2F36]'
-                                        }`}
-                                        title="加回歷史除息金額（還原 K 線走勢）"
-                                    >
-                                        <span
-                                            className={`w-3 h-3 rounded-[2px] border flex items-center justify-center shrink-0 transition-colors ${
-                                                isAdjustedKline
-                                                    ? 'border-[#FF69B4] bg-[#FF69B4] text-gray-950'
-                                                    : 'border-gray-500 bg-transparent'
-                                            }`}
-                                        >
-                                            {isAdjustedKline && (
-                                                <svg className="w-2.5 h-2.5 stroke-[3.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                    <polyline points="20 6 9 17 4 12" />
-                                                </svg>
-                                            )}
-                                        </span>
-                                        <span>還原k</span>
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                        <div className="flex-1 p-2 overflow-hidden relative">
-                            {loadingChart && activeTab !== 'detail' && (
-                                <div className="absolute inset-0 bg-[#181A20]/60 backdrop-blur-[1px] flex items-center justify-center z-20 text-xs text-[#FF69B4] font-bold font-mono">
-                                    載入數據中...
-                                </div>
-                            )}
-                            {activeTab === 'k' && <CandlestickChart data={displayData} yesterdayPrice={pair.yesterdayPrice} pairId={pair.id} />}
-                            {activeTab === 'time' && (
-                                <CandlestickChart data={displayData} isTimeChart={true} yesterdayPrice={pair.yesterdayPrice} pairId={pair.id} /> 
-                            )}
-                            {activeTab === 'detail' && (
-                                <div className="h-full flex items-center justify-center p-4">
-                                    <div className="w-full max-w-lg grid grid-cols-2 gap-4 text-xs font-mono select-none">
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">開盤</span>
-                                            <span className={`font-bold text-sm ${getCompareColor(pair.todayOpenPrice)}`}>
-                                                {pair.todayOpenPrice ? pair.todayOpenPrice.toFixed(2) : '未成交'}
-                                            </span>
-                                        </div>
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">昨收</span>
-                                            <span className="text-white font-bold text-sm">{yesterdayPrice.toFixed(2)}</span>
-                                        </div>
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">最高</span>
-                                            <span className={`font-bold text-sm ${getCompareColor(highVal)}`}>
-                                                {highVal.toFixed(2)}
-                                            </span>
-                                        </div>
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">最低</span>
-                                            <span className={`font-bold text-sm ${getCompareColor(lowVal)}`}>
-                                                {lowVal.toFixed(2)}
-                                            </span>
-                                        </div>
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">漲停</span>
-                                            <span className="text-white font-bold text-sm">{ceiling.toFixed(2)}</span>
-                                        </div>
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">跌停</span>
-                                            <span className="text-white font-bold text-sm">{floor.toFixed(2)}</span>
-                                        </div>
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">振幅</span>
-                                            <span className="text-white font-bold text-sm">{amplitude.toFixed(2)}%</span>
-                                        </div>
-                                        <div className="bg-[#1E2329]/50 border border-[#2B2F36] p-3 rounded flex flex-col justify-center">
-                                            <span className="text-[#848E9C] text-[9px] font-bold mb-1">均價</span>
-                                            <span className={`${avgPrice ? 'text-white' : 'text-gray-400'} font-bold text-sm`}>
-                                                {avgPrice ? avgPrice.toFixed(2) : '未成交'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <OrderHistoryPanel 
+                        pair={pair}
+                        orders={orders}
+                        cancelOrder={cancelOrder}
+                        isCancelling={isCancelling}
+                        currentUserId={currentUserId}
+                        cancelledOrderIdsRef={cancelledOrderIdsRef}
+                        addNotification={addNotification}
+                        orderSubTab={orderSubTab}
+                        setOrderSubTab={setOrderSubTab}
+                    />
 
-                    {/* 五檔買賣報價 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded overflow-hidden select-none shadow-2xl">
-                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#FFD700] animate-pulse shadow-[0_0_8px_#FFD700]" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">五檔買賣報價</h3>
-                            </div>
-                        </div>
+                    <TradeTickerPanel 
+                        pair={pair}
+                        refPrice={refPrice}
+                        ceiling={ceiling}
+                        floor={floor}
+                    />
 
-                        {/* 頂部快捷按鈕列 (現價 / 漲停 / 跌停) */}
-                        <div className="p-2.5 bg-[#12161c] border-b border-[#2B2F36] grid grid-cols-3 gap-2 select-none">
-                            <button
-                                type="button"
-                                onClick={() => setOrderPrice(pair.price)}
-                                title={`填入現價 (${pair.price})`}
-                                className={`py-2 px-1.5 rounded-lg text-center font-bold text-xs transition-all duration-150 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-0.5 cursor-pointer border ${
-                                    orderPrice === pair.price
-                                        ? 'bg-slate-700/90 border-amber-400 text-amber-300 ring-1 ring-amber-400/50 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
-                                        : 'bg-[#22272f] hover:bg-[#2c323c] border-[#363c48] hover:border-slate-500 text-slate-200'
-                                }`}
-                            >
-                                <span className="text-xs tracking-wider">現價</span>
-                                <span className="text-[10px] font-mono font-normal text-slate-400">
-                                    {pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setOrderPrice(ceiling)}
-                                title={`填入漲停價 (${ceiling})`}
-                                className={`py-2 px-1.5 rounded-lg text-center font-bold text-xs transition-all duration-150 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-0.5 cursor-pointer border ${
-                                    orderPrice === ceiling
-                                        ? 'bg-red-900/60 border-red-500 text-red-200 ring-1 ring-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.25)]'
-                                        : 'bg-[#291417] hover:bg-[#36191d] border-[#4a2024] hover:border-red-500/70 text-[#FF4D4D]'
-                                }`}
-                            >
-                                <span className="text-xs tracking-wider flex items-center gap-0.5">
-                                    <span className="text-[9px]">▲</span> 漲停
-                                </span>
-                                <span className="text-[10px] font-mono font-normal text-red-400/80">
-                                    {ceiling.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setOrderPrice(floor)}
-                                title={`填入跌停價 (${floor})`}
-                                className={`py-2 px-1.5 rounded-lg text-center font-bold text-xs transition-all duration-150 active:scale-95 shadow-sm flex flex-col items-center justify-center gap-0.5 cursor-pointer border ${
-                                    orderPrice === floor
-                                        ? 'bg-emerald-900/60 border-emerald-400 text-emerald-200 ring-1 ring-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
-                                        : 'bg-[#0d231a] hover:bg-[#133024] border-[#184633] hover:border-emerald-500/70 text-[#00FFA3]'
-                                }`}
-                            >
-                                <span className="text-xs tracking-wider flex items-center gap-0.5">
-                                    <span className="text-[9px]">▼</span> 跌停
-                                </span>
-                                <span className="text-[10px] font-mono font-normal text-emerald-400/80">
-                                    {floor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            </button>
-                        </div>
+                    <NewsReportSection 
+                        pair={pair}
+                        newsList={newsList}
+                        reportTargetId={reportTargetId}
+                        setReportTargetId={setReportTargetId}
+                        reportUrl={reportUrl}
+                        setReportUrl={setReportUrl}
+                        reportErrorMsg={reportErrorMsg}
+                        reportSuccessMsg={reportSuccessMsg}
+                        handleReportSubmit={handleReportSubmit}
+                        marketData={marketData}
+                        pairIdMap={PAIR_ID_MAP}
+                    />
 
-                        <div className="p-4 space-y-4">
-                            {/* 委託價格輸入列 */}
-                            <div className="grid grid-cols-12 gap-3 items-center">
-                                <div className="col-span-7 flex items-center bg-[#0B0E11] border border-[#2B2F36] rounded h-[40px] overflow-hidden focus-within:border-[#FF69B4] transition-colors">
-                                    <button 
-                                        type="button" 
-                                        onClick={handleDecrement} 
-                                        className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-r border-[#2B2F36] text-lg font-bold select-none"
-                                    >
-                                        -
-                                    </button>
-                                    <div className="flex-1 relative flex items-center justify-center">
-                                        <input 
-                                            type="number"
-                                            value={orderPrice || ""}
-                                            step={getTickSize(orderPrice || pair.price)}
-                                            onChange={(e) => setOrderPrice(Number(e.target.value))}
-                                            placeholder="委託價格" 
-                                            className="bg-transparent text-center font-mono text-sm font-bold text-white outline-none w-full px-2 placeholder-[#848E9C]" 
-                                        />
-                                    </div>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleIncrement} 
-                                        className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-l border-[#2B2F36] text-lg font-bold select-none"
-                                    >
-                                        +
-                                    </button>
-                                </div>
+                </div>
+            </main>
+            
+            <NotificationBanner 
+                notifications={notifications}
+                removeNotification={removeNotification}
+                pairId={pair.id}
+                pairIdMap={PAIR_ID_MAP}
+            />
 
-                                {/* 右側帳戶餘額/庫存資訊 */}
-                                <div className="col-span-5 text-[10px] font-bold text-right flex flex-col justify-center h-[40px] pl-2 border-l border-[#2B2F36]/50 leading-tight">
-                                    <div className="text-white font-mono truncate">可用: {availableBalance.toLocaleString()}</div>
-                                    <div className="text-[#848E9C] font-mono truncate">
-                                        庫存: <span className="text-white">{myHolding.toLocaleString()}</span> 股
-                                    </div>
-                                    {myHolding > 0 && (
-                                        <div className="text-[9px] font-mono truncate flex items-center justify-end gap-1">
-                                            <span className="text-gray-400">均價: {avgCost.toFixed(1)}</span>
-                                            <span className="text-gray-600">|</span>
-                                            <span className={profitLoss >= 0 ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}>
-                                                {profitLoss >= 0 ? '▲' : '▼'}{Math.abs(Math.round(profitLoss))} ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* 委託數量輸入列 */}
-                            <div className="grid grid-cols-12 gap-3 items-center">
-                                <div className="col-span-7 flex items-center bg-[#0B0E11] border border-[#2B2F36] rounded h-[40px] overflow-hidden focus-within:border-[#FF69B4] transition-colors">
-                                    <button 
-                                        type="button" 
-                                        onClick={handleAmountDecrement} 
-                                        className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-r border-[#2B2F36] text-lg font-bold select-none"
-                                    >
-                                        -
-                                    </button>
-                                    <div className="flex-1 relative flex items-center justify-center">
-                                        <input 
-                                            type="number" 
-                                            value={amount || ""}
-                                            onChange={(e) => setAmount(Number(e.target.value))}
-                                            placeholder="1" 
-                                            className="bg-transparent text-center font-mono text-sm font-bold text-white outline-none w-full px-2 placeholder-[#848E9C]" 
-                                        />
-                                    </div>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleAmountIncrement} 
-                                        className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-l border-[#2B2F36] text-lg font-bold select-none"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-
-                                {/* 右側單位與預估價金 */}
-                                <div className="col-span-5 text-[10px] font-bold text-right flex flex-col justify-center h-[40px] pl-2 border-l border-[#2B2F36]/50">
-                                    <div className="text-white mb-0.5">1單位：1股</div>
-                                    <div className="text-[#FFD700] truncate">預估價金：</div>
-                                    <div className="text-[#FFD700] font-mono truncate">{estimatedTotal.toLocaleString()} $TEE</div>
-                                </div>
-                            </div>
-
-                            {/* 快捷操作貼齊五檔上緣 */}
-                            <div className="flex items-center gap-2.5 font-bold text-[10px] px-1 select-none mt-2 pb-0.5">
-                                <button 
-                                    type="button"
-                                    onClick={() => {
-                                        const price = orderPrice || pair.price;
-                                        if (price > 0) {
-                                            setAmount(Math.floor(availableBalance / price));
-                                        }
-                                    }}
-                                    className="text-[#FF3B3B] hover:underline cursor-pointer focus:outline-none bg-transparent border-0 p-0"
-                                >
-                                    全額買進
-                                </button>
-                                <span className="text-gray-600">|</span>
-                                <button 
-                                    type="button"
-                                    onClick={() => setAmount(myHolding)}
-                                    className="text-[#00FFA3] hover:underline cursor-pointer focus:outline-none bg-transparent border-0 p-0"
-                                >
-                                    全股賣出
-                                </button>
-                            </div>
-
-                            {/* 五檔買賣盤 (放到下面) */}
-                            <div className="border border-[#2B2F36] rounded overflow-hidden bg-[#0B0E11]/40 text-sm select-none">
-                                <div className="grid grid-cols-4 border-b border-[#2B2F36]/50 bg-[#1E2329]/40 text-[10px] text-[#848E9C] font-bold py-1.5 px-3">
-                                    <div className="text-right pr-2">買量</div>
-                                    <div className="text-center">買價</div>
-                                    <div className="text-center">賣價</div>
-                                    <div className="text-left pl-2">賣量</div>
-                                </div>
-                                <div className="divide-y divide-[#2B2F36]/20">
-                                    {[0, 1, 2, 3, 4].map(i => {
-                                        const bid = paddedBids[i];
-                                        const ask = paddedAsks[i];
-                                        
-                                        const hasBid = bid && bid.price > 0;
-                                        const hasAsk = ask && ask.price > 0;
-
-                                        const bidDiff = bid.price - refPrice;
-                                        const bidColor = bidDiff > 0 
-                                            ? 'text-[#FF3B3B]' 
-                                            : bidDiff < 0 
-                                                ? 'text-[#00FFA3]' 
-                                                : 'text-white';
-
-                                        const askDiff = ask.price - refPrice;
-                                        const askColor = askDiff > 0 
-                                            ? 'text-[#FF3B3B]' 
-                                            : askDiff < 0 
-                                                ? 'text-[#00FFA3]' 
-                                                : 'text-white';
-
-                                        // Bid styling logic
-                                        const isBidCurrent = hasBid && bid.price === pair.price;
-                                        const isBidCeiling = hasBid && bid.price === ceiling;
-                                        const isBidFloor = hasBid && bid.price === floor;
-                                        const isBidSelected = hasBid && orderPrice === bid.price;
-
-                                        let bidBgBorderClass = '';
-                                        let bidTextClass = bidColor;
-                                        if (isBidCeiling || isBidFloor) {
-                                            const bgColor = isBidCeiling ? 'bg-red-600' : 'bg-green-600';
-                                            const borderColor = isBidCurrent ? 'border-white' : (isBidCeiling ? 'border-red-600' : 'border-green-600');
-                                            bidBgBorderClass = `${bgColor} border ${borderColor}`;
-                                            bidTextClass = 'text-white font-bold';
-                                        } else if (isBidCurrent) {
-                                            bidBgBorderClass = 'border border-white bg-transparent';
-                                            bidTextClass = 'text-white';
-                                        } else if (isBidSelected) {
-                                            bidBgBorderClass = 'border border-[#FFD700] bg-[#FFD700]/10 shadow-[0_0_8px_rgba(255,215,0,0.2)]';
-                                        } else {
-                                            bidBgBorderClass = 'border border-transparent hover:bg-[#2B3139]';
-                                        }
-
-                                        // Ask styling logic
-                                        const isAskCurrent = hasAsk && ask.price === pair.price;
-                                        const isAskCeiling = hasAsk && ask.price === ceiling;
-                                        const isAskFloor = hasAsk && ask.price === floor;
-                                        const isAskSelected = hasAsk && orderPrice === ask.price;
-
-                                        let askBgBorderClass = '';
-                                        let askTextClass = askColor;
-                                        if (isAskCeiling || isAskFloor) {
-                                            const bgColor = isAskCeiling ? 'bg-red-600' : 'bg-green-600';
-                                            const borderColor = isAskCurrent ? 'border-white' : (isAskCeiling ? 'border-red-600' : 'border-green-600');
-                                            askBgBorderClass = `${bgColor} border ${borderColor}`;
-                                            askTextClass = 'text-white font-bold';
-                                        } else if (isAskCurrent) {
-                                            askBgBorderClass = 'border border-white bg-transparent';
-                                            askTextClass = 'text-white';
-                                        } else if (isAskSelected) {
-                                            askBgBorderClass = 'border border-[#FFD700] bg-[#FFD700]/10 shadow-[0_0_8px_rgba(255,215,0,0.2)]';
-                                        } else {
-                                            askBgBorderClass = 'border border-transparent hover:bg-[#2B3139]';
-                                        }
-
-                                        return (
-                                            <div key={`five-tier-${i}`} className="grid grid-cols-4 items-center h-10 px-3 font-bold font-mono text-xs">
-                                                <div className="text-right text-[#EAECEF] pr-2 truncate">
-                                                    {hasBid ? bid.amount.toLocaleString() : '--'}
-                                                </div>
-                                                
-                                                <div 
-                                                    onClick={() => hasBid && setOrderPrice(bid.price)}
-                                                    className={`text-center py-1 cursor-pointer transition-all rounded ${bidTextClass} ${bidBgBorderClass}`}
-                                                >
-                                                    {hasBid ? bid.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '--'}
-                                                </div>
-
-                                                <div 
-                                                    onClick={() => hasAsk && setOrderPrice(ask.price)}
-                                                    className={`text-center py-1 cursor-pointer transition-all rounded ${askTextClass} ${askBgBorderClass}`}
-                                                >
-                                                    {hasAsk ? ask.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '--'}
-                                                </div>
-
-                                                <div className="text-left text-[#EAECEF] pl-2 truncate">
-                                                    {hasAsk ? ask.amount.toLocaleString() : '--'}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* 比例條與總委託量 */}
-                            <div className="space-y-1.5">
-                                <div className="w-full h-1.5 bg-[#2B2F36] rounded-full overflow-hidden flex">
-                                    <div 
-                                        className="bg-[#FF3B3B] h-full transition-all duration-500" 
-                                        style={{ width: `${bidRatio}%` }} 
-                                    />
-                                    <div 
-                                        className="bg-[#0070FF] h-full transition-all duration-500" 
-                                        style={{ width: `${100 - bidRatio}%` }} 
-                                    />
-                                </div>
-                                <div className="flex justify-between text-xs font-mono font-bold text-[#EAECEF]">
-                                    <span>{totalBidVol.toLocaleString()}</span>
-                                    <span>{totalAskVol.toLocaleString()}</span>
-                                </div>
-                            </div>
-
-                            {/* 買進/賣出 按鈕 (橫跨底端) */}
-                            <div className="flex gap-3 mt-4 pt-4 border-t border-[#2B2F36]/50">
-                                <button 
-                                    onClick={() => handleAction('buy')} 
-                                    disabled={isSubmitting}
-                                    className={`flex-1 font-black h-12 rounded shadow-lg transition-all text-base flex items-center justify-center ${isSubmitting ? 'bg-[#FF3B3B]/50 cursor-not-allowed' : 'bg-[#FF3B3B] hover:bg-[#ff5252] active:scale-[0.98] cursor-pointer'} text-white`}
-                                >
-                                    {isSubmitting ? (
-                                        <><span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />處理中...</>
-                                    ) : '現股買進'}
-                                </button>
-                                <button 
-                                    onClick={() => handleAction('sell')} 
-                                    disabled={isSubmitting}
-                                    className={`flex-1 font-black h-12 rounded shadow-lg transition-all text-base flex items-center justify-center ${isSubmitting ? 'bg-[#00B074]/50 cursor-not-allowed' : 'bg-[#00B074] hover:bg-[#00c985] active:scale-[0.98] cursor-pointer'} text-white`}
-                                >
-                                    {isSubmitting ? (
-                                        <><span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />處理中...</>
-                                    ) : '現股賣出'}
-                                </button>
-                            </div>
-                            
-                            <p className="text-[9px] text-[#474D57] text-center leading-relaxed mt-4 pt-2 border-t border-[#2B2F36]/10">
-                                提醒：本交易所為 VTuber 虛擬市場，所有交易皆為 $TEE 虛擬代幣。投資一定有風險，貼貼組合有漲有跌，申購前應詳閱成員互動。
-                            </p>
-                        </div>
-                    </div>
-                    {/* 委託成交回報 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden">
-                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#00FFA3] animate-pulse shadow-[0_0_8px_#00FFA3]" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">委託成交回報</h3>
-                            </div>
-                            <div className="flex gap-4 text-xs font-bold select-none">
-                                <span 
-                                    onClick={() => setOrderSubTab('pending')}
-                                    className={`pb-0.5 cursor-pointer transition-colors ${orderSubTab === 'pending' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                                >
-                                    委回
-                                </span>
-                                <span 
-                                    onClick={() => setOrderSubTab('trades')}
-                                    className={`pb-0.5 cursor-pointer transition-colors ${orderSubTab === 'trades' ? 'text-[#FF69B4] border-b-2 border-[#FF69B4]' : 'text-[#848E9C] hover:text-white'}`}
-                                >
-                                    成回
-                                </span>
-                            </div>
-                        </div>
-                        <div className="p-4 pt-3">
-
-                        {orderSubTab === 'pending' ? (() => {
-                            const myOrders = orders.filter(o => o.isUser && o.pairId === pair.id);
-                            return (
-                                <div className="overflow-x-auto overflow-y-auto max-h-[250px] custom-scrollbar">
-                                    <table className="w-full text-base font-mono">
-                                        <thead>
-                                            <tr className="text-[#848E9C] border-b border-[#2B2F36] text-[10px] font-bold text-right">
-                                                <th className="py-2 px-2 text-left font-bold">類型</th>
-                                                <th className="py-2 px-2 font-bold">價格</th>
-                                                <th className="py-2 px-2 font-bold">數量</th>
-                                                <th className="py-2 px-2 font-bold">操作</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#2B2F36]/30">
-                                            {myOrders.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={4} className="text-center py-6 text-gray-500 text-sm">
-                                                        無未成交委託單
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                myOrders.map(o => (
-                                                    <tr key={o.id} className="hover:bg-[#2B3139] border-b border-[#2B2F36] transition-colors text-[11px] font-mono text-right">
-                                                        <td className={`py-2 px-2 text-left font-bold ${o.type === 'buy' ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}`}>
-                                                            {o.type === 'buy' ? '買進' : '賣出'}
-                                                        </td>
-                                                        <td className="py-2 px-2 text-white font-bold">{o.price.toFixed(2)}</td>
-                                                        <td className="py-2 px-2 text-white">{o.amount.toLocaleString()}</td>
-                                                        <td className="py-2 px-2">
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    cancelledOrderIdsRef.current.add(o.id);
-                                                                    const res = await cancelOrder(o.id);
-                                                                    if (!res.success) {
-                                                                        cancelledOrderIdsRef.current.delete(o.id);
-                                                                        addNotification('failed', 0, 0, res.message || "撤單失敗");
-                                                                    }
-                                                                }}
-                                                                disabled={isCancelling}
-                                                                className={`px-2 py-0.5 rounded transition-colors ${isCancelling ? 'bg-[#2B3139] text-[#474D57] cursor-not-allowed' : 'bg-[#2B3139] hover:bg-[#FF3B3B]/20 text-[#848E9C] hover:text-[#FF3B3B]'} text-[10px]`}
-                                                            >
-                                                                {isCancelling ? '撤銷中...' : '撤單'}
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            );
-                        })() : (() => {
-                            const myTrades = (pair.recentTrades || []).filter(
-                                t => t.buyerId === currentUserId || t.sellerId === currentUserId
-                            );
-                            return (
-                                <div className="overflow-x-auto overflow-y-auto max-h-[250px] custom-scrollbar">
-                                    <table className="w-full text-base font-mono">
-                                        <thead>
-                                            <tr className="text-[#848E9C] border-b border-[#2B2F36] text-[10px] font-bold text-right">
-                                                <th className="py-2 px-2 text-left font-bold">時間</th>
-                                                <th className="py-2 px-2 font-bold text-center">類型</th>
-                                                <th className="py-2 px-2 font-bold">成交價</th>
-                                                <th className="py-2 px-2 font-bold">成交量</th>
-                                                <th className="py-2 px-2 font-bold">成交額</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#2B2F36]/30">
-                                            {myTrades.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={5} className="text-center py-6 text-gray-500 text-sm">
-                                                        今日尚無成交明細
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                myTrades.map((t, idx) => {
-                                                    const isBuy = t.buyerId === currentUserId;
-                                                    const sideText = isBuy ? '買進' : '賣出';
-                                                    const sideColor = isBuy ? 'text-[#FF3B3B]' : 'text-[#00FFA3]';
-                                                    const totalVal = t.price * t.amount;
-                                                    
-                                                    return (
-                                                        <tr key={`my-trade-${idx}`} className="hover:bg-[#2B3139] border-b border-[#2B2F36] transition-colors text-[11px] font-mono text-right">
-                                                            <td className="py-2 px-2 text-left text-gray-400">{t.time}</td>
-                                                            <td className={`py-2 px-2 text-center font-bold ${sideColor}`}>{sideText}</td>
-                                                            <td className="py-2 px-2 text-white font-bold">{t.price.toFixed(2)}</td>
-                                                            <td className="py-2 px-2 text-white">{t.amount.toLocaleString()}</td>
-                                                            <td className="py-2 px-2 text-white font-bold">{totalVal.toFixed(2)}</td>
-                                                        </tr>
-                                                    );
-                                                })
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            );
-                        })()}
-                        </div>
-                    </div>
-
-                    {/* 即時成交明細 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden">
-                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#A855F7] animate-pulse shadow-[0_0_8px_#A855F7]" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">即時成交明細</h3>
-                            </div>
-                        </div>
-                        <div className="p-4 pt-3">
-                        <div className="overflow-x-auto overflow-y-auto max-h-[302px] custom-scrollbar">
-                            <table className="w-full text-base font-mono">
-                                <thead>
-                                    <tr className="text-[#848E9C] border-b border-[#2B2F36] text-[10px] font-bold text-right">
-                                        <th className="py-1 px-2 text-left font-bold">時間</th>
-                                        <th className="py-1 px-2 font-bold">買進</th>
-                                        <th className="py-1 px-2 font-bold">賣出</th>
-                                        <th className="py-1 px-2 font-bold">成交</th>
-                                        <th className="py-1 px-2 font-bold">漲跌</th>
-                                        <th className="py-1 px-2 font-bold">單量</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#2B2F36]/30">
-                                    {(!pair.recentTrades || pair.recentTrades.length === 0) ? (
-                                        <tr>
-                                            <td colSpan={6} className="text-center py-6 text-gray-500 text-sm">
-                                                尚無成交紀錄
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        pair.recentTrades.map((trade, i) => {
-                                            const tick = getTickSize(trade.price);
-                                            const bid = trade.isUp ? trade.price - tick : trade.price;
-                                            const ask = trade.isUp ? trade.price : trade.price + tick;
-                                            const change = trade.price - refPrice;
-
-                                            const getPriceColor = (val: number) => {
-                                                if (val > refPrice) return 'text-[#FF3B3B]';
-                                                if (val < refPrice) return 'text-[#00FFA3]';
-                                                return 'text-[#FFD700]';
-                                            };
-
-                                            const getChangeColor = (val: number) => {
-                                                if (val > 0) return 'text-[#FF3B3B]';
-                                                if (val < 0) return 'text-[#00FFA3]';
-                                                return 'text-[#FFD700]';
-                                            };
-
-                                            const isCeiling = trade.price === ceiling;
-                                            const isFloor = trade.price === floor;
-                                            const tradePriceClass = isCeiling 
-                                                ? 'bg-red-600 text-white font-bold rounded px-1.5 py-0.5 shadow-sm' 
-                                                : isFloor 
-                                                    ? 'bg-green-600 text-white font-bold rounded px-1.5 py-0.5 shadow-sm' 
-                                                    : `font-bold ${getPriceColor(trade.price)}`;
-
-                                            return (
-                                                <tr key={i} className="hover:bg-[#2B3139] border-b border-[#2B2F36] transition-colors text-[11px] font-mono text-right">
-                                                    <td className="py-1 px-2 text-left text-gray-400">{trade.time}</td>
-                                                    <td className={`py-1 px-2 ${getPriceColor(bid)}`}>{bid.toFixed(2)}</td>
-                                                    <td className={`py-1 px-2 ${getPriceColor(ask)}`}>{ask.toFixed(2)}</td>
-                                                    <td className="py-1 px-2">
-                                                        <span className={tradePriceClass}>
-                                                            {trade.price.toFixed(2)}
-                                                        </span>
-                                                    </td>
-                                                    <td className={`py-1 px-2 ${getChangeColor(change)}`}>
-                                                        {change > 0 ? '+' : ''}{change.toFixed(2)}
-                                                    </td>
-                                                    <td className="py-1 px-2 text-[#EAECEF]">{trade.amount.toLocaleString()}</td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        </div>
-                    </div>
-
-                    {/* 最新貼貼情報 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden">
-                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF69B4] animate-pulse shadow-[0_0_8px_#FF69B4]" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">最新貼貼情報</h3>
-                            </div>
-                            <span className="text-[10px] font-mono text-gray-400">
-                                已核可 ({newsList.length})
-                            </span>
-                        </div>
-                        <div className="p-4 pt-3">
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                {newsList.length === 0 ? (
-                                    <p className="text-center text-sm text-[#848E9C] py-4">目前暫無已核可的貼貼情報</p>
-                                ) : (
-                                    newsList.map((news) => {
-                                        let typeLabel = "未知";
-                                        let typeColor = "text-gray-400 bg-gray-500/10 border-gray-500/30";
-                                        if (news.eventType === 'x_mention') { typeLabel = 'X 提及'; typeColor = 'text-sky-400 bg-sky-500/10 border-sky-500/20'; }
-                                        if (news.eventType === 'live_collab') { typeLabel = '日常連動'; typeColor = 'text-red-400 bg-red-500/10 border-red-500/20'; }
-                                        if (news.eventType === 'large_event') { typeLabel = '大型/3D'; typeColor = 'text-purple-400 bg-purple-500/10 border-purple-500/20'; }
-                                        if (news.eventType === 'new_song') { typeLabel = '新曲/MV'; typeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'; }
-                                        if (news.eventType === 'video') { typeLabel = '影片/首播'; typeColor = 'text-purple-400 bg-purple-500/10 border-purple-500/30'; }
-                                        if (news.eventType === 'crowdsourced') { typeLabel = '股民回報'; typeColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30'; }
-                                        if (news.eventType === 'totsumachi') { typeLabel = '突發/凸待'; typeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'; }
-
-                                        return (
-                                            <div key={news.id} className="bg-[#0B0E11] border border-[#2B2F36] p-3 rounded-lg hover:border-[#FF69B4]/50 transition-colors">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${typeColor}`}>
-                                                        {typeLabel}
-                                                    </span>
-                                                    <span className="text-[10px] text-pink-400 font-bold bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20">
-                                                        聯動加成
-                                                    </span>
-                                                    <span className="text-[10px] text-[#848E9C] ml-auto">
-                                                        {new Date(news.createdAt).toLocaleString()}
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-[#EAECEF] mb-2">{news.rawText}</p>
-                                                <a href={news.url} target="_blank" rel="noreferrer" className="text-[10px] text-[#FF69B4] hover:underline flex items-center gap-1">
-                                                    <span>🔗 前往精華來源</span>
-                                                    {news.url.includes('&t=') && <span className="bg-[#FF69B4]/20 text-[#FF69B4] px-1 rounded">帶有時間戳</span>}
-                                                </a>
-                                            </div>
-                                        )
-                                    })
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 股民貼貼回報 */}
-                    <div className="bg-[#181A20] border border-[#2B2F36] rounded shadow-xl overflow-hidden relative group/form hover:border-[#FF69B4]/30 transition-all">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF69B4]/5 rounded-full blur-3xl pointer-events-none" />
-                        
-                        <div className="p-3 bg-gray-950 border-b border-[#2B2F36] flex justify-between items-center select-none">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#F43F5E] animate-pulse shadow-[0_0_8px_#F43F5E]" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">股民貼貼回報</h3>
-                            </div>
-                        </div>
-                        <div className="p-4 pt-3">
-
-                        <form onSubmit={handleReportSubmit} className="space-y-3 text-xs">
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-[#848E9C] font-semibold">目標個股組合</label>
-                                <select 
-                                    value={reportTargetId}
-                                    onChange={(e) => setReportTargetId(e.target.value)}
-                                    className="w-full bg-[#0B0E11] border border-[#2B2F36] focus:border-[#FF69B4] rounded p-2 text-white outline-none font-mono text-[11px] transition-colors"
-                                >
-                                    {[...marketData]
-                                        .sort((a, b) => {
-                                            const codeA = PAIR_ID_MAP[a.id.toLowerCase()] || a.id.toUpperCase();
-                                            const codeB = PAIR_ID_MAP[b.id.toLowerCase()] || b.id.toUpperCase();
-                                            return codeA.localeCompare(codeB);
-                                        })
-                                        .map((p) => {
-                                            const stockId = PAIR_ID_MAP[p.id.toLowerCase()] || p.id.toUpperCase();
-                                            return (
-                                                <option key={p.id} value={p.id}>
-                                                    {p.name} ({stockId})
-                                                </option>
-                                            );
-                                        })}
-                                </select>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-[#848E9C] font-semibold flex justify-between">
-                                    <span>互動網址 (URL)</span>
-                                    <span className="text-[9px] text-[#474D57]">(限 YouTube)</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    placeholder="https://youtube.com/..." 
-                                    value={reportUrl}
-                                    onChange={(e) => setReportUrl(e.target.value)}
-                                    className="w-full bg-[#0B0E11] border border-[#2B2F36] focus:border-[#FF69B4] rounded p-2 text-white outline-none font-mono text-[11px] transition-colors"
-                                />
-                            </div>
-
-                            {reportErrorMsg && (
-                                <p className="text-[10px] text-[#FF3B3B] bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 p-2 rounded">
-                                    ⚠️ {reportErrorMsg}
-                                </p>
-                            )}
-                            {reportSuccessMsg && (
-                                <p className="text-[10px] text-[#00FFA3] bg-[#00FFA3]/10 border border-[#00FFA3]/20 p-2 rounded">
-                                    ✅ {reportSuccessMsg}
-                                </p>
-                            )}
-
-                            <button 
-                                type="submit"
-                                className="w-full py-2.5 bg-gradient-to-r from-[#FF69B4] to-[#7000FF] hover:from-[#ff85c2] hover:to-[#8a2be2] text-white font-bold rounded shadow-lg shadow-pink-500/20 active:scale-[0.98] transition-all text-center text-xs"
-                            >
-                                遞交貼貼回報 (待審查)
-                            </button>
-                        </form>
-                        </div>
-                    </div>
-            </div>
-        </main>
-        
-        {/* 頂部通知橫幅容器 */}
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 w-[90%] max-w-[450px] pointer-events-none">
-            {notifications.map((notif) => {
-                const stockId = PAIR_ID_MAP[pair.id.toLowerCase()] || pair.id.toUpperCase();
-                let bgClass = "";
-                let labelClass = "";
-                let textClass = "";
-                let label = "";
-                let detailText = "";
-
-                if (notif.type === 'buy_submit') {
-                    // 委託買進：精美半透明紅底配亮紅字與純白成交細節
-                    bgClass = "bg-[#FF3B3B]/10 border border-[#FF3B3B]/40 backdrop-blur-md shadow-lg shadow-red-950/20";
-                    labelClass = "text-[#FF8B8B]";
-                    textClass = "text-white";
-                    label = "買進 委託成功";
-                    detailText = `[${stockId}] ${notif.amount}股 ${notif.price.toFixed(2)}$TEE`;
-                } else if (notif.type === 'sell_submit') {
-                    // 委託賣出：精美半透明綠底配亮綠字與純白成交細節
-                    bgClass = "bg-[#00FFA3]/10 border border-[#00FFA3]/40 backdrop-blur-md shadow-lg shadow-green-950/20";
-                    labelClass = "text-[#00FFA3]";
-                    textClass = "text-white";
-                    label = "賣出 委託成功";
-                    detailText = `[${stockId}] ${notif.amount}股 ${notif.price.toFixed(2)}$TEE`;
-                } else if (notif.type === 'match_deal') {
-                    // 成交：精美半透明黃底配亮黃字與純白成交細節
-                    bgClass = "bg-[#FFD700]/15 border border-[#FFD700]/40 backdrop-blur-md shadow-lg shadow-yellow-950/20";
-                    labelClass = "text-[#FFE57F]";
-                    textClass = "text-white";
-                    label = "成交";
-                    detailText = `[${stockId}] ${notif.amount}股 ${notif.price.toFixed(2)}$TEE`;
-                } else if (notif.type === 'failed') {
-                    // 失敗：半透明暗紅底配淡紅字
-                    bgClass = "bg-[#3A1414]/90 border border-red-500/40 backdrop-blur-md shadow-lg shadow-red-950/40";
-                    labelClass = "text-[#FF8B8B]";
-                    textClass = "text-[#FFEAEA]";
-                    label = "操作失敗";
-                    detailText = notif.message || "";
-                }
-
-                return (
-                    <div
-                        key={notif.id}
-                        onClick={() => removeNotification(notif.id)}
-                        className={`pointer-events-auto cursor-pointer rounded-lg p-3.5 shadow-xl flex items-center justify-between gap-6 select-none transition-all duration-500 ${
-                            notif.isFading ? 'opacity-0 scale-95 -translate-y-2' : 'opacity-100 scale-100'
-                        } ${bgClass}`}
-                    >
-                        <div className="flex flex-col gap-0.5">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${labelClass}`}>{label}</span>
-                            <span className={`text-sm font-black font-mono leading-none ${textClass}`}>{detailText}</span>
-                        </div>
-                        <span className="text-xs text-white opacity-40 hover:opacity-100 transition-opacity">✕</span>
-                    </div>
-                );
-            })}
-        </div>
-
-        <BottomNav />
+            <BottomNav />
         </div>
     );
 }

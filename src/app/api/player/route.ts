@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { UserChoice } from '@/types/enums';
+import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 import { getAuthenticatedUser } from '@/lib/auth';
 
 const DEFAULT_PLAYER_ID = 'default_player';
@@ -32,7 +34,8 @@ export async function GET(request: Request) {
     });
 
     const settlementLogs = await prisma.settlementLog.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 100
     });
 
     const userDividendLogs = await prisma.userDividendLog.findMany({
@@ -124,6 +127,12 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  // 安全修復：PUT 只允許管理員使用
+  const cookieStore = await cookies();
+  const session = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  if (session !== getExpectedAuthToken()) {
+    return NextResponse.json({ error: '未授權：僅管理員可修改玩家資料。' }, { status: 401 });
+  }
   try {
     const body = await request.json();
     const { balance, holdings } = body as {

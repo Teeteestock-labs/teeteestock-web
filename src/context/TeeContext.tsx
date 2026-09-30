@@ -2,7 +2,7 @@
 
 import { INITIAL_PAIRS } from '@/app/constants/market';
 import { teeteePair, UserHolding, ChartDataPoint, Order } from '@/app/types';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { isValidTickSize, getTickSize, alignToTick } from '@/utils/validatePrice';
 import { isPreMarketPeriod, isOperatingPeriod, getCurrentMarketStatus } from '@/utils/marketHours';
 
@@ -193,46 +193,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         setMarketStatus('SETTLING');
         
         try {
-            // ── 1. 撤銷所有委託單 (退還資金/股票到本地) ──
-            let newBalance = balance;
-            const newHoldings = [...holdings];
-            const nextBots = [...bots];
-
-            orders.forEach(order => {
-                if (order.isUser) {
-                    if (order.type === 'buy') {
-                        newBalance += order.price * order.amount;
-                    } else {
-                        const existingIdx = newHoldings.findIndex(h => h.pairId === order.pairId);
-                        if (existingIdx >= 0) {
-                            newHoldings[existingIdx] = { 
-                                ...newHoldings[existingIdx], 
-                                shares: newHoldings[existingIdx].shares + order.amount 
-                            };
-                        } else {
-                            newHoldings.push({ pairId: order.pairId, shares: order.amount, avgCost: order.price });
-                        }
-                    }
-                } else if (order.botId) {
-                    const botIdx = nextBots.findIndex(x => x.id === order.botId);
-                    if (botIdx >= 0) {
-                        if (order.type === 'buy') {
-                            nextBots[botIdx].balance += order.price * order.amount;
-                        } else {
-                            nextBots[botIdx].holdings[order.pairId] = (nextBots[botIdx].holdings[order.pairId] || 0) + order.amount;
-                        }
-                    }
-                }
-            });
-
-            // ── 2. 先將完全退還委託後的玩家資料同步到後端 ──
-            await fetch('/api/player', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ balance: newBalance, holdings: newHoldings })
-            });
-
-            // ── 3. 呼叫後端結算 API ──
+            // ── 直接呼叫後端結算 API（委託退款由後端統一處理，不再由前端計算覆寫）──
             const res = await fetch('/api/cron/settle', { method: 'POST' });
             if (!res.ok) throw new Error('Settlement API failed');
             const data = await res.json();
@@ -244,8 +205,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             if (!playerRes.ok) throw new Error('Failed to fetch player data after settlement');
             const playerData = await playerRes.json();
             
-            let finalBalance = newBalance;
-            let finalHoldings = newHoldings;
+            let finalBalance = balance;
+            let finalHoldings = holdings;
             if (playerData && playerData.player) {
                 finalBalance = playerData.player.balance;
                 finalHoldings = playerData.player.holdings;
@@ -254,6 +215,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
             // ── 5. 套用結算結果到市場資料與機器人模擬 ──
             const _delistedIds = new Set<string>(data.delistedPairs || []);
+            const nextBots = [...bots];
 
             const updatedMarket = marketData.map(pair => {
                 const settlementResult = data.results.find((r: any) => r.pairId === pair.id);
@@ -384,9 +346,13 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
     const availableBalance = Math.max(0, balance - pendingBuyCost);
 
-    // 當資料變動時，同步到 LocalStorage
+    // 當資料變動時，同步到 LocalStorage（節流：最多每 10 秒寫入一次，避免主線程阻塞）
+    const lastSyncRef = useRef(0);
     useEffect(() => {
         if (!isInitialized || !mounted) return;
+        const now = Date.now();
+        if (now - lastSyncRef.current < 10000) return;
+        lastSyncRef.current = now;
         localStorage.setItem('tee_market_status', marketStatus);
         localStorage.setItem('tee_balance', balance.toString());
         localStorage.setItem('tee_holdings', JSON.stringify(holdings));
@@ -481,16 +447,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                 return { success: false, message: data.error || '委託失敗' };
             }
 
-            // 成功：在背景觸發撮合與非同步更新，不阻塞前端按鈕響應（將延遲從 5 秒降至 0.2 秒）
-            if (marketStatus === 'OPEN') {
-                fetch('/api/matching', { method: 'POST' })
-                    .catch(e => console.error('Auto matching trigger failed:', e))
-                    .finally(() => {
-                        fetchLatestMarketAndPlayer();
-                    });
-            } else {
-                fetchLatestMarketAndPlayer();
-            }
+            // 成功：直接刷新市場資料（撮合由 3 秒自動排程處理，不再手動觸發以避免 race condition）
+            fetchLatestMarketAndPlayer();
 
             return { success: true, message: "委託單已送出" };
         } catch (err) {
@@ -521,15 +479,8 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             });
 
             if (res.ok) {
-                if (marketStatus === 'OPEN') {
-                    fetch('/api/matching', { method: 'POST' })
-                        .catch(e => console.error('Auto matching trigger failed:', e))
-                        .finally(() => {
-                            fetchLatestMarketAndPlayer();
-                        });
-                } else {
-                    fetchLatestMarketAndPlayer();
-                }
+                // 撤單成功：直接刷新資料（撮合由 3 秒自動排程處理）
+                fetchLatestMarketAndPlayer();
                 return { success: true, message: '撤單成功' };
             } else {
                 const data = await res.json();
@@ -626,9 +577,17 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
             console.error('Error submitting report to events report api:', err);
         });
     };
+    // 效能優化：memoize context value 避免每次渲染產生新物件導致全站 consumer 重渲染
+    const contextValue = useMemo(() => ({
+        balance, availableBalance, holdings, marketData, orders, marketStatus,
+        isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder,
+        simulateMarketMove, reportInteraction, executeWeeklySettlement,
+        settlementLogs, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer
+    }), [balance, availableBalance, holdings, marketData, orders, marketStatus,
+         isSubmitting, isCancelling, settlementLogs]);
 
     return (
-        <TeeContext.Provider value={{ balance, availableBalance, holdings, marketData, orders, marketStatus, isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder, simulateMarketMove, reportInteraction, executeWeeklySettlement, settlementLogs, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer }}>
+        <TeeContext.Provider value={contextValue}>
             {children}
             {settlementReport && (
                 <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 select-none">
