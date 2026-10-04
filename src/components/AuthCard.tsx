@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 interface AuthCardProps {
-  initialTab?: 'login' | 'register';
+  initialTab?: 'login' | 'register' | 'forgot';
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,9 +28,9 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/';
 
-  const { login, register } = useAuth();
+  const { login, register, forgotPassword } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot'>(initialTab);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -46,6 +46,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
+  const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
 
   // 監聽 URL 參數中的 OAuth 回應或錯誤通知
   useEffect(() => {
@@ -97,17 +98,20 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
 
     if (activeTab === 'login') {
       return password.length > 0;
-    } else {
+    } else if (activeTab === 'register') {
       return passwordStrength.score === 3 && isPasswordMatch;
+    } else {
+      return isEmailValid;
     }
   }, [activeTab, isSubmitting, isEmailValid, password, passwordStrength, isPasswordMatch]);
 
   // 切換 Tab 時清理表單提示
-  const handleTabChange = (tab: 'login' | 'register') => {
+  const handleTabChange = (tab: 'login' | 'register' | 'forgot') => {
     setActiveTab(tab);
     setErrorMessage(null);
     setSuccessMessage(null);
     setOauthNotice(null);
+    setDevResetUrl(null);
   };
 
   // 送出處理
@@ -118,6 +122,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
     setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
+    setDevResetUrl(null);
 
     if (activeTab === 'login') {
       const res = await login(email, password, rememberMe);
@@ -130,7 +135,7 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
         setErrorMessage(res.error || '登入失敗');
         setIsSubmitting(false);
       }
-    } else {
+    } else if (activeTab === 'register') {
       const res = await register(email, password, name);
       if (res.success) {
         setSuccessMessage('註冊成功！已為您存入 10,000 $TEE 初始資產，正在進入大廳...');
@@ -140,6 +145,18 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
       } else {
         setErrorMessage(res.error || '註冊失敗');
         setIsSubmitting(false);
+      }
+    } else {
+      // 忘記密碼
+      const res = await forgotPassword(email);
+      setIsSubmitting(false);
+      if (res.success) {
+        setSuccessMessage(res.message || '密碼重設驗證信已寄出，請查收信箱（15分鐘內有效）。');
+        if (res.devResetUrl) {
+          setDevResetUrl(res.devResetUrl);
+        }
+      } else {
+        setErrorMessage(res.error || '申請重設密碼失敗');
       }
     }
   };
@@ -173,40 +190,55 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-100 flex items-center justify-center gap-2">
           <ShieldCheck className="w-6 h-6 text-emerald-400" />
-          {activeTab === 'login' ? '歡迎回到交易所' : '註冊新交易帳號'}
+          {activeTab === 'login' ? '歡迎回到交易所' : activeTab === 'register' ? '註冊新交易帳號' : '重設交易密碼'}
         </h1>
         <p className="text-xs text-slate-400 mt-1">
           {activeTab === 'login' 
             ? '請輸入您的帳號密碼以進入個人資產與交易操作' 
-            : '立即加入！開戶即領取 10,000 $TEE 初始模擬資金'}
+            : activeTab === 'register'
+            ? '立即加入！開戶即領取 10,000 $TEE 初始模擬資金'
+            : '請輸入您註冊時的電子信箱，我們將發送密碼重設驗證信'}
         </p>
       </div>
 
       {/* Tab 切換分頁 */}
-      <div className="grid grid-cols-2 bg-slate-900/80 p-1 rounded-xl border border-slate-800 mb-6">
-        <button
-          type="button"
-          onClick={() => handleTabChange('login')}
-          className={`py-2 text-xs font-bold rounded-lg transition-all ${
-            activeTab === 'login'
-              ? 'bg-slate-800 text-emerald-400 shadow-md border border-slate-700/80'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          帳號登入
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabChange('register')}
-          className={`py-2 text-xs font-bold rounded-lg transition-all ${
-            activeTab === 'register'
-              ? 'bg-slate-800 text-emerald-400 shadow-md border border-slate-700/80'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          會員註冊
-        </button>
-      </div>
+      {activeTab === 'forgot' ? (
+        <div className="flex items-center justify-between bg-slate-900/80 p-2 rounded-xl border border-slate-800 mb-6">
+          <button
+            type="button"
+            onClick={() => handleTabChange('login')}
+            className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-emerald-400 font-medium px-2 py-1 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> 返回帳號登入
+          </button>
+          <span className="text-[11px] text-slate-500 font-mono pr-2">忘記密碼模式</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 bg-slate-900/80 p-1 rounded-xl border border-slate-800 mb-6">
+          <button
+            type="button"
+            onClick={() => handleTabChange('login')}
+            className={`py-2 text-xs font-bold rounded-lg transition-all ${
+              activeTab === 'login'
+                ? 'bg-slate-800 text-emerald-400 shadow-md border border-slate-700/80'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            帳號登入
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange('register')}
+            className={`py-2 text-xs font-bold rounded-lg transition-all ${
+              activeTab === 'register'
+                ? 'bg-slate-800 text-emerald-400 shadow-md border border-slate-700/80'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            會員註冊
+          </button>
+        </div>
+      )}
 
       {/* 錯誤橫幅 */}
       {errorMessage && (
@@ -229,6 +261,24 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
         <div className="mb-5 flex items-start gap-2.5 bg-blue-950/70 border border-blue-800/80 p-3 rounded-xl text-blue-300 text-xs">
           <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
           <div className="flex-1 leading-relaxed">{oauthNotice}</div>
+        </div>
+      )}
+
+      {/* 開發環境密碼重設連結快速入口 */}
+      {devResetUrl && (
+        <div className="mb-5 bg-amber-950/70 border border-amber-600/70 p-3.5 rounded-xl text-amber-200 text-xs">
+          <div className="flex items-center gap-2 font-bold mb-1 text-amber-300">
+            <span>[開發環境模擬] 重設密碼連結已產生</span>
+          </div>
+          <p className="text-[11px] text-amber-300/80 mb-2">
+            目前環境尚未配置 RESEND_API_KEY，已自動在後台印出並提供直接跳轉連結：
+          </p>
+          <a
+            href={devResetUrl}
+            className="inline-block bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors"
+          >
+            點此立即前往重設密碼頁面 →
+          </a>
         </div>
       )}
 
@@ -281,66 +331,79 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
         )}
 
         {/* 密碼 */}
-        <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1.5">
-            登入密碼 (Password)
-          </label>
-          <div className="relative">
-            <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="請輸入密碼"
-              className="w-full bg-slate-900/90 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 focus:outline-none"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-
-          {/* 註冊時的密碼強度儀 */}
-          {activeTab === 'register' && password && (
-            <div className="mt-2 space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">密碼強度：</span>
-                <span className={`font-medium ${
-                  passwordStrength.score === 3 ? 'text-emerald-400' :
-                  passwordStrength.score === 2 ? 'text-amber-400' : 'text-red-400'
-                }`}>
-                  {passwordStrength.label}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5 h-1.5">
-                <div className={`rounded-full transition-all ${
-                  passwordStrength.score >= 1 ? (passwordStrength.score === 1 ? 'bg-red-500' : passwordStrength.score === 2 ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-slate-800'
-                }`} />
-                <div className={`rounded-full transition-all ${
-                  passwordStrength.score >= 2 ? (passwordStrength.score === 2 ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-slate-800'
-                }`} />
-                <div className={`rounded-full transition-all ${
-                  passwordStrength.score >= 3 ? 'bg-emerald-500' : 'bg-slate-800'
-                }`} />
-              </div>
-              <div className="text-[10px] text-slate-400 flex flex-wrap gap-x-3 gap-y-0.5 pt-1">
-                <span className={passwordStrength.hasLength ? 'text-emerald-400' : 'text-slate-500'}>
-                  {passwordStrength.hasLength ? '✓' : '•'} 8 碼以上
-                </span>
-                <span className={passwordStrength.hasLetter ? 'text-emerald-400' : 'text-slate-500'}>
-                  {passwordStrength.hasLetter ? '✓' : '•'} 含英文字母
-                </span>
-                <span className={passwordStrength.hasNumber ? 'text-emerald-400' : 'text-slate-500'}>
-                  {passwordStrength.hasNumber ? '✓' : '•'} 含數字
-                </span>
-              </div>
+        {activeTab !== 'forgot' && (
+          <div>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="block text-xs font-medium text-slate-300">
+                登入密碼 (Password)
+              </label>
+              {activeTab === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('forgot')}
+                  className="text-xs text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  忘記密碼？
+                </button>
+              )}
             </div>
-          )}
-        </div>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="請輸入密碼"
+                className="w-full bg-slate-900/90 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 focus:outline-none"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {/* 註冊時的密碼強度儀 */}
+            {activeTab === 'register' && password && (
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">密碼強度：</span>
+                  <span className={`font-medium ${
+                    passwordStrength.score === 3 ? 'text-emerald-400' :
+                    passwordStrength.score === 2 ? 'text-amber-400' : 'text-red-400'
+                  }`}>
+                    {passwordStrength.label}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 h-1.5">
+                  <div className={`rounded-full transition-all ${
+                    passwordStrength.score >= 1 ? (passwordStrength.score === 1 ? 'bg-red-500' : passwordStrength.score === 2 ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-slate-800'
+                  }`} />
+                  <div className={`rounded-full transition-all ${
+                    passwordStrength.score >= 2 ? (passwordStrength.score === 2 ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-slate-800'
+                  }`} />
+                  <div className={`rounded-full transition-all ${
+                    passwordStrength.score >= 3 ? 'bg-emerald-500' : 'bg-slate-800'
+                  }`} />
+                </div>
+                <div className="text-[10px] text-slate-400 flex flex-wrap gap-x-3 gap-y-0.5 pt-1">
+                  <span className={passwordStrength.hasLength ? 'text-emerald-400' : 'text-slate-500'}>
+                    {passwordStrength.hasLength ? '✓' : '•'} 8 碼以上
+                  </span>
+                  <span className={passwordStrength.hasLetter ? 'text-emerald-400' : 'text-slate-500'}>
+                    {passwordStrength.hasLetter ? '✓' : '•'} 含英文字母
+                  </span>
+                  <span className={passwordStrength.hasNumber ? 'text-emerald-400' : 'text-slate-500'}>
+                    {passwordStrength.hasNumber ? '✓' : '•'} 含數字
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 註冊確認密碼 */}
         {activeTab === 'register' && (
@@ -418,10 +481,24 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
             </>
           ) : activeTab === 'login' ? (
             '確認登入'
-          ) : (
+          ) : activeTab === 'register' ? (
             '立即註冊並領取 10,000 $TEE'
+          ) : (
+            '發送密碼重設信件'
           )}
         </button>
+
+        {activeTab === 'forgot' && (
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={() => handleTabChange('login')}
+              className="text-xs text-slate-400 hover:text-emerald-400 transition-colors"
+            >
+              記起密碼了？返回帳號登入
+            </button>
+          </div>
+        )}
 
         {activeTab === 'register' && (
           <p className="text-[11px] text-slate-500 text-center mt-2.5 leading-relaxed">
@@ -437,61 +514,66 @@ export default function AuthCard({ initialTab = 'login' }: AuthCardProps) {
         )}
       </form>
 
-      {/* 分隔線 */}
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-800" />
-        </div>
-        <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
-          <span className="bg-[#0a111a] px-3 text-slate-500 font-medium">
-            或透過第三方帳號快速登入
-          </span>
-        </div>
-      </div>
+      {/* OAuth 區塊 (僅在登入/註冊時顯示) */}
+      {activeTab !== 'forgot' && (
+        <>
+          {/* 分隔線 */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-800" />
+            </div>
+            <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+              <span className="bg-[#0a111a] px-3 text-slate-500 font-medium">
+                或透過第三方帳號快速登入
+              </span>
+            </div>
+          </div>
 
-      {/* OAuth 快速登入入口按鈕 (Google / Discord) */}
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          disabled={isSubmitting}
-          onClick={() => handleOAuthClick('Google')}
-          className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 rounded-xl text-xs text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          title="Google 登入"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
-            <path
-              fill="#EA4335"
-              d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
-            />
-            <path
-              fill="#4285F4"
-              d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.6 14.8c-.3-.8-.4-1.8-.4-2.8 0-1 .1-2 .4-2.8L1.9 6.3C.7 8.7 0 10.8 0 12s.7 3.3 1.9 5.7l3.7-2.9z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
-            />
-          </svg>
-          <span>Google 登入</span>
-        </button>
+          {/* OAuth 快速登入入口按鈕 (Google / Discord) */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => handleOAuthClick('Google')}
+              className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 rounded-xl text-xs text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              title="Google 登入"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path
+                  fill="#EA4335"
+                  d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+                />
+                <path
+                  fill="#4285F4"
+                  d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.6 14.8c-.3-.8-.4-1.8-.4-2.8 0-1 .1-2 .4-2.8L1.9 6.3C.7 8.7 0 10.8 0 12s.7 3.3 1.9 5.7l3.7-2.9z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
+                />
+              </svg>
+              <span>Google 登入</span>
+            </button>
 
-        <button
-          type="button"
-          disabled={isSubmitting}
-          onClick={() => handleOAuthClick('Discord')}
-          className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-[#5865F2]/50 rounded-xl text-xs text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          title="Discord 登入"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#5865F2">
-            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-          </svg>
-          <span>Discord 登入</span>
-        </button>
-      </div>
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => handleOAuthClick('Discord')}
+              className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-[#5865F2]/50 rounded-xl text-xs text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              title="Discord 登入"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#5865F2">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+              </svg>
+              <span>Discord 登入</span>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

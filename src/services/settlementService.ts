@@ -233,6 +233,18 @@ export async function runDailyRolloverOrSettlement(options?: {
     }
   }
 
+  // 維護：清理過期或已使用的密碼重設 Token（防止資料庫堆積）
+  try {
+    const deleted = await prisma.passwordResetToken.deleteMany({
+      where: { OR: [{ used: true }, { expiresAt: { lt: now } }] },
+    });
+    if (deleted.count > 0) {
+      console.log(`[Settlement] Cleaned up ${deleted.count} expired/used password reset tokens.`);
+    }
+  } catch (e) {
+    console.warn('[Settlement] Failed to cleanup password reset tokens:', e);
+  }
+
   if (action === 'rollover') {
     // ── Scenario 1: Weekday Rollover (Tue-Sat 24:00) ──
     const results = await prisma.$transaction(async (tx) => {

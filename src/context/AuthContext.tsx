@@ -17,6 +17,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, password: string, name?: string) => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (email: string) => Promise<{ success: boolean; message?: string; error?: string; devResetUrl?: string }>;
+  resetPassword: (token: string, password: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -101,6 +103,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // 申請忘記密碼
+  const forgotPassword = async (email: string) => {
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || '申請重設密碼失敗，請稍候再試。' };
+      }
+
+      return {
+        success: true,
+        message: data.message,
+        devResetUrl: data.devResetUrl,
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || '網路異常，無法連線至伺服器。' };
+    }
+  };
+
+  // 執行重設密碼
+  const resetPassword = async (token: string, password: string) => {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || '重設密碼失敗，請稍候再試。' };
+      }
+
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || '網路異常，無法連線至伺服器。' };
+    }
+  };
+
   // 登出
   const logout = async () => {
     try {
@@ -116,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, forgotPassword, resetPassword, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );
