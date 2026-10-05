@@ -6,23 +6,11 @@ TeeteeStock 是一個將 VTuber 組合（CP）的互動感（てえてえ）股�
 ⦁	標的物：以「組合」為單位（例如：MIKOMETO, OKAKORO）。
 ⦁	價值來源：直播互動、社群貼文、以及大眾對該組合「貼貼感」的認可。
 ⦁	目標：用數據視覺化呈現 VTuber 圈最動人的瞬間。
-🛠 技術堆疊 (規劃中)
+🛠 技術堆疊
 ⦁	Frontend: Next.js + Tailwind CSS
 ⦁	Backend: Node.js / Python
 ⦁	Database: PostgreSQL + Redis
 ⦁	Real-time: WebSocket (Socket.io)
-📅 開發進度 (Day 01)
-⦁	[x] 專案命名與概念定案
-⦁	[x] GitHub 組織與儲存庫建立
-⦁	[ ] (Pending) 購買網域
-📅 開發進度 (Day 04)
-⦁	品牌更新:
-        貨幣單位訂為 $TEE。
-        初始資金設為 10,000 $TEE，個股初始價格訂為100。
-⦁	技術實踐:
-        環境架構:採用 Next.js + Tailwind CSS v4。
-        UI設計:採用 Dark Mode 專業交易所風格。
-        數據邏輯:實作teeteePair介面，並推出首波9組CP名單。
 
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
