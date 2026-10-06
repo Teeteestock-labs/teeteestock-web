@@ -8,7 +8,7 @@ const CP_PAIR_IDS = [
 ];
 
 async function main() {
-  console.log('--- Deploying / Refreshing MARKET_MAKER 5-Tier Liquidity Orders ---');
+  console.log('--- Deploying / Refreshing MARKET_MAKER 8-Tier Liquidity Orders (499 shares/tier) ---');
 
   // Clear existing MARKET_MAKER orders
   const deleted = await prisma.orderBook.deleteMany({
@@ -44,7 +44,7 @@ async function main() {
         },
       });
     }
-    console.log(`Deployed 5 bids & 5 asks for ${pairId} around price ${refPrice}`);
+    console.log(`Deployed 8 bids & 8 asks for ${pairId} around price ${refPrice} (499 shares each)`);
   }
 
   console.log('✅ Finished deploying MARKET_MAKER orders.');

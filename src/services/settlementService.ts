@@ -128,7 +128,7 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
   // 3. 依據持股比例執行控盤策略
   if (ratio < 0.20) {
     // 比例 < 20%（初期）：【流動性注入模式】
-    // 依據價格級距掛出 5 檔買單與 5 檔賣單，每檔數量 = Math.ceil(80000 / 掛價)
+    // 依據價格級距掛出上下各 8 檔買賣單，每檔固定 499 股（當天耗盡不補充）
     const { bids, asks } = generateMMFiveBidsAndAsks(openingPrice);
 
     for (const b of bids) {
@@ -141,7 +141,7 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
         data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: a.price, volume: a.volume }
       });
     }
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【流動性注入模式】：依級距掛出 5 檔買賣單，單檔資金各約 80,000 TEE。`);
+    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【流動性注入模式】：依級距掛出上下各 8 檔買賣單，每檔 499 股（當天耗盡不補充）。`);
   } else if (ratio >= 0.20 && ratio <= 0.70) {
     // 比例處於 20% ~ 70%（中期）：【野性波動模式】
     // 撤出盤口中央，Spread 放寬至 10%（左右各 5%），每檔掛 1,000 股。

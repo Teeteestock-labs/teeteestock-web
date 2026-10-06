@@ -173,8 +173,8 @@ async function main() {
   });
   console.log('✅ default_player account and balance initialized to 10,000.');
 
-  // 8. Deploy MARKET_MAKER liquidity orders (5 bids and 5 asks for all 9 pairs)
-  console.log('Deploying MARKET_MAKER 5-tier bid and ask liquidity orders by tick rules...');
+  // 8. Deploy MARKET_MAKER liquidity orders (8 bids and 8 asks for all 9 pairs, 499 shares/tier)
+  console.log('Deploying MARKET_MAKER 8-tier bid and ask liquidity orders by tick rules (499 shares/tier)...');
   for (const pairId of CP_PAIR_IDS) {
     const { bids, asks } = generateMMFiveBidsAndAsks(100.0);
     for (const b of bids) {
@@ -201,7 +201,7 @@ async function main() {
       });
     }
   }
-  console.log('✅ MARKET_MAKER 5-tier bid/ask orders deployed for all 9 pairs.');
+  console.log('✅ MARKET_MAKER 8-tier bid/ask orders deployed for all 9 pairs (499 shares/tier).');
 
   console.log('--- Database Reset and Seeding Completed Successfully ---');
 }
