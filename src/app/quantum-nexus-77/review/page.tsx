@@ -35,7 +35,12 @@ const MEMBER_JP_MAP: Record<string, string> = {
   'TsunomakiWatame': '角巻わため',
   'TokinoSora': 'ときのそら',
   'OozoraSubaru': '大空スバル',
-  'HimemoriRuna': '姫森ルーナ'
+  'HimemoriRuna': '姫森ルーナ',
+  'TodorokiHajime': '轟はじめ',
+  'TakanashiKiara': '小鳥遊キアラ',
+  'MoriCalliope': '森カリオペ',
+  'HakosBaelz': 'ハコス・ベールズ',
+  'IRyS': 'IRyS'
 };
 
 // Tokenize title for duplicate grouping

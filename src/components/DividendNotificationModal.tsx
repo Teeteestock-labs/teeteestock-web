@@ -20,7 +20,10 @@ const STOCK_NAME_MAP: Record<string, string> = {
   PKMR: 'PekoMarin',
   SSWT: 'ShishiWata',
   SRAZ: 'SorAZ',
-  SBRN: 'SubaRuna'
+  SBRN: 'SubaRuna',
+  PKVV: 'PekoVivi',
+  TKMR: 'TakaMori',
+  BARS: 'BaeRyS'
 };
 
 export default function DividendNotificationModal() {

@@ -24,7 +24,10 @@ const PAIR_ID_MAP: Record<string, string> = {
   'fubumio': 'FBMO',
   'shishiwata': 'SSWT',
   'subaruna': 'SBRN',
-  'aziro': 'AZIR'
+  'aziro': 'AZIR',
+  'pekovivi': 'PKVV',
+  'takamori': 'TKMR',
+  'baerys': 'BARS'
 };
 
 type Mode = 'list' | 'asset';

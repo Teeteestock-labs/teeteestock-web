@@ -13,6 +13,9 @@ const INITIAL_PAIRS = [
   { id: 'SSWT', name: 'ShishiWata' },
   { id: 'SBRN', name: 'SubaRuna' },
   { id: 'AZIR', name: 'AZIro' },
+  { id: 'PKVV', name: 'PekoVivi' },
+  { id: 'TKMR', name: 'TakaMori' },
+  { id: 'BARS', name: 'BaeRyS' },
 ];
 
 async function main() {

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import MarketDetailClient from "./MarketDetailClient";
 
-const GOLDEN_IDS = ['MCMT', 'OKKR', 'PKMR', 'NEFL', 'SRAZ', 'FBMO', 'SSWT', 'SBRN', 'AZIR'];
+const GOLDEN_IDS = ['MCMT', 'OKKR', 'PKMR', 'NEFL', 'SRAZ', 'FBMO', 'SSWT', 'SBRN', 'AZIR', 'PKVV', 'TKMR', 'BARS'];
 
 interface PageProps {
     params: Promise<{

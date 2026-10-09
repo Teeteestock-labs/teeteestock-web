@@ -13,6 +13,9 @@ const CP_PAIR_IDS = [
   'SSWT',
   'SBRN',
   'AZIR',
+  'PKVV',
+  'TKMR',
+  'BARS',
 ];
 
 async function main() {
@@ -57,6 +60,9 @@ async function main() {
         status: 'NORMAL',
         warningWeeks: 0,
         adminAdjust: 0.0,
+        adminAdjustReason: '',
+        lastSettledAt: null,
+        total_shares: BigInt(1000000),
       },
     });
     console.log(`Reset pair: ${pairId}`);
@@ -71,8 +77,8 @@ async function main() {
   });
   console.log(`Cleared ${portfolioCleanup.count} test bot portfolios.`);
 
-  // 4. Seed TEST_BOT_01 to TEST_BOT_50
-  console.log('Seeding TEST_BOT_01 to TEST_BOT_50 user accounts and portfolios...');
+  // 4. Seed TEST_BOT_01 to TEST_BOT_50 user cash balance (1M TEE each, 0 initial shares)
+  console.log('Seeding TEST_BOT_01 to TEST_BOT_50 user accounts...');
   for (let i = 1; i <= 50; i++) {
     const botId = `TEST_BOT_${i.toString().padStart(2, '0')}`;
     
@@ -87,21 +93,8 @@ async function main() {
         balance: 1000000.0,
       },
     });
-
-    // Seed portfolios (100k shares of each pair)
-    for (const pairId of CP_PAIR_IDS) {
-      await prisma.userPortfolios.create({
-        data: {
-          userId: botId,
-          pairId: pairId,
-          shares_owned: BigInt(100000),
-          average_cost: 100.0,
-          initial_choice: 'CASH_ONLY',
-        },
-      });
-    }
-    console.log(`Seeded account and portfolios for: ${botId}`);
   }
+  console.log('Seeded accounts for TEST_BOT_01 to TEST_BOT_50.');
 
   // 5. Reset MARKET_MAKER user account balance
   console.log('Resetting MARKET_MAKER user account balance...');
@@ -201,7 +194,7 @@ async function main() {
       });
     }
   }
-  console.log('✅ MARKET_MAKER 8-tier bid/ask orders deployed for all 9 pairs (499 shares/tier).');
+  console.log(`✅ MARKET_MAKER 8-tier bid/ask orders deployed for all ${CP_PAIR_IDS.length} pairs (499 shares/tier).`);
 
   console.log('--- Database Reset and Seeding Completed Successfully ---');
 }

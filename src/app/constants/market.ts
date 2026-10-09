@@ -145,5 +145,53 @@ export const INITIAL_PAIRS: teeteePair[] = [
         warningWeeks: 0,
         pendingInteractions: { liveCollab: 0, largeEvent: 0, newSong: 0 },
         teeteeNews: []
+    },
+    {
+        id: 'PKVV',
+        name: 'PekoVivi',
+        members: ['UsadaPekora', 'TodorokiHajime'],
+        price: 100,
+        change24h: 0,
+        ceoTitle: 'PV董事長',
+        history: [],
+        recentTrades: [],
+        yesterdayPrice: 100,
+        todayVolume: 0,
+        status: 'NORMAL' as const,
+        warningWeeks: 0,
+        pendingInteractions: { liveCollab: 0, largeEvent: 0, newSong: 0 },
+        teeteeNews: []
+    },
+    {
+        id: 'TKMR',
+        name: 'TakaMori',
+        members: ['TakanashiKiara', 'MoriCalliope'],
+        price: 100,
+        change24h: 0,
+        ceoTitle: 'TM董事長',
+        history: [],
+        recentTrades: [],
+        yesterdayPrice: 100,
+        todayVolume: 0,
+        status: 'NORMAL' as const,
+        warningWeeks: 0,
+        pendingInteractions: { liveCollab: 0, largeEvent: 0, newSong: 0 },
+        teeteeNews: []
+    },
+    {
+        id: 'BARS',
+        name: 'BaeRyS',
+        members: ['HakosBaelz', 'IRyS'],
+        price: 100,
+        change24h: 0,
+        ceoTitle: 'BR董事長',
+        history: [],
+        recentTrades: [],
+        yesterdayPrice: 100,
+        todayVolume: 0,
+        status: 'NORMAL' as const,
+        warningWeeks: 0,
+        pendingInteractions: { liveCollab: 0, largeEvent: 0, newSong: 0 },
+        teeteeNews: []
     }
 ].sort((a, b) => a.name.localeCompare(b.name));

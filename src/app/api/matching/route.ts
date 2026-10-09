@@ -27,8 +27,9 @@ export async function POST(request: Request) {
 
     const tz = getTaipeiTime(now);
     const isTradingHours = (tz.dayOfWeek !== 1) && (tz.hour >= 19 && tz.hour <= 23);
+    const bypassHours = process.env.BYPASS_MARKET_HOURS === 'true';
 
-    if (marketStatus !== 'OPEN' || !isTradingHours) {
+    if (!bypassHours && (marketStatus !== 'OPEN' || !isTradingHours)) {
       return NextResponse.json({
         success: false,
         error: '撮合引擎保持凍結，僅在開盤狀態開放。',
@@ -228,10 +229,48 @@ export async function POST(request: Request) {
               const currentBalance = buyerAccCheck ? Number(buyerAccCheck.balance) : 0;
               if (currentBalance < buyerCost) {
                 console.warn(`[Matching] 買方餘額不足，跳過撮合。買方: ${buyerId}, 餘額: ${currentBalance}, 需要: ${buyerCost}`);
+                bOrder.isCancelled = true;
+                buyIdx++;
                 continue;
               }
             }
 
+            // 檢查賣方庫存：交割前防禦驗證
+            let sellerPortfolio = await tx.userPortfolios.findUnique({
+              where: { userId_pairId: { userId: sellerId, pairId: pair.id } },
+            });
+
+            // 防禦性保障：若賣方為 MARKET_MAKER 且尚未建立庫存紀錄，初始化建立 500,000 庫存
+            if (sellerId === 'MARKET_MAKER' && !sellerPortfolio) {
+              sellerPortfolio = await tx.userPortfolios.create({
+                data: {
+                  userId: 'MARKET_MAKER',
+                  pairId: pair.id,
+                  shares_owned: BigInt(500000),
+                  average_cost: finalPrice,
+                  initial_choice: UserChoice.CASH_ONLY,
+                }
+              });
+            }
+
+            // 若賣方庫存不足以交割
+            if (!sellerPortfolio || Number(sellerPortfolio.shares_owned) < matchVol) {
+              // 若為造市商且持股耗盡，依規則不自動補充，撤銷該筆賣單並跳過，避免整筆撮合 rollback
+              if (sellerId === 'MARKET_MAKER') {
+                console.warn(`[Matching] 造市商庫存已耗盡不足以交割 (${sellerPortfolio?.shares_owned ?? 0} < ${matchVol})，撤銷該委託賣單。`);
+                try {
+                  await tx.orderBook.delete({ where: { id: sOrder.id } });
+                } catch { /* 委託單可能已被刪除 */ }
+                sOrder.isCancelled = true;
+                sellIdx++;
+                continue;
+              }
+              throw new Error(
+                `賣方庫存不足以進行交割！賣方: ${sellerId}, 組合: ${pair.id}, 持有: ${sellerPortfolio?.shares_owned ?? 0}, 撮合需求: ${matchVol}`
+              );
+            }
+
+            // 雙方資格確認無誤，執行現金扣款與轉移
             await tx.userAccount.update({
               where: { userId: buyerId },
               data: { balance: { decrement: buyerCost } },
@@ -247,24 +286,20 @@ export async function POST(request: Request) {
               data: { balance: { increment: sellerNetCash } },
             });
 
-            // 股份移轉
-            // 賣方扣除股份：由於賣方下單時，前端已先行扣除或此為後端撮合核心
-            // 我們仍須對資料庫中的庫存 UserPortfolios 進行交割更新
-            const sellerPortfolio = await tx.userPortfolios.findUnique({
-              where: { userId_pairId: { userId: sellerId, pairId: pair.id } },
-            });
-
-            if (!sellerPortfolio || Number(sellerPortfolio.shares_owned) < matchVol) {
-              throw new Error(
-                `賣方庫存不足以進行交割！賣方: ${sellerId}, 組合: ${pair.id}, 持有: ${sellerPortfolio?.shares_owned ?? 0}, 撮合需求: ${matchVol}`
-              );
-            }
-
+            // 股份移轉：賣方扣除股份
             const newSellerShares = Number(sellerPortfolio.shares_owned) - matchVol;
             if (newSellerShares <= 0) {
-              await tx.userPortfolios.delete({
-                where: { id: sellerPortfolio.id },
-              });
+              if (sellerId === 'MARKET_MAKER') {
+                // 造市商不可直接刪除持股紀錄，保持 shares_owned = 0，避免下次撮合 sellerPortfolio 變為 null
+                await tx.userPortfolios.update({
+                  where: { id: sellerPortfolio.id },
+                  data: { shares_owned: BigInt(0) },
+                });
+              } else {
+                await tx.userPortfolios.delete({
+                  where: { id: sellerPortfolio.id },
+                });
+              }
             } else {
               await tx.userPortfolios.update({
                 where: { id: sellerPortfolio.id },

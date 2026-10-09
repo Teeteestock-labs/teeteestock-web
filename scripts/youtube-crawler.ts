@@ -167,6 +167,54 @@ const CP_CONFIGS: CPConfig[] = [
         targetKeywords: [/スバル/i, /Subaru/i, /大空/i, /Subaru-senpai/i]
       }
     ]
+  },
+  {
+    pairId: 'PKVV',
+    generalKeywords: [/ぺこびび/i, /PekoVivi/i, /pekovivi/i, /ぺこビビ/i],
+    channels: [
+      {
+        channelId: 'UC1DCedRgGHBdm81E1llLhOQ', // 兔田佩克拉 (Pekora)
+        name: 'Usada Pekora',
+        targetKeywords: [/はじめ/i, /びび/i, /Hajime/i, /Vivi/i, /轟/i, /ビビ/i, /番長/i]
+      },
+      {
+        channelId: 'UCGzTVXqMQHa4AgJVJIVvtDQ', // 轟初 (Hajime / Vivi)
+        name: 'Todoroki Hajime',
+        targetKeywords: [/ぺこら/i, /Pekora/i, /兔田/i, /ぺこちゃん/i, /Peko/i]
+      }
+    ]
+  },
+  {
+    pairId: 'TKMR',
+    generalKeywords: [/タカモリ/i, /TakaMori/i, /takamori/i],
+    channels: [
+      {
+        channelId: 'UCHsx4Hqa-1ORjQTh9TYDhww', // 小鳥遊琪亞拉 (Kiara)
+        name: 'Takanashi Kiara',
+        targetKeywords: [/カリオペ/i, /Calliope/i, /Calli/i, /Mori/i, /森/i, /死神/i]
+      },
+      {
+        channelId: 'UCL_qhgtOy0dy1Agp8vkySQg', // 森美聲 (Calliope)
+        name: 'Mori Calliope',
+        targetKeywords: [/キアラ/i, /Kiara/i, /小鳥遊/i, /火雞/i, /Tenchou/i, /店長/i]
+      }
+    ]
+  },
+  {
+    pairId: 'BARS',
+    generalKeywords: [/ベリス/i, /BaeRyS/i, /baerys/i],
+    channels: [
+      {
+        channelId: 'UCgmPnx-EEeOrZSg5Tiw7ZRQ', // 哈克斯·貝爾斯 (Baelz)
+        name: 'Hakos Baelz',
+        targetKeywords: [/アイリス/i, /IRyS/i, /Irys/i]
+      },
+      {
+        channelId: 'UC8rcEBzJSleTkf_-agPM20g', // IRyS
+        name: 'IRyS',
+        targetKeywords: [/ベールズ/i, /Baelz/i, /Bae/i, /ハコス/i, /老鼠/i]
+      }
+    ]
   }
 ];
 

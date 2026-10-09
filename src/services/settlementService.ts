@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { MarketStatus, EventType, ReviewStatus, OrderSide } from '../types/enums';
+import { MarketStatus, EventType, ReviewStatus, OrderSide, UserChoice } from '../types/enums';
 import { alignToTick, getTickSize, generateMMFiveBidsAndAsks } from '../utils/validatePrice';
 import { getTaipeiTime } from '../utils/marketHours';
 
@@ -49,6 +49,40 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
       userId: 'MARKET_MAKER'
     }
   });
+
+  // 確保造市商帳號存在且有足額資金
+  await tx.userAccount.upsert({
+    where: { userId: 'MARKET_MAKER' },
+    update: {},
+    create: { userId: 'MARKET_MAKER', balance: 999999999.0 }
+  });
+
+  // 確保造市商在 UserPortfolios 中擁有該組合的持股紀錄（預設 500,000 股），確保掛出賣單時可交割
+  const mmPortfolio = await tx.userPortfolios.findUnique({
+    where: {
+      userId_pairId: {
+        userId: 'MARKET_MAKER',
+        pairId: pair.id,
+      }
+    }
+  });
+
+  let mmCurrentShares = 0;
+  if (!mmPortfolio) {
+    await tx.userPortfolios.create({
+      data: {
+        userId: 'MARKET_MAKER',
+        pairId: pair.id,
+        shares_owned: BigInt(500000),
+        average_cost: openingPrice || 100.0,
+        initial_choice: UserChoice.CASH_ONLY,
+      }
+    });
+    mmCurrentShares = 500000;
+  } else {
+    // 依規則：耗盡後不自動補足，尊重現有剩餘持股
+    mmCurrentShares = Number(mmPortfolio.shares_owned);
+  }
 
   const isAlertMode = alertPairIds.includes(pair.id);
 
@@ -136,34 +170,65 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
         data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: b.price, volume: b.volume }
       });
     }
+
+    let availableToSell = mmCurrentShares;
     for (const a of asks) {
-      await tx.orderBook.create({
-        data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: a.price, volume: a.volume }
-      });
+      if (availableToSell <= 0) break; // 造市商持股耗盡，當天不補足亦不再掛賣單
+      const sellVol = Math.min(a.volume, availableToSell);
+      if (sellVol > 0) {
+        await tx.orderBook.create({
+          data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: a.price, volume: sellVol }
+        });
+        availableToSell -= sellVol;
+      }
     }
     console.log(`[🤖 MarketMaker] ${pair.id} 啟動【流動性注入模式】：依級距掛出上下各 8 檔買賣單，每檔 499 股（當天耗盡不補充）。`);
-  } else if (ratio >= 0.20 && ratio <= 0.70) {
-    // 比例處於 20% ~ 70%（中期）：【野性波動模式】
-    // 撤出盤口中央，Spread 放寬至 10%（左右各 5%），每檔掛 1,000 股。
-    const buyPrice = alignToTick(openingPrice * 0.95);
-    const sellPrice = alignToTick(openingPrice * 1.05);
+  } else if (ratio >= 0.20 && ratio <= 0.40) {
+    // 比例處於 20% ~ 40%（中期）：【野性波動模式】
+    // 撤出盤口中央，分三階梯掛出防守與壓盤單：
+    // ±8% 掛價值 2 萬 TEE 的股數、±10% 掛價值 3 萬 TEE 的股數、±15% 掛價值 5 萬 TEE 的股數
+    const tiers = [
+      { pct: 0.08, targetValue: 20000 },
+      { pct: 0.10, targetValue: 30000 },
+      { pct: 0.15, targetValue: 50000 },
+    ];
 
-    await tx.orderBook.create({
-      data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice, volume: 1000 }
-    });
-    await tx.orderBook.create({
-      data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: sellPrice, volume: 1000 }
-    });
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【野性波動模式】：盤口 Spread 放寬至 10% 雙向各 1,000 股。`);
+    let availableToSellWild = mmCurrentShares;
+    for (const tier of tiers) {
+      const buyPrice = alignToTick(Math.max(0.01, openingPrice * (1 - tier.pct)));
+      const buyVol = Math.max(1, Math.floor(tier.targetValue / buyPrice));
+
+      const sellPrice = alignToTick(openingPrice * (1 + tier.pct));
+      const sellVol = Math.max(1, Math.floor(tier.targetValue / sellPrice));
+
+      if (buyVol > 0 && buyPrice > 0) {
+        await tx.orderBook.create({
+          data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice, volume: buyVol }
+        });
+      }
+      if (sellVol > 0 && sellPrice > 0 && availableToSellWild > 0) {
+        const actualSellVol = Math.min(sellVol, availableToSellWild);
+        if (actualSellVol > 0) {
+          await tx.orderBook.create({
+            data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: sellPrice, volume: actualSellVol }
+          });
+          availableToSellWild -= actualSellVol;
+        }
+      }
+    }
+    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【野性波動模式】：玩家持股 20%~40%，掛出 ±8%(2萬)、±10%(3萬)、±15%(5萬) 梯隊買賣單。`);
   } else {
-    // 比例 > 70%（後期）：【終極護盤與欺敵模式】
-    // 在當日跌停限制線（Limit Down，-20%）精準掛出基本面淨值清算保底買單（10,000 股）。
-    const buyPrice = alignToTick(openingPrice * 0.80);
+    // 比例 > 40%（後期）：【終極護盤與欺敵模式】
+    // 僅在當日跌停板（Limit Down，-20%）掛出價值 20 萬 TEE 的清算保底買單
+    const buyPrice = alignToTick(Math.max(0.01, openingPrice * 0.80));
+    const buyVol = Math.max(1, Math.floor(200000 / buyPrice));
 
-    await tx.orderBook.create({
-      data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice, volume: 10000 }
-    });
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【終極護盤與欺敵模式】：於今日跌停限制線 ${buyPrice} 掛出保底買單 10,000 股。`);
+    if (buyVol > 0 && buyPrice > 0) {
+      await tx.orderBook.create({
+        data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice, volume: buyVol }
+      });
+    }
+    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【終極護盤與欺敵模式】：玩家持股 >40%，於跌停板 ${buyPrice} 掛出價值 20 萬 TEE 保底買單 (${buyVol} 股)。`);
   }
 }
 
