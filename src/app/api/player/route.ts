@@ -6,7 +6,8 @@ import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/rou
 import { getAuthenticatedUser } from '@/lib/auth';
 
 const DEFAULT_PLAYER_ID = 'default_player';
-const DEFAULT_BALANCE = 10000;
+const GUEST_BALANCE = 0;
+const INITIAL_REGISTERED_BALANCE = 10000;
 
 export async function GET(request: Request) {
   try {
@@ -19,11 +20,27 @@ export async function GET(request: Request) {
       where: { userId: targetUserId },
     });
 
-    if (!account) {
+    if (targetUserId === DEFAULT_PLAYER_ID) {
+      // 訪客試玩帳號：所持金固定為 0
+      if (!account) {
+        account = await prisma.userAccount.create({
+          data: {
+            userId: DEFAULT_PLAYER_ID,
+            balance: GUEST_BALANCE,
+          },
+        });
+      } else if (account.balance !== 0) {
+        account = await prisma.userAccount.update({
+          where: { userId: DEFAULT_PLAYER_ID },
+          data: { balance: GUEST_BALANCE },
+        });
+      }
+    } else if (!account) {
+      // 註冊玩家：初始資金 10,000 $TEE
       account = await prisma.userAccount.create({
         data: {
           userId: targetUserId,
-          balance: DEFAULT_BALANCE,
+          balance: INITIAL_REGISTERED_BALANCE,
         },
       });
     }

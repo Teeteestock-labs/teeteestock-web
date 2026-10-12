@@ -112,7 +112,7 @@ const getInitialMarketStatus = (): 'CLOSED' | 'PRE_MARKET' | 'OPEN' | 'SETTLING'
 };
 
 export function TeeProvider({ children } : { children: React.ReactNode}) {
-    const [balance, setBalance] = useState(10000);
+    const [balance, setBalance] = useState(0);
     const [holdings, setHoldings] = useState<UserHolding[]>([]);
     const [marketData, setMarketData] = useState<teeteePair[]>(INITIAL_PAIRS);
     const [orders, setOrders] = useState<Order[]>([]);

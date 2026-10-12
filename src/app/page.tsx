@@ -943,7 +943,7 @@ function HomeContent() {
               <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-3 flex items-center justify-between gap-2 text-xs text-slate-300 shadow-lg">
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-400 font-bold">💡 訪客試玩模式</span>
-                  <span className="text-slate-400 hidden sm:inline">登入或註冊專屬交易帳號即可永久保存投資部位與歷史紀錄！</span>
+                  <span className="text-slate-400 hidden sm:inline">登入或註冊專屬交易帳號即可領取 10,000 $TEE 初始資產並永久保存投資紀錄！</span>
                 </div>
                 <Link
                   href="/login"

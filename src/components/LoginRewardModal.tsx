@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTee } from '@/context/TeeContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface DayProgress {
   key: string;      // 'WED', 'THU', 'FRI', 'SAT', 'SUN'
@@ -14,6 +15,7 @@ interface DayProgress {
 
 export default function LoginRewardModal() {
   const { refreshPlayerState } = useTee();
+  const { user, isLoading } = useAuth();
   const [daysProgress, setDaysProgress] = useState<DayProgress[]>([
     { key: 'WED', label: 'WED', dayName: '週三', amount: 50, claimed: false, isToday: false },
     { key: 'THU', label: 'THU', dayName: '週四', amount: 50, claimed: false, isToday: false },
@@ -28,6 +30,12 @@ export default function LoginRewardModal() {
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
+    // 訪客（未登入者）不具備領取登入獎勵資格，不彈出視窗
+    if (isLoading || !user) {
+      setIsOpen(false);
+      return;
+    }
+
     async function checkLoginReward() {
       try {
         const res = await fetch('/api/login-reward');
@@ -72,7 +80,7 @@ export default function LoginRewardModal() {
     return () => {
       window.removeEventListener('trigger_login_reward_modal_preview', handlePreviewEvent);
     };
-  }, []);
+  }, [user, isLoading]);
 
   // 按下「領取獎勵」時的處理邏輯
   const handleClaim = async () => {

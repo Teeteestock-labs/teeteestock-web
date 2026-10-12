@@ -145,7 +145,7 @@ export async function POST(request: Request) {
         const account = await tx.userAccount.findUnique({
           where: { userId: targetUserId }
         });
-        const balance = account ? account.balance : 10000;
+        const balance = account ? account.balance : (targetUserId === 'default_player' ? 0 : 10000);
 
         if (balance - pendingCost < price * volume) {
           throw new Error('可用餘額不足（已扣除其他委託中買單金額）');

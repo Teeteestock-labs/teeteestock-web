@@ -36,7 +36,25 @@ function getTaipeiYearAndWeek(now: Date = new Date()) {
 export async function GET(request: Request) {
   try {
     const authUser = await getAuthenticatedUser(request);
-    const targetUserId = authUser?.id || DEFAULT_USER_ID;
+    if (!authUser) {
+      return NextResponse.json({
+        success: true,
+        todayKey: null,
+        isTodayClaimable: false,
+        todayAmount: 0,
+        daysProgress: Object.keys(REWARD_SCHEDULE).map((key) => ({
+          key,
+          label: key,
+          dayName: REWARD_SCHEDULE[key].dayName,
+          amount: REWARD_SCHEDULE[key].amount,
+          claimed: false,
+          isToday: false,
+        })),
+        isGuest: true,
+      });
+    }
+
+    const targetUserId = authUser.id;
 
     const now = new Date();
     const { year, week, dayOfWeek } = getTaipeiYearAndWeek(now);
@@ -82,7 +100,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const authUser = await getAuthenticatedUser(request);
-    const targetUserId = authUser?.id || DEFAULT_USER_ID;
+    if (!authUser) {
+      return NextResponse.json(
+        { error: '訪客試玩模式無法領取每日登入獎勵，請先登入或註冊會員帳號。' },
+        { status: 401 }
+      );
+    }
+
+    const targetUserId = authUser.id;
 
     const now = new Date();
     const { year, week, dayOfWeek } = getTaipeiYearAndWeek(now);
