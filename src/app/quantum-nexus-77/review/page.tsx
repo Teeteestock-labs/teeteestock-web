@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getNextSettlementBoundary } from '@/utils/marketHours';
 import TriggerCrawlerButton from './TriggerCrawlerButton';
 import ManualDividendButton from './ManualDividendButton';
+import { getDividendCooldownInfo } from '@/services/settlementService';
 import { INITIAL_PAIRS } from '@/app/constants/market';
 import ReviewPageClient from './ReviewPageClient';
 import InquiriesTable from './InquiriesTable';
@@ -11,6 +12,8 @@ import { cookies } from 'next/headers';
 import AdminLoginForm from '../AdminLoginForm';
 import AdminLogoutButton from '../AdminLogoutButton';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
+import { Trophy } from 'lucide-react';
+import { HOLO_KOUSHIEN_EVENT_ID } from '@/utils/eventDeadline';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +104,19 @@ export default async function AdminReviewPage() {
     orderBy: { createdAt: 'desc' },
     take: 100
   });
+
+  // 查詢特別企劃是否尚未鎖定
+  const specialEvent = await prisma.specialEvent.findUnique({
+    where: { id: HOLO_KOUSHIEN_EVENT_ID },
+  });
+  const isSpecialEventUnlocked = !specialEvent?.isLocked && !specialEvent?.isSettled;
+
+  // 查詢除息冷卻與手動確認狀態
+  const rawDividendCooldown = await getDividendCooldownInfo();
+  const initialDividendCooldown = {
+    ...rawDividendCooldown,
+    lastDividendTriggeredAt: rawDividendCooldown.lastDividendTriggeredAt ? rawDividendCooldown.lastDividendTriggeredAt.toISOString() : null,
+  };
 
   // Ensure special 'hololive' system pair exists in the database
   await prisma.cpPairs.upsert({
@@ -242,7 +258,32 @@ export default async function AdminReviewPage() {
             <p className="text-xs text-gray-500 mt-1">外顯數據主控牆 • 行政干預與情報審查風箱</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <ManualDividendButton />
+            <Link
+              href="/quantum-nexus-77/events"
+              className={`relative px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-sm ${
+                isSpecialEventUnlocked
+                  ? "bg-amber-500/15 border border-amber-400/60 text-amber-300 hover:bg-amber-500/25 shadow-amber-950/30"
+                  : "bg-gray-800/60 border border-gray-700/60 text-gray-300 hover:bg-gray-800"
+              }`}
+            >
+              <div className="relative flex items-center justify-center">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                {isSpecialEventUnlocked && (
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00FFA3]" />
+                  </span>
+                )}
+              </div>
+              <span>特別企劃管理</span>
+              {isSpecialEventUnlocked && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-[#00FFA3] border border-emerald-500/40 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00FFA3] animate-pulse" />
+                  未鎖定
+                </span>
+              )}
+            </Link>
+            <ManualDividendButton initialCooldown={initialDividendCooldown} />
             <TriggerCrawlerButton />
           </div>
         </header>

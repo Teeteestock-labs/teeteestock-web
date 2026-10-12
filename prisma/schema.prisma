@@ -250,3 +250,45 @@ model PasswordResetToken {
   @@index([email])
   @@index([token])
 }
+
+model EventPrediction {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String   @default("holo_koushien_2026")
+  choice    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, eventId])
+  @@index([eventId, choice])
+}
+
+model SpecialEvent {
+  id            String    @id // 活動識別碼，例如 "holo_koushien_2026"
+  title         String    // 活動名稱
+  prize         Float     @default(500.0) // 正確預測每人獎金
+  winningChoice String?   // 冠軍學校選項
+  isLocked      Boolean   @default(false) // 是否由後台手動截止鎖定
+  lockedAt      DateTime? // 手動截止時間
+  isSettled     Boolean   @default(false) // 是否已結算發放
+  settledAt     DateTime? // 結算發放時間
+  totalPayout   Float     @default(0.0)   // 總發放金額
+  winnerCount   Int       @default(0)     // 獲獎人數
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model EventRewardLog {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  amount    Float
+  choice    String
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+

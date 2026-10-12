@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-interface CooldownState {
+export interface CooldownState {
   lastDividendTriggeredAt: string | null;
   cooldownHoursTotal: number;
   remainingMs: number;
@@ -10,9 +10,13 @@ interface CooldownState {
   pendingDividendSettle: boolean;
 }
 
-export default function ManualDividendButton() {
-  const [cooldown, setCooldown] = useState<CooldownState | null>(null);
-  const [remainingMs, setRemainingMs] = useState<number>(0);
+interface ManualDividendButtonProps {
+  initialCooldown?: CooldownState | null;
+}
+
+export default function ManualDividendButton({ initialCooldown = null }: ManualDividendButtonProps) {
+  const [cooldown, setCooldown] = useState<CooldownState | null>(initialCooldown);
+  const [remainingMs, setRemainingMs] = useState<number>(initialCooldown?.remainingMs || 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -109,7 +113,7 @@ export default function ManualDividendButton() {
   };
 
   const canTrigger = cooldown ? cooldown.canTrigger && remainingMs === 0 : false;
-  const isPending = cooldown?.pendingDividendSettle;
+  const isPending = cooldown?.pendingDividendSettle ?? false;
 
   return (
     <div className="relative inline-flex items-center gap-2">
@@ -132,12 +136,22 @@ export default function ManualDividendButton() {
         </div>
       )}
 
-      {/* Pending status badge indicator */}
-      {isPending && (
-        <span className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-          除息參考價已暫存 (待週二 18:30 劃轉)
-        </span>
+      {/* Pending status / warning prompt badge */}
+      {cooldown && (
+        !isPending ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-400/60 text-amber-300 text-xs font-bold shadow-sm shadow-amber-950/30">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+            </span>
+            <span>⚠️ 尚未手動確定週一除息</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-[#00FFA3] text-xs font-bold shadow-sm shadow-emerald-950/30">
+            <span className="w-2 h-2 rounded-full bg-[#00FFA3]" />
+            <span>✓ 週一除息已確認暫存 (待週二 18:30 劃轉)</span>
+          </span>
+        )
       )}
 
       {/* Main Trigger / Cooldown Button */}
@@ -145,10 +159,20 @@ export default function ManualDividendButton() {
         <button
           onClick={() => setShowConfirmModal(true)}
           disabled={isSubmitting}
-          className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white shadow-lg shadow-pink-500/20 border border-pink-400/30 transition-all duration-200 active:scale-95 flex items-center gap-2"
+          className={`relative px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition-all duration-200 active:scale-95 flex items-center gap-2 ${
+            !isPending
+              ? 'bg-gradient-to-r from-amber-600 via-pink-600 to-purple-600 hover:from-amber-500 hover:to-purple-500 shadow-amber-500/20 border border-amber-400/60 ring-1 ring-amber-400/40'
+              : 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 shadow-pink-500/20 border border-pink-400/30'
+          }`}
+          title={!isPending ? '尚未手動確定週一除息，請點擊進行試算並確認暫存' : '週一除息已確認暫存'}
         >
           <span>💰</span>
-          <span>手動執行除息 (試算參考價)</span>
+          <span>手動確定週一除息 (試算參考價)</span>
+          {!isPending && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400 text-black shadow-sm animate-pulse">
+              待確定
+            </span>
+          )}
         </button>
       ) : (
         <div className="flex items-center gap-2">
@@ -176,6 +200,9 @@ export default function ManualDividendButton() {
             </div>
 
             <div className="space-y-3 text-xs text-gray-300 leading-relaxed bg-gray-950/60 p-4 rounded-xl border border-gray-800">
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-center gap-2 font-semibold">
+                <span>⚠️ 提示：目前尚未手動確定週一除息程序</span>
+              </div>
               <p className="font-semibold text-pink-400">
                 ⚠️ 本次操作將觸發 【156 小時（6.5 天）】冷卻倒數計時！
               </p>

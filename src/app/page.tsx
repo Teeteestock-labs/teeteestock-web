@@ -818,7 +818,8 @@ function HomeContent() {
     marketStatus,
     simulateMarketMove,
     executeWeeklySettlement,
-    settlementLogs
+    settlementLogs,
+    eventRewardLogs
   } = useTee();
   const { user } = useAuth();
 
@@ -1209,6 +1210,55 @@ function HomeContent() {
               marketData={marketData}
               router={router}
             />
+
+            {/* 企劃獎金明細 (Special Event Prize Details) */}
+            <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden shadow-xl font-mono">
+              <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center select-none">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#FFD700] animate-pulse shadow-[0_0_8px_#FFD700]" />
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">企劃獎金明細</h3>
+                </div>
+                <div className="flex items-center gap-3 font-mono">
+                  <span className="text-xs font-bold text-white">
+                    累計領取 +{(eventRewardLogs || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0).toLocaleString()} $TEE
+                  </span>
+                  <span className="text-[10px] text-gray-400 border-l border-gray-800 pl-3">
+                    共 {(eventRewardLogs || []).length} 筆
+                  </span>
+                </div>
+              </div>
+
+              {(!eventRewardLogs || eventRewardLogs.length === 0) ? (
+                <div className="p-8 text-center text-gray-500 text-xs font-bold font-mono">
+                  目前尚無企劃獎金發放紀錄
+                </div>
+              ) : (
+                <div className="divide-y divide-[#21262C]/60">
+                  {eventRewardLogs.map((item: any) => (
+                    <div
+                      key={item.id}
+                      className="p-3 px-4 flex justify-between items-center hover:bg-gray-900/30 transition-colors"
+                    >
+                      <div className="flex flex-col text-left">
+                        <span className="text-xs font-bold text-gray-200">
+                          {item.title || "特別企劃預測獎勵"}
+                        </span>
+                        {item.createdAt && (
+                          <span className="text-[10px] text-gray-500 font-sans mt-0.5">
+                            {new Date(item.createdAt).toLocaleDateString('zh-TW')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs sm:text-sm font-bold text-[#00FFA3]">
+                          +{item.amount?.toLocaleString() || 500} $TEE
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* 最下方總資產歷史變化分時圖 (1M, 3M, 6M, 1Y, MAX) */}
             <AssetHistoryChart

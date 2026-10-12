@@ -102,6 +102,27 @@ export async function GET(request: Request) {
       createdAt: d.createdAt.toISOString()
     }));
 
+    // 取得企劃獎金發放明細
+    const userRewardLogs = await prisma.eventRewardLog.findMany({
+      where: { userId: targetUserId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const rewardEventIds = Array.from(new Set(userRewardLogs.map(r => r.eventId)));
+    const specialEvents = rewardEventIds.length > 0 ? await prisma.specialEvent.findMany({
+      where: { id: { in: rewardEventIds } },
+    }) : [];
+    const eventTitleMap = new Map(specialEvents.map(e => [e.id, e.title]));
+
+    const mappedRewardLogs = userRewardLogs.map(r => ({
+      id: r.id,
+      eventId: r.eventId,
+      title: eventTitleMap.get(r.eventId) || (r.eventId === 'holo_koushien_2026' ? 'ホロライブ甲子園2026 冠軍預測' : r.eventId),
+      amount: r.amount,
+      choice: r.choice,
+      createdAt: r.createdAt.toISOString(),
+    }));
+
     return NextResponse.json({
       player: {
         id: account.userId,
@@ -118,7 +139,8 @@ export async function GET(request: Request) {
         }),
       },
       settlementLogs: mappedSettlementLogs,
-      dividendLogs: mappedDividendLogs
+      dividendLogs: mappedDividendLogs,
+      eventRewardLogs: mappedRewardLogs,
     });
   } catch (error) {
     console.error('Error fetching player:', error);

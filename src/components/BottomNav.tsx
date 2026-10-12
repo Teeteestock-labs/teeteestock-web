@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { LayoutGrid, TrendingUp, Wallet } from "lucide-react";
+import { LayoutGrid, TrendingUp, Wallet, Trophy } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 
 function BottomNavContent() {
@@ -10,13 +10,7 @@ function BottomNavContent() {
   const searchParams = useSearchParams();
 
   // Keep track of the last visited stock ID (default to MCMT)
-  // Use lazy initializer to read from localStorage without triggering cascading renders
-  const [lastStockId, setLastStockId] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem("last_visited_stock") || "MCMT";
-    }
-    return "MCMT";
-  });
+  const [lastStockId, setLastStockId] = useState("MCMT");
 
   useEffect(() => {
     if (pathname?.startsWith("/market/")) {
@@ -27,12 +21,17 @@ function BottomNavContent() {
         setLastStockId(upperId);
         localStorage.setItem("last_visited_stock", upperId);
       }
+    } else {
+      const saved = localStorage.getItem("last_visited_stock");
+      if (saved) {
+        setLastStockId(saved);
+      }
     }
   }, [pathname]);
 
   // Determine active tab
   const mode = searchParams.get("mode");
-  let activeTab: 'lobby' | 'stock' | 'asset' = 'lobby';
+  let activeTab: 'lobby' | 'stock' | 'events' | 'asset' = 'lobby';
   if (pathname === "/") {
     if (mode === "asset") {
       activeTab = 'asset';
@@ -41,11 +40,14 @@ function BottomNavContent() {
     }
   } else if (pathname?.startsWith("/market/")) {
     activeTab = 'stock';
+  } else if (pathname?.startsWith("/events")) {
+    activeTab = 'events';
   }
 
   const items = [
     { id: 'lobby', label: '交易大廳', icon: LayoutGrid, href: '/?mode=list' },
     { id: 'stock', label: '個股情報', icon: TrendingUp, href: `/market/${lastStockId}` },
+    { id: 'events', label: '特別企劃', icon: Trophy, href: '/events' },
     { id: 'asset', label: '個人資產', icon: Wallet, href: '/?mode=asset' },
   ] as const;
 

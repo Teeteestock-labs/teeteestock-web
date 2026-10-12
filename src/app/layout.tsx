@@ -7,7 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 const inter = Inter({ subsets: ["latin"]});
 
 export const metadata: Metadata = {
-  title: "TeeTeeStock - VTuber 虛擬股票交易所",
+  title: "teeteeStock - VTuber 虛擬股票交易所",
   description: "VTuber 虛擬股票交易所",
   icons: {
     icon: [

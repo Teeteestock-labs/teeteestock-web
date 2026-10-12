@@ -327,11 +327,26 @@ export default function MarketDetailClient({ id }: { id: string }) {
             return;
         }
 
-        submitTeeteeReport(reportTargetId || pair.id, 'live_collab', reportUrl);
+        if (pair) {
+            submitTeeteeReport(reportTargetId || pair.id, 'live_collab', reportUrl);
+        }
         setReportUrl("");
         setReportSuccessMsg("回報成功！已送往後台審查，感謝您的奉獻！");
         setTimeout(() => setReportSuccessMsg(""), 4000);
     };
+
+    if (!pair) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col pb-20 font-mono">
+                <TickerTape />
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="w-10 h-10 border-4 border-pink-500/20 border-t-pink-500 rounded-full animate-spin mb-4" />
+                    <p className="text-gray-400 text-sm">正在載入股票資訊或查無此標的...</p>
+                    <a href="/" className="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition">返回市場列表</a>
+                </div>
+            </div>
+        );
+    }
 
     const isUp = pair.change24h >= 0;
     const priceDiff = pair.price - (pair.yesterdayPrice || pair.price);

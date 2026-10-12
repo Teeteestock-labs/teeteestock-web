@@ -13,16 +13,6 @@ export async function GET(request: Request) {
     const now = new Date();
     const marketStatus = await checkAndTickMarketStatus(now);
 
-    // 結算進行中時凍結回傳，避免讀到半結算的髒資料
-    if (marketStatus === 'SETTLING') {
-      return NextResponse.json({
-        success: true,
-        pairs: [],
-        orders: [],
-        marketStatus: 'SETTLING',
-        message: '結算作業進行中，資料暫時凍結。'
-      });
-    }
 
     const activeTrading = getActiveTradingDay(now);
     const { startUTC, endUTC } = getTaipeiSessionRange(activeTrading.year, activeTrading.month, activeTrading.day);

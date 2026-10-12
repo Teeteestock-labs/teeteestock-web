@@ -28,6 +28,7 @@ interface TeeContextType {
     reportInteraction: (pairId: string, type: 'liveCollab' | 'largeEvent' | 'newSong') => void;
     executeWeeklySettlement: () => void;
     settlementLogs: any[];
+    eventRewardLogs: any[];
     submitTeeteeReport: (pairId: string, type: string, url: string) => void;
     refreshPlayerState: () => Promise<void>;
 }
@@ -124,6 +125,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
     const [isCancelling, setIsCancelling] = useState(false);
     const [settlementReport, setSettlementReport] = useState<string | null>(null);
     const [settlementLogs, setSettlementLogs] = useState<any[]>([]);
+    const [eventRewardLogs, setEventRewardLogs] = useState<any[]>([]);
 
     // 同步後端行情與玩家狀態
     const fetchLatestMarketAndPlayer = async () => {
@@ -148,7 +150,7 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                         setMarketStatus(data.marketStatus);
                         localStorage.setItem('tee_market_status', data.marketStatus);
                     }
-                    if (Array.isArray(data.pairs)) {
+                    if (Array.isArray(data.pairs) && data.pairs.length > 0) {
                         const mergedMarket = data.pairs.map((p: any) => {
                             const initialPair = INITIAL_PAIRS.find(x => x.id === p.id) || INITIAL_PAIRS[0];
                             return {
@@ -174,6 +176,10 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
                     setBalance(data.player.balance);
                     setHoldings(data.player.holdings);
                     if (data.settlementLogs) setSettlementLogs(data.settlementLogs);
+                    if (data.eventRewardLogs) {
+                        setEventRewardLogs(data.eventRewardLogs);
+                        localStorage.setItem('tee_event_rewards', JSON.stringify(data.eventRewardLogs));
+                    }
                     localStorage.setItem('tee_balance', data.player.balance.toString());
                     localStorage.setItem('tee_holdings', JSON.stringify(data.player.holdings));
                     localStorage.setItem('tee_last_db_balance', data.player.balance.toString());
@@ -322,9 +328,16 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
         if (saveBalance) setBalance(Number(saveBalance));
         try { if (saveHoldings) setHoldings(JSON.parse(saveHoldings)); } catch (_e) { console.warn('Failed to parse holdings from localStorage'); }
-        try { if (savedMarket) setMarketData(JSON.parse(savedMarket)); } catch (_e) { console.warn('Failed to parse market from localStorage'); }
+        try {
+            if (savedMarket) {
+                const parsed = JSON.parse(savedMarket);
+                if (Array.isArray(parsed) && parsed.length > 0) setMarketData(parsed);
+            }
+        } catch (_e) { console.warn('Failed to parse market from localStorage'); }
         try { if (savedOrders) setOrders(JSON.parse(savedOrders)); } catch (_e) { console.warn('Failed to parse orders from localStorage'); }
         try { if (savedBots) setBots(JSON.parse(savedBots)); } catch (_e) { console.warn('Failed to parse bots from localStorage'); }
+        const savedRewards = localStorage.getItem('tee_event_rewards');
+        try { if (savedRewards) setEventRewardLogs(JSON.parse(savedRewards)); } catch (_e) { console.warn('Failed to parse event rewards from localStorage'); }
 
         fetchLatestMarketAndPlayer().then(() => {
             setIsInitialized(true);
@@ -582,9 +595,9 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
         balance, availableBalance, holdings, marketData, orders, marketStatus,
         isSubmitting, isCancelling, getOrderBook, submitOrder, cancelOrder,
         simulateMarketMove, reportInteraction, executeWeeklySettlement,
-        settlementLogs, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer
+        settlementLogs, eventRewardLogs, submitTeeteeReport, refreshPlayerState: fetchLatestMarketAndPlayer
     }), [balance, availableBalance, holdings, marketData, orders, marketStatus,
-         isSubmitting, isCancelling, settlementLogs]);
+         isSubmitting, isCancelling, settlementLogs, eventRewardLogs]);
 
     return (
         <TeeContext.Provider value={contextValue}>
