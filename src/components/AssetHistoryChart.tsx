@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { teeteePair, UserHolding } from "@/app/types";
+import { useAuth } from "@/context/AuthContext";
 
 export type TimeRange = '1M' | '3M' | '6M' | '1Y' | 'MAX';
 
@@ -17,6 +18,8 @@ interface DataPoint {
   timestamp: number;
   value: number;
 }
+
+const SNAPSHOT_RESET_VERSION = 'v20261013_reset';
 
 const PAIR_ID_MAP: Record<string, string> = {
   'micomet': 'MCMT',
@@ -39,27 +42,79 @@ export default function AssetHistoryChart({
   balance,
   netWorth,
 }: AssetHistoryChartProps) {
+  const { user } = useAuth();
   const [range, setRange] = useState<TimeRange>('1M');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [snapshots, setSnapshots] = useState<Record<string, number>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 持續在 LocalStorage 記錄每日總資產歷史快照
+  // 取得當前使用者專屬的儲存 Key
+  const storageKey = useMemo(() => {
+    return user?.id ? `tee_net_worth_snapshots_${user.id}` : 'tee_net_worth_snapshots_guest';
+  }, [user?.id]);
+
+  // 全域版本檢查：若版本未更新，全面清空舊快照以完成走勢重設
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('tee_net_worth_snapshots');
+      const currentVer = localStorage.getItem('tee_asset_snapshots_ver');
+      if (currentVer !== SNAPSHOT_RESET_VERSION) {
+        localStorage.removeItem('tee_net_worth_snapshots');
+        localStorage.removeItem('tee_net_worth_snapshots_guest');
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('tee_net_worth_snapshots')) {
+            localStorage.removeItem(key);
+          }
+        });
+        localStorage.setItem('tee_asset_snapshots_ver', SNAPSHOT_RESET_VERSION);
+      }
+    } catch (e) {
+      console.error('Failed to reset asset snapshots version:', e);
+    }
+  }, []);
+
+  // 持續在 LocalStorage 記錄每日總資產歷史快照（依帳號隔離）
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
       const parsed: Record<string, number> = saved ? JSON.parse(saved) : {};
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      if (netWorth > 0) {
+      if (netWorth >= 0) {
         parsed[todayStr] = netWorth;
-        localStorage.setItem('tee_net_worth_snapshots', JSON.stringify(parsed));
+        localStorage.setItem(storageKey, JSON.stringify(parsed));
       }
       setSnapshots(parsed);
     } catch (e) {
       console.error('Failed to load asset snapshots:', e);
     }
-  }, [netWorth]);
+  }, [netWorth, storageKey]);
+
+  // 手動重設資產歷史走勢
+  const handleResetHistory = useCallback(() => {
+    if (!confirm('確定要清空並重設現有的資產歷史走勢數據嗎？\n重設後將清空過往快照，並從今日當前資產重新開始累積。')) return;
+    try {
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem('tee_net_worth_snapshots');
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const freshSnap: Record<string, number> = {};
+      if (netWorth >= 0) {
+        freshSnap[todayStr] = netWorth;
+        localStorage.setItem(storageKey, JSON.stringify(freshSnap));
+      }
+      setSnapshots(freshSnap);
+    } catch (e) {
+      console.error('Failed to reset asset history:', e);
+    }
+  }, [storageKey, netWorth]);
+
+  // 註冊全域控制台命令供開發調試
+  useEffect(() => {
+    (window as any).resetAssetHistory = handleResetHistory;
+    return () => {
+      delete (window as any).resetAssetHistory;
+    };
+  }, [handleResetHistory]);
 
   // 判斷是否有過往真實歷史數據 (至少需 2 天以上之歷史快照紀錄)
   const hasHistoricalData = useMemo(() => {
@@ -180,15 +235,26 @@ export default function AssetHistoryChart({
   // 若過往無數據則不做圖，改顯示無數據提示 (需放置於 Hook 調用下方以遵守 React Hook 規範)
   if (!hasHistoricalData || dataPoints.length < 2) {
     return (
-      <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden select-none">
+      <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden select-none font-mono">
         <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">資產歷史走勢</h3>
           </div>
+          <button
+            onClick={handleResetHistory}
+            title="手動清空並重設資產歷史走勢"
+            className="px-2.5 py-1 text-[10px] text-gray-400 hover:text-white bg-[#181a20] hover:bg-gray-800 border border-[#2b2f36] rounded-lg transition-colors flex items-center gap-1 cursor-pointer font-bold"
+          >
+            <span>🔄</span>
+            <span>重設走勢</span>
+          </button>
         </div>
-        <div className="p-8 text-center text-xs font-bold text-gray-500 font-mono">
-          尚無過往歷史資產數據
+        <div className="p-8 text-center text-xs font-mono text-gray-400 space-y-1.5">
+          <p className="text-gray-200 font-bold">歷史走勢已重設為最新基準</p>
+          <p className="text-[11px] text-gray-500">
+            已建立今日資產基準快照（{netWorth.toLocaleString()} $TEE），走勢將於次日（跨日）起繪製連貫折線圖。
+          </p>
         </div>
       </div>
     );
@@ -196,28 +262,40 @@ export default function AssetHistoryChart({
 
   return (
     <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] font-mono select-none overflow-hidden space-y-3">
-      {/* 頂部標題與時段切換按鈕 (1M, 3M, 6M, 1Y, MAX) */}
+      {/* 頂部標題、重設按鈕與時段切換 (1M, 3M, 6M, 1Y, MAX) */}
       <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] animate-pulse shadow-[0_0_8px_#38BDF8]" />
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">資產歷史走勢</h3>
         </div>
 
-        {/* 時段切換按鈕區 */}
-        <div className="flex items-center gap-1 bg-[#181a20] p-1 rounded-lg border border-[#2b2f36]">
-          {(['1M', '3M', '6M', '1Y', 'MAX'] as TimeRange[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`px-2.5 py-1 text-[11px] font-extrabold rounded transition-all duration-150 ${
-                range === r
-                  ? 'bg-gradient-to-r from-[#38BDF8] to-[#0284C7] text-white shadow-md shadow-sky-500/20'
-                  : 'text-gray-400 hover:text-white hover:bg-[#1e2329]'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          {/* 重設走勢按鈕 */}
+          <button
+            onClick={handleResetHistory}
+            title="手動清空並重設資產歷史走勢"
+            className="px-2 py-1 text-[10px] text-gray-400 hover:text-white bg-[#181a20] hover:bg-gray-800 border border-[#2b2f36] rounded-lg transition-colors flex items-center gap-1 cursor-pointer font-bold"
+          >
+            <span>🔄</span>
+            <span>重設</span>
+          </button>
+
+          {/* 時段切換按鈕區 */}
+          <div className="flex items-center gap-1 bg-[#181a20] p-1 rounded-lg border border-[#2b2f36]">
+            {(['1M', '3M', '6M', '1Y', 'MAX'] as TimeRange[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`px-2.5 py-1 text-[11px] font-extrabold rounded transition-all duration-150 ${
+                  range === r
+                    ? 'bg-gradient-to-r from-[#38BDF8] to-[#0284C7] text-white shadow-md shadow-sky-500/20'
+                    : 'text-gray-400 hover:text-white hover:bg-[#1e2329]'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
