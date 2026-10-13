@@ -1220,7 +1220,7 @@ function HomeContent() {
                 </div>
                 <div className="flex items-center gap-3 font-mono">
                   <span className="text-xs font-bold text-white">
-                    累計領取 +{(eventRewardLogs || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0).toLocaleString()} $TEE
+                    累計領取 +{(eventRewardLogs || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $TEE
                   </span>
                   <span className="text-[10px] text-gray-400 border-l border-gray-800 pl-3">
                     共 {(eventRewardLogs || []).length} 筆
