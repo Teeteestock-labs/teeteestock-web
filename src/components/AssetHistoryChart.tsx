@@ -250,11 +250,8 @@ export default function AssetHistoryChart({
             <span>重設走勢</span>
           </button>
         </div>
-        <div className="p-8 text-center text-xs font-mono text-gray-400 space-y-1.5">
-          <p className="text-gray-200 font-bold">歷史走勢已重設為最新基準</p>
-          <p className="text-[11px] text-gray-500">
-            已建立今日資產基準快照（{netWorth.toLocaleString()} $TEE），走勢將於次日（跨日）起繪製連貫折線圖。
-          </p>
+        <div className="p-8 text-center text-xs font-bold text-gray-500 font-mono">
+          目前尚無歷史走勢
         </div>
       </div>
     );
