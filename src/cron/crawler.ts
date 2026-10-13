@@ -1,3 +1,4 @@
+import dns from 'dns';
 import fs from 'fs';
 import path from 'path';
 import cron from 'node-cron';
@@ -6,6 +7,11 @@ import dotenv from 'dotenv';
 import { prisma } from '../lib/prisma';
 import { EventType, ReviewStatus } from '../types/enums';
 import { runDailyRolloverOrSettlement, getDividendCooldownInfo, stageManualDividendSettlement } from '../services/settlementService';
+
+// Set DNS order to ipv4first to prevent Happy Eyeballs IPv6 connection timeouts on Linux VMs
+if (dns && typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 // Load environment variables
 dotenv.config();
@@ -362,46 +368,148 @@ async function fetchVideosFromAPI(channelId: string): Promise<VideoFeed[]> {
   }
 }
 
-async function fetchVideosFromRSS(channelId: string): Promise<VideoFeed[]> {
-  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-  
+async function fetchVideosFromChannelHTML(channelId: string): Promise<VideoFeed[]> {
   try {
-    const res = await fetch(rssUrl, {
+    const url = `https://www.youtube.com/channel/${channelId}/streams`;
+    const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5'
+        'Accept-Language': 'en-US,en;q=0.9'
       },
       signal: AbortSignal.timeout(10000)
     });
     if (!res.ok) {
-      throw new Error(`YouTube RSS returned status ${res.status}`);
+      console.warn(`[Channel Scraper] Failed to fetch channel streams page for ${channelId}: HTTP ${res.status}`);
+      return [];
     }
-    const xml = await res.text();
-    const result = await parseStringPromise(xml);
+    const html = await res.text();
+    const match = html.match(/var ytInitialData = ({.*?});<\/script>/);
+    if (!match) return [];
+    const data = JSON.parse(match[1]);
+    const tabs = data.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+    const streamsTab = tabs.find((t: any) => t.tabRenderer?.title === 'Live' || t.tabRenderer?.selected);
+    const contents = streamsTab?.tabRenderer?.content?.richGridRenderer?.contents || [];
 
-    if (!result.feed || !result.feed.entry) return [];
+    const scraped: { videoId: string; title: string }[] = [];
+    for (const item of contents.slice(0, 6)) {
+      const vm = item.richItemRenderer?.content?.lockupViewModel;
+      const vr = item.richItemRenderer?.content?.videoRenderer;
+      let videoId = '';
+      let title = '';
+      if (vm) {
+        videoId = vm.contentId;
+        title = vm.metadata?.lockupMetadataViewModel?.title?.content || 
+                vm.rendererContext?.accessibilityContext?.label || '';
+      } else if (vr) {
+        videoId = vr.videoId;
+        title = vr.title?.runs?.[0]?.text || '';
+      }
+      if (videoId && title) {
+        scraped.push({ videoId, title });
+      }
+    }
 
-    const entries = result.feed.entry.slice(0, 10);
-    return entries.map((entry: any) => {
-      const videoId = entry['yt:videoId']?.[0] || '';
-      const title = entry.title?.[0] || '';
-      const mediaGroup = entry['media:group']?.[0] || {};
-      const description = mediaGroup['media:description']?.[0] || '';
-      const published = entry.published?.[0] || new Date().toISOString();
+    if (scraped.length === 0) return [];
 
-      return {
-        url: `https://www.youtube.com/watch?v=${videoId}`,
-        title,
-        description,
-        publishedAt: published,
-        tags: [] // RSS has no tags list
-      };
-    });
-  } catch (error) {
-    console.error(`[YouTube RSS Error] Channel ${channelId} fetch failed:`, error);
+    // Enrich timestamps from watch pages for the most recent videos
+    const results: VideoFeed[] = [];
+    for (const s of scraped.slice(0, 3)) {
+      try {
+        const watchRes = await fetch(`https://www.youtube.com/watch?v=${s.videoId}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          },
+          signal: AbortSignal.timeout(6000)
+        });
+        if (watchRes.ok) {
+          const wHtml = await watchRes.text();
+          const start = wHtml.match(/"startTimestamp":"([^"]+)"/)?.[1];
+          const pub = wHtml.match(/"publishDate":"([^"]+)"/)?.[1] || 
+                      wHtml.match(/"uploadDate":"([^"]+)"/)?.[1] || 
+                      new Date().toISOString();
+          const descMatch = wHtml.match(/"shortDescription":"([^"]+)"/);
+          const desc = descMatch ? descMatch[1] : '';
+          results.push({
+            url: `https://www.youtube.com/watch?v=${s.videoId}`,
+            title: s.title,
+            description: desc,
+            publishedAt: pub,
+            actualStartTime: start,
+            tags: []
+          });
+        }
+      } catch {
+        results.push({
+          url: `https://www.youtube.com/watch?v=${s.videoId}`,
+          title: s.title,
+          description: '',
+          publishedAt: new Date().toISOString(),
+          tags: []
+        });
+      }
+    }
+    return results;
+  } catch (err: any) {
+    console.warn(`[Channel Scraper Error] Channel ${channelId}:`, err?.message || err);
     return [];
   }
+}
+
+async function fetchVideosFromRSS(channelId: string, retries = 2): Promise<VideoFeed[]> {
+  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(rssUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5'
+        },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!res.ok) {
+        if (attempt < retries) {
+          console.warn(`[YouTube RSS] Channel ${channelId} returned status ${res.status}. Retrying in ${attempt + 1}s...`);
+          await delay(1000 * (attempt + 1));
+          continue;
+        } else {
+          console.warn(`[YouTube RSS] Channel ${channelId} returned status ${res.status}. Falling back to channel scraper...`);
+          return await fetchVideosFromChannelHTML(channelId);
+        }
+      }
+      const xml = await res.text();
+      const result = await parseStringPromise(xml);
+
+      if (!result.feed || !result.feed.entry) return [];
+
+      const entries = result.feed.entry.slice(0, 10);
+      return entries.map((entry: any) => {
+        const videoId = entry['yt:videoId']?.[0] || '';
+        const title = entry.title?.[0] || '';
+        const mediaGroup = entry['media:group']?.[0] || {};
+        const description = mediaGroup['media:description']?.[0] || '';
+        const published = entry.published?.[0] || new Date().toISOString();
+
+        return {
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+          title,
+          description,
+          publishedAt: published,
+          tags: [] // RSS has no tags list
+        };
+      });
+    } catch (error: any) {
+      if (attempt < retries) {
+        console.warn(`[YouTube RSS] Channel ${channelId} fetch error (${error?.message || error}). Retrying in ${attempt + 1}s...`);
+        await delay(1000 * (attempt + 1));
+      } else {
+        console.warn(`[YouTube RSS] Channel ${channelId} fetch failed after retries. Falling back to channel scraper...`);
+        return await fetchVideosFromChannelHTML(channelId);
+      }
+    }
+  }
+  return [];
 }
 
 // ── Notification Trigger ──
@@ -443,26 +551,26 @@ export async function runPoll(options?: { targetDate?: Date }) {
     }
   }
 
-  // 2. Fetch all channels in parallel with concurrent requests
-  console.log(`Fetching videos for ${uniqueChannels.size} unique channels in parallel...`);
+  // 2. Fetch all channels sequentially with polite throttle to avoid YouTube rate-limiting
+  console.log(`Fetching videos for ${uniqueChannels.size} unique channels...`);
   const channelVideosMap = new Map<string, VideoFeed[]>();
   
-  await Promise.all(
-    Array.from(uniqueChannels.values()).map(async (ch) => {
-      try {
-        let videos: VideoFeed[] = [];
-        if (YOUTUBE_API_KEY) {
-          videos = await fetchVideosFromAPI(ch.channelId);
-        } else {
-          videos = await fetchVideosFromRSS(ch.channelId);
-        }
-        channelVideosMap.set(ch.channelId, videos);
-        console.log(`Fetched ${videos.length} videos from ${ch.name} (${ch.channelId})`);
-      } catch (err) {
-        console.error(`Failed to fetch videos for channel ${ch.name} (${ch.channelId}):`, err);
+  for (const ch of uniqueChannels.values()) {
+    try {
+      let videos: VideoFeed[] = [];
+      if (YOUTUBE_API_KEY) {
+        videos = await fetchVideosFromAPI(ch.channelId);
+      } else {
+        videos = await fetchVideosFromRSS(ch.channelId);
       }
-    })
-  );
+      channelVideosMap.set(ch.channelId, videos);
+      console.log(`Fetched ${videos.length} videos from ${ch.name} (${ch.channelId})`);
+    } catch (err) {
+      console.error(`Failed to fetch videos for channel ${ch.name} (${ch.channelId}):`, err);
+    }
+    // Polite throttle between channel queries to prevent YouTube burst rate-limiting
+    await delay(600);
+  }
 
   // 3. Process the results for each CP configuration
   for (const cpConfig of CP_CONFIGS) {
