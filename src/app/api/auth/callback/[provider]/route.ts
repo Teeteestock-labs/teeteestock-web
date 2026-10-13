@@ -23,7 +23,11 @@ export async function GET(
     const errorParam = url.searchParams.get('error');
 
     if (errorParam) {
-      console.warn(`[OAuth Callback] Provider returned error: ${errorParam}`);
+      if (errorParam === 'access_denied') {
+        console.log(`[OAuth Callback] User cancelled OAuth authorization (${errorParam})`);
+      } else {
+        console.warn(`[OAuth Callback] Provider returned error: ${errorParam}`);
+      }
       return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent('第三方授權已被取消或拒絕')}`, baseUrl));
     }
 
