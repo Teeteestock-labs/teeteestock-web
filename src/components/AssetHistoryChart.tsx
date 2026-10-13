@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { teeteePair, UserHolding } from "@/app/types";
 import { useAuth } from "@/context/AuthContext";
 
@@ -88,33 +88,6 @@ export default function AssetHistoryChart({
       console.error('Failed to load asset snapshots:', e);
     }
   }, [netWorth, storageKey]);
-
-  // 手動重設資產歷史走勢
-  const handleResetHistory = useCallback(() => {
-    if (!confirm('確定要清空並重設現有的資產歷史走勢數據嗎？\n重設後將清空過往快照，並從今日當前資產重新開始累積。')) return;
-    try {
-      localStorage.removeItem(storageKey);
-      localStorage.removeItem('tee_net_worth_snapshots');
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const freshSnap: Record<string, number> = {};
-      if (netWorth >= 0) {
-        freshSnap[todayStr] = netWorth;
-        localStorage.setItem(storageKey, JSON.stringify(freshSnap));
-      }
-      setSnapshots(freshSnap);
-    } catch (e) {
-      console.error('Failed to reset asset history:', e);
-    }
-  }, [storageKey, netWorth]);
-
-  // 註冊全域控制台命令供開發調試
-  useEffect(() => {
-    (window as any).resetAssetHistory = handleResetHistory;
-    return () => {
-      delete (window as any).resetAssetHistory;
-    };
-  }, [handleResetHistory]);
 
   // 判斷是否有過往真實歷史數據 (至少需 2 天以上之歷史快照紀錄)
   const hasHistoricalData = useMemo(() => {
@@ -241,14 +214,6 @@ export default function AssetHistoryChart({
             <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">資產歷史走勢</h3>
           </div>
-          <button
-            onClick={handleResetHistory}
-            title="手動清空並重設資產歷史走勢"
-            className="px-2.5 py-1 text-[10px] text-gray-400 hover:text-white bg-[#181a20] hover:bg-gray-800 border border-[#2b2f36] rounded-lg transition-colors flex items-center gap-1 cursor-pointer font-bold"
-          >
-            <span>🔄</span>
-            <span>重設走勢</span>
-          </button>
         </div>
         <div className="p-8 text-center text-xs font-bold text-gray-500 font-mono">
           目前尚無歷史走勢
@@ -259,26 +224,15 @@ export default function AssetHistoryChart({
 
   return (
     <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] font-mono select-none overflow-hidden space-y-3">
-      {/* 頂部標題、重設按鈕與時段切換 (1M, 3M, 6M, 1Y, MAX) */}
+      {/* 頂部標題與時段切換 (1M, 3M, 6M, 1Y, MAX) */}
       <div className="p-3 bg-gray-950 border-b border-[#2b2f36] flex justify-between items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] animate-pulse shadow-[0_0_8px_#38BDF8]" />
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">資產歷史走勢</h3>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* 重設走勢按鈕 */}
-          <button
-            onClick={handleResetHistory}
-            title="手動清空並重設資產歷史走勢"
-            className="px-2 py-1 text-[10px] text-gray-400 hover:text-white bg-[#181a20] hover:bg-gray-800 border border-[#2b2f36] rounded-lg transition-colors flex items-center gap-1 cursor-pointer font-bold"
-          >
-            <span>🔄</span>
-            <span>重設</span>
-          </button>
-
-          {/* 時段切換按鈕區 */}
-          <div className="flex items-center gap-1 bg-[#181a20] p-1 rounded-lg border border-[#2b2f36]">
+        {/* 時段切換按鈕區 */}
+        <div className="flex items-center gap-1 bg-[#181a20] p-1 rounded-lg border border-[#2b2f36]">
             {(['1M', '3M', '6M', '1Y', 'MAX'] as TimeRange[]).map((r) => (
               <button
                 key={r}
@@ -294,7 +248,6 @@ export default function AssetHistoryChart({
             ))}
           </div>
         </div>
-      </div>
 
       {/* 分時圖畫布與圖上浮動標籤 (On-Chart Floating Label Badge) */}
       <div
