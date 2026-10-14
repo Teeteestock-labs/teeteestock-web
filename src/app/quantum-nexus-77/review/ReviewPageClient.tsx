@@ -76,6 +76,21 @@ const MEMBER_CP_MAP: Record<string, string[]> = {
   'BARS': ['HakosBaelz', 'IRyS']
 };
 
+const TARGET_CP_OPTIONS = [
+  { id: 'AZIR', name: 'AZIro' },
+  { id: 'BARS', name: 'BaeRyS' },
+  { id: 'FBMO', name: 'FubuMio' },
+  { id: 'MCMT', name: 'miComet' },
+  { id: 'NEFL', name: 'NoeFure' },
+  { id: 'OKKR', name: 'OkaKoro' },
+  { id: 'PKMR', name: 'PekoMarin' },
+  { id: 'PKVV', name: 'PekoVivi' },
+  { id: 'SBRN', name: 'SubaRuna' },
+  { id: 'SRAZ', name: 'SorAZ' },
+  { id: 'SSWT', name: 'ShishiWata' },
+  { id: 'TKMR', name: 'TakaMori' },
+];
+
 // Tokenize title for duplicate grouping
 function tokenize(text: string): Set<string> {
   const clean = text
@@ -129,6 +144,14 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
     (e.reason && e.reason.includes('已轉移至'))
   );
   
+  // 12組個股分流選項（整合完整清單與 DB 動態清單，排除系統 hololive，並依代碼字母排序）
+  const dispatchOptions = [
+    ...TARGET_CP_OPTIONS,
+    ...previews
+      .filter(p => p.id !== 'hololive' && !TARGET_CP_OPTIONS.some(t => t.id === p.id))
+      .map(p => ({ id: p.id, name: p.name }))
+  ].sort((a, b) => a.id.localeCompare(b.id));
+
   const pendingCount = pendingEvents.length;
 
   // Duplicate grouping logic for this CP
@@ -350,15 +373,11 @@ export default function ReviewPageClient({ previews, allEvents }: Props) {
                         </select>
                         
                         <select name="targetPairId" className="bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white focus:outline-none">
-                          <option value="AZIR">AZIR (AZIro)</option>
-                          <option value="FBMO">FBMO (FubuMio)</option>
-                          <option value="MCMT">MCMT (miComet)</option>
-                          <option value="NEFL">NEFL (NoeFure)</option>
-                          <option value="OKKR">OKKR (OkaKoro)</option>
-                          <option value="PKMR">PKMR (PekoMarin)</option>
-                          <option value="SSWT">SSWT (ShishiWata)</option>
-                          <option value="SRAZ">SRAZ (SorAZ)</option>
-                          <option value="SBRN">SBRN (SubaRuna)</option>
+                          {dispatchOptions.map(cp => (
+                            <option key={cp.id} value={cp.id}>
+                              {cp.id} ({cp.name})
+                            </option>
+                          ))}
                         </select>
 
                         <button 
