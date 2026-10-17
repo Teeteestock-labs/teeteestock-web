@@ -184,11 +184,11 @@ const CP_CONFIGS: CPConfig[] = [
       {
         channelId: 'UC1DCedRgGHBdm81E1llLhOQ', // Usada Pekora
         name: 'Usada Pekora',
-        targetKeywords: [/はじめ/i, /びび/i, /Hajime/i, /Vivi/i, /轟/i, /ビビ/i, /番長/i]
+        targetKeywords: [/びび/i, /Vivi/i, /ビビ/i, /ききらら/i, /綺々羅々/i, /はじめ/i, /Hajime/i, /轟/i, /番長/i]
       },
       {
-        channelId: 'UCGzTVXqMQHa4AgJVJIVvtDQ', // Todoroki Hajime
-        name: 'Todoroki Hajime',
+        channelId: 'UCGzTVXqMQHa4AgJVJIVvtDQ', // Kikirara Vivi
+        name: 'Kikirara Vivi',
         targetKeywords: [/ぺこら/i, /Pekora/i, /兔田/i, /ぺこちゃん/i, /Peko/i]
       }
     ]

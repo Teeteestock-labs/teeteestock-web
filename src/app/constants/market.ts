@@ -149,7 +149,7 @@ export const INITIAL_PAIRS: teeteePair[] = [
     {
         id: 'PKVV',
         name: 'PekoVivi',
-        members: ['UsadaPekora', 'TodorokiHajime'],
+        members: ['UsadaPekora', 'KikiraraVivi'],
         price: 100,
         change24h: 0,
         ceoTitle: 'PV董事長',

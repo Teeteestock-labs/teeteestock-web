@@ -55,6 +55,7 @@ const MEMBER_JP_MAP: Record<string, string> = {
   'OozoraSubaru': '大空スバル',
   'HimemoriRuna': '姫森ルーナ',
   'TodorokiHajime': '轟はじめ',
+  'KikiraraVivi': '綺々羅々ヴィヴィ',
   'TakanashiKiara': '小鳥遊キアラ',
   'MoriCalliope': '森カリオペ',
   'HakosBaelz': 'ハコス・ベールズ',
@@ -71,7 +72,7 @@ const MEMBER_CP_MAP: Record<string, string[]> = {
   'SSWT': ['ShishiroBotan', 'TsunomakiWatame'],
   'SRAZ': ['TokinoSora', 'AZKi'],
   'SBRN': ['OozoraSubaru', 'HimemoriRuna'],
-  'PKVV': ['UsadaPekora', 'TodorokiHajime'],
+  'PKVV': ['UsadaPekora', 'KikiraraVivi'],
   'TKMR': ['TakanashiKiara', 'MoriCalliope'],
   'BARS': ['HakosBaelz', 'IRyS']
 };
