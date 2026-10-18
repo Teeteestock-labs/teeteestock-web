@@ -136,54 +136,59 @@ export default function ManualDividendButton({ initialCooldown = null }: ManualD
         </div>
       )}
 
-      {/* Pending status / warning prompt badge */}
-      {cooldown && (
-        !isPending ? (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-400/60 text-amber-300 text-xs font-bold shadow-sm shadow-amber-950/30">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
-            </span>
-            <span>⚠️ 尚未手動確定週一除息</span>
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-[#00FFA3] text-xs font-bold shadow-sm shadow-emerald-950/30">
-            <span className="w-2 h-2 rounded-full bg-[#00FFA3]" />
-            <span>✓ 週一除息已確認暫存 (待週二 18:30 劃轉)</span>
-          </span>
-        )
-      )}
-
-      {/* Main Trigger / Cooldown Button */}
+      {/* 合併為一的「手動除息」與「狀態提示」按鈕 / 監控元件 */}
       {canTrigger ? (
         <button
           onClick={() => setShowConfirmModal(true)}
           disabled={isSubmitting}
-          className={`relative px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition-all duration-200 active:scale-95 flex items-center gap-2 ${
+          className={`relative px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 ${
             !isPending
-              ? 'bg-gradient-to-r from-amber-600 via-pink-600 to-purple-600 hover:from-amber-500 hover:to-purple-500 shadow-amber-500/20 border border-amber-400/60 ring-1 ring-amber-400/40'
-              : 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 shadow-pink-500/20 border border-pink-400/30'
+              ? 'bg-amber-500/15 border border-amber-400/60 text-amber-300 hover:bg-amber-500/25 shadow-amber-950/30'
+              : 'bg-emerald-500/15 border border-emerald-400/40 text-[#00FFA3] hover:bg-emerald-500/25 shadow-emerald-950/30'
           }`}
-          title={!isPending ? '尚未手動確定週一除息，請點擊進行試算並確認暫存' : '週一除息已確認暫存'}
+          title={!isPending ? '尚未手動確定週一除息，請點擊進行試算並確認暫存' : '週一除息已確認暫存，點擊可重新試算'}
         >
-          <span>💰</span>
-          <span>手動確定週一除息 (試算參考價)</span>
-          {!isPending && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400 text-black shadow-sm animate-pulse">
-              待確定
+          <div className="relative flex items-center justify-center">
+            <span className="text-sm">💰</span>
+            {!isPending && (
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+              </span>
+            )}
+          </div>
+          <span>手動確定週一除息</span>
+          {!isPending ? (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              ⚠️ 尚未確定
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-[#00FFA3] border border-emerald-500/40 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00FFA3]" />
+              已確認暫存
             </span>
           )}
         </button>
       ) : (
         <div className="flex items-center gap-2">
-          <div className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-gray-900/80 border border-gray-700/80 text-gray-400 flex items-center gap-2 select-none">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>除息冷卻中 ({formatRemainingTime(remainingMs)})</span>
+          <div className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-gray-900/80 border border-gray-700/80 text-gray-300 flex items-center gap-2 select-none shadow-sm">
+            <span className="text-sm">💰</span>
+            {isPending && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-[#00FFA3] border border-emerald-500/40 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00FFA3]" />
+                已確認暫存
+              </span>
+            )}
+            <span className="text-amber-400 flex items-center gap-1 font-mono text-[11px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              冷卻中 ({formatRemainingTime(remainingMs)})
+            </span>
           </div>
           <button
             onClick={handleResetCooldown}
             title="重置冷卻倒數 (測試調試專用)"
-            className="px-2.5 py-2 rounded-xl text-xs font-bold bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 hover:text-white transition-colors"
+            className="px-2.5 py-2 rounded-xl text-xs font-bold bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
             🔄 重置冷卻
           </button>
@@ -200,8 +205,16 @@ export default function ManualDividendButton({ initialCooldown = null }: ManualD
             </div>
 
             <div className="space-y-3 text-xs text-gray-300 leading-relaxed bg-gray-950/60 p-4 rounded-xl border border-gray-800">
-              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-center gap-2 font-semibold">
-                <span>⚠️ 提示：目前尚未手動確定週一除息程序</span>
+              <div className={`p-2.5 rounded-lg border flex items-center gap-2 font-semibold ${
+                !isPending
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-[#00FFA3]'
+              }`}>
+                <span>
+                  {!isPending
+                    ? '⚠️ 提示：目前尚未手動確定週一除息程序'
+                    : 'ℹ️ 提示：週一除息已確認暫存，重新發動將更新試算結果'}
+                </span>
               </div>
               <p className="font-semibold text-pink-400">
                 ⚠️ 本次操作將觸發 【156 小時（6.5 天）】冷卻倒數計時！
