@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
     if (specialEvent && (specialEvent.isSettled || specialEvent.isArchived)) {
       return NextResponse.json(
-        { error: '本企劃已圓滿結算並歸檔保存，無法修改選擇。' },
+        { error: '本企劃活動已圓滿落幕，無法修改選擇。' },
         { status: 403 }
       );
     }

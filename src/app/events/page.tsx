@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import TickerTape from "@/components/TickerTape";
 import BottomNav from "@/components/BottomNav";
-import { Trophy, CheckCircle2, Circle, Coins, Lock, Sparkles, Bookmark, ChevronDown, FolderArchive } from "lucide-react";
+import { Trophy, CheckCircle2, Circle, Coins, Lock, Sparkles, Bookmark, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface BannerNotification {
@@ -403,19 +403,19 @@ export default function EventsPage() {
             <div className="space-y-1">
               <h2 className="text-base font-black text-white tracking-wide">目前尚無進行中的特別企劃</h2>
               <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
-                甲子園 2026 預測活動已圓滿落幕並歸檔！下一期精彩企劃正加緊籌備中，敬請鎖定。歡迎於下方歷史書籤查閱過往企劃紀錄。
+                甲子園 2026 預測活動已圓滿落幕！下一期精彩企劃正加緊籌備中，敬請鎖定。歡迎於下方歷史書籤查閱過往企劃紀錄。
               </p>
             </div>
           </div>
         )}
 
-        {/* ── 歷史企劃存檔區：以書籤折疊方式保存 ── */}
+        {/* ── 歷屆企劃回顧區：以書籤折疊方式保存 ── */}
         {isArchived && (
           <section className="w-full space-y-3">
             <div className="flex items-center justify-between border-b border-gray-800 pb-2.5">
               <div className="flex items-center gap-2">
                 <Bookmark className="w-4 h-4 text-amber-400 fill-amber-400/20" />
-                <h2 className="text-sm font-bold text-white tracking-wide">歷史企劃存檔 (Archived Events)</h2>
+                <h2 className="text-sm font-bold text-white tracking-wide">歷屆企劃回顧 (Past Events)</h2>
               </div>
               <span className="text-[11px] text-gray-500 font-mono">1 筆歷史書籤</span>
             </div>
@@ -441,7 +441,7 @@ export default function EventsPage() {
                         📑 歷史企劃書籤
                       </span>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-800/80 text-gray-400 border border-gray-700 shrink-0">
-                        🔒 賽事落幕已歸檔
+                        🔒 賽事已圓滿落幕
                       </span>
                     </div>
 
@@ -475,7 +475,7 @@ export default function EventsPage() {
                   {/* 說明與獎金 */}
                   <div className="text-center space-y-3">
                     <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
-                      六校爭霸，誰能登頂！本企劃已於 2026 年 10 月 17 日賽事圓滿結束後正式歸檔保存。
+                      六校爭霸，誰能登頂！本企劃已於 2026 年 10 月 17 日賽事圓滿落幕。
                     </p>
 
                     <div className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-gradient-to-b from-[#1c160c] to-[#0e0b06] border border-amber-500/40 shadow-lg shadow-amber-950/20 backdrop-blur-md">
@@ -495,7 +495,7 @@ export default function EventsPage() {
                     )}
                   </div>
 
-                  {/* 六校卡片展示 (以歸檔方式檢視) */}
+                  {/* 六校卡片展示 (回顧檢視) */}
                   <div className="grid grid-cols-2 gap-3 w-full">
                     <div className="flex flex-col gap-3">
                       {SCHOOLS_LEFT.map(renderSchoolCard)}
@@ -505,7 +505,7 @@ export default function EventsPage() {
                     </div>
                   </div>
 
-                  {/* 個人紀錄與歸檔狀態反饋 */}
+                  {/* 個人紀錄與成果反饋 */}
                   <div className="w-full space-y-3">
                     {isSettled ? (
                       confirmedSchool === winningChoice ? (
@@ -535,22 +535,22 @@ export default function EventsPage() {
                       confirmedSchool ? (
                         <div className="w-full p-3.5 rounded-xl bg-[#142320]/60 border border-[#00FFA3]/40 text-center">
                           <p className="text-xs text-gray-300 font-mono">
-                            你在本企劃中保存的預測選擇：<span className="text-[#00FFA3] font-bold">【{confirmedSchool}】</span>（歷史存檔）
+                            你在本企劃中留下的預測選擇：<span className="text-[#00FFA3] font-bold">【{confirmedSchool}】</span>
                           </p>
                         </div>
                       ) : (
                         <div className="w-full p-3.5 rounded-xl bg-gray-900/60 border border-gray-800 text-center">
                           <p className="text-xs text-gray-400 font-mono">
-                            你未於截止前參與本企劃預測（歷史存檔已鎖定）
+                            你未於截止前參與本企劃預測（預測已截止）
                           </p>
                         </div>
                       )
                     )}
 
-                    {/* 歸檔存檔提示條 */}
+                    {/* 落幕提示條 */}
                     <div className="w-full py-3 px-4 rounded-xl font-black text-xs bg-[#12161f] border border-gray-800 text-gray-400 select-none flex items-center justify-center gap-2">
-                      <FolderArchive className="w-4 h-4 text-amber-500/70" />
-                      <span>本特別企劃已圓滿落幕並歸檔保存於歷史書籤簿</span>
+                      <Trophy className="w-4 h-4 text-amber-500/70" />
+                      <span>本特別企劃已圓滿落幕，感謝所有玩家的熱情參與！</span>
                     </div>
                   </div>
                 </div>
