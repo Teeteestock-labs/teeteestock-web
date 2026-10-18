@@ -51,6 +51,7 @@ export async function GET(request: Request) {
         ? `🏆 本企劃已結算，冠軍為【${winningChoice}】`
         : lockStatus.message,
       isSettled,
+      isArchived: specialEvent?.isArchived || false,
       winningChoice,
       hasWon,
       prize: specialEvent?.prize || 500.0,
@@ -77,9 +78,9 @@ export async function POST(request: Request) {
       where: { id: HOLO_KOUSHIEN_EVENT_ID },
     });
 
-    if (specialEvent && specialEvent.isSettled) {
+    if (specialEvent && (specialEvent.isSettled || specialEvent.isArchived)) {
       return NextResponse.json(
-        { error: '本企劃已圓滿結算公佈結果，無法修改選擇。' },
+        { error: '本企劃已圓滿結算並歸檔保存，無法修改選擇。' },
         { status: 403 }
       );
     }

@@ -274,6 +274,7 @@ model SpecialEvent {
   settledAt     DateTime? // 結算發放時間
   totalPayout   Float     @default(0.0)   // 總發放金額
   winnerCount   Int       @default(0)     // 獲獎人數
+  isArchived    Boolean   @default(false) // 是否已歸檔保存
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }

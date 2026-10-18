@@ -73,6 +73,7 @@ export default async function AdminEventsPage() {
     isLocked: specialEvent.isLocked,
     lockedAt: specialEvent.lockedAt?.toISOString() || null,
     isSettled: specialEvent.isSettled,
+    isArchived: specialEvent.isArchived,
     winningChoice: specialEvent.winningChoice,
     settledAt: specialEvent.settledAt?.toISOString() || null,
     winnerCount: specialEvent.winnerCount,

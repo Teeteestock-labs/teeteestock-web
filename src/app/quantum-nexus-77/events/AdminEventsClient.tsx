@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Trophy, Coins, Users, CheckCircle2, Circle, AlertTriangle, ShieldCheck, Lock, Unlock } from "lucide-react";
-import { settleChampionAction, toggleEventLockAction } from "./actions";
+import { Trophy, Coins, Users, CheckCircle2, Circle, AlertTriangle, ShieldCheck, Lock, Unlock, FolderArchive } from "lucide-react";
+import { settleChampionAction, toggleEventLockAction, toggleEventArchiveAction } from "./actions";
 
 interface OptionStat {
   name: string;
@@ -17,6 +17,7 @@ interface EventData {
   isLocked: boolean;
   lockedAt: string | null;
   isSettled: boolean;
+  isArchived: boolean;
   winningChoice: string | null;
   settledAt: string | null;
   winnerCount: number;
@@ -67,6 +68,37 @@ export default function AdminEventsClient({ initialData }: Props) {
         message: targetLock
           ? '🔒 企劃預測已手動截止鎖定！前台已禁止玩家點選與提交。'
           : '🟢 企劃預測已重新開放！前台玩家可自由選擇與提交。',
+      });
+    } catch (err: any) {
+      setNotification({ type: 'error', message: err.message || '網路異常。' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 切換歸檔狀態
+  const handleToggleArchive = async (targetArchive: boolean) => {
+    setIsSubmitting(true);
+    setNotification(null);
+
+    try {
+      const res = await toggleEventArchiveAction(data.id, targetArchive);
+      if (!res.success) {
+        setNotification({ type: 'error', message: res.error || '切換歸檔狀態失敗。' });
+        return;
+      }
+
+      setData((prev) => ({
+        ...prev,
+        isArchived: res.isArchived!,
+        isLocked: res.isLocked !== undefined ? res.isLocked : prev.isLocked,
+      }));
+
+      setNotification({
+        type: 'success',
+        message: targetArchive
+          ? '📁 企劃已成功歸檔！使用者前台將以書籤折疊方式保存顯示。'
+          : '📂 企劃已解除歸檔！',
       });
     } catch (err: any) {
       setNotification({ type: 'error', message: err.message || '網路異常。' });
@@ -184,9 +216,23 @@ export default function AdminEventsClient({ initialData }: Props) {
           </p>
         </div>
 
-        {!isSettled && (
-          <div className="flex items-center gap-3 shrink-0">
-            {data.isLocked ? (
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => handleToggleArchive(!data.isArchived)}
+            disabled={isSubmitting}
+            className={`px-4 py-2.5 rounded-xl border text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg ${
+              data.isArchived
+                ? 'border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-950/60 shadow-amber-950/20'
+                : 'border-gray-750 bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            <FolderArchive className="w-4 h-4 text-amber-400" />
+            <span>{data.isArchived ? "📁 歷史歸檔中（點擊解除）" : "📁 歸檔企劃（書籤保存）"}</span>
+          </button>
+
+          {!isSettled && (
+            data.isLocked ? (
               <button
                 type="button"
                 onClick={() => handleToggleLock(false)}
@@ -206,9 +252,9 @@ export default function AdminEventsClient({ initialData }: Props) {
                 <Lock className="w-4 h-4 text-red-400" />
                 <span>手動截止預測（鎖定）</span>
               </button>
-            )}
-          </div>
-        )}
+            )
+          )}
+        </div>
       </div>
 
       {/* 企劃狀態總覽卡片 */}
@@ -216,7 +262,15 @@ export default function AdminEventsClient({ initialData }: Props) {
         {/* 卡片 1: 企劃狀態 */}
         <div className="bg-gray-900/50 border border-gray-800 p-5 rounded-2xl flex flex-col justify-between">
           <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">企劃狀態</span>
-          <div className="mt-2">
+          <div className="mt-2 space-y-1.5">
+            {data.isArchived && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/50 text-blue-300 text-xs font-black">
+                  <FolderArchive className="w-3.5 h-3.5 text-blue-400" />
+                  已歸檔書籤保存
+                </span>
+              </div>
+            )}
             {isSettled ? (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-black">

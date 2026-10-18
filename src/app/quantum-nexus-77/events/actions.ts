@@ -178,3 +178,46 @@ export async function toggleEventLockAction(eventId: string = HOLO_KOUSHIEN_EVEN
   }
 }
 
+/**
+ * 管理員切換特別企劃歸檔狀態
+ */
+export async function toggleEventArchiveAction(eventId: string = HOLO_KOUSHIEN_EVENT_ID, archive: boolean) {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  if (sessionToken !== getExpectedAuthToken()) {
+    return { success: false, error: '未授權的管理員操作。' };
+  }
+
+  try {
+    const updated = await prisma.specialEvent.upsert({
+      where: { id: eventId },
+      create: {
+        id: eventId,
+        title: 'ホロライブ甲子園2026 冠軍預測',
+        isLocked: archive ? true : false,
+        isArchived: archive,
+      },
+      update: {
+        isArchived: archive,
+        ...(archive ? { isLocked: true } : {}),
+      },
+    });
+
+    revalidatePath('/events');
+    revalidatePath('/quantum-nexus-77/events');
+    revalidatePath('/quantum-nexus-77/review');
+
+    return {
+      success: true,
+      isArchived: updated.isArchived,
+      isLocked: updated.isLocked,
+    };
+  } catch (err: any) {
+    console.error('[Admin Toggle Archive Error]:', err);
+    return {
+      success: false,
+      error: err.message || '更新歸檔狀態時發生錯誤。',
+    };
+  }
+}
+

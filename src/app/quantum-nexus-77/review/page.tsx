@@ -110,7 +110,7 @@ export default async function AdminReviewPage() {
   const specialEvent = await prisma.specialEvent.findUnique({
     where: { id: HOLO_KOUSHIEN_EVENT_ID },
   });
-  const isSpecialEventUnlocked = !specialEvent?.isLocked && !specialEvent?.isSettled;
+  const isSpecialEventUnlocked = !specialEvent?.isLocked && !specialEvent?.isSettled && !specialEvent?.isArchived;
 
   // 查詢除息冷卻與手動確認狀態
   const rawDividendCooldown = await getDividendCooldownInfo();
