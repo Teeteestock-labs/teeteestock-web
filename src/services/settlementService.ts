@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { MarketStatus, EventType, ReviewStatus, OrderSide, UserChoice } from '../types/enums';
-import { alignToTick, getTickSize, generateMMFiveBidsAndAsks } from '../utils/validatePrice';
+import { alignToTick, getTickSize, generateMMFiveBidsAndAsks, generateMMLevelOrders } from '../utils/validatePrice';
 import { getTaipeiTime } from '../utils/marketHours';
 
 const WARNING_LINE = 10;          // 警戒線
@@ -159,77 +159,48 @@ async function deployMarketMakerOrders(tx: any, pair: any, openingPrice: number,
 
   console.log(`[🤖 MarketMaker] ${pair.id} 進行盤前驚醒。玩家總股數: ${playerShares}, 全市場發行總股數: ${totalShares}, 持股比例: ${(ratio * 100).toFixed(2)}%`);
 
-  // 3. 依據持股比例執行控盤策略
-  if (ratio < 0.20) {
-    // 比例 < 20%（初期）：【流動性注入模式】
-    // 依據價格級距掛出上下各 8 檔買賣單，每檔固定 499 股（當天耗盡不補充）
-    const { bids, asks } = generateMMFiveBidsAndAsks(openingPrice);
+  // 3. 依據玩家持股數執行 MMlevelrule 7 階段造市控盤演算法
+  const plan = generateMMLevelOrders(openingPrice, playerShares);
 
-    for (const b of bids) {
+  // 部署買單
+  let deployedBids = 0;
+  for (const b of plan.bids) {
+    if (b.volume > 0 && b.price > 0) {
       await tx.orderBook.create({
-        data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: b.price, volume: b.volume }
-      });
-    }
-
-    let availableToSell = mmCurrentShares;
-    for (const a of asks) {
-      if (availableToSell <= 0) break; // 造市商持股耗盡，當天不補足亦不再掛賣單
-      const sellVol = Math.min(a.volume, availableToSell);
-      if (sellVol > 0) {
-        await tx.orderBook.create({
-          data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: a.price, volume: sellVol }
-        });
-        availableToSell -= sellVol;
-      }
-    }
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【流動性注入模式】：依級距掛出上下各 8 檔買賣單，每檔 499 股（當天耗盡不補充）。`);
-  } else if (ratio >= 0.20 && ratio <= 0.40) {
-    // 比例處於 20% ~ 40%（中期）：【野性波動模式】
-    // 撤出盤口中央，分三階梯掛出防守與壓盤單：
-    // ±8% 掛價值 2 萬 TEE 的股數、±10% 掛價值 3 萬 TEE 的股數、±15% 掛價值 5 萬 TEE 的股數
-    const tiers = [
-      { pct: 0.08, targetValue: 20000 },
-      { pct: 0.10, targetValue: 30000 },
-      { pct: 0.15, targetValue: 50000 },
-    ];
-
-    let availableToSellWild = mmCurrentShares;
-    for (const tier of tiers) {
-      const buyPrice = alignToTick(Math.max(0.01, openingPrice * (1 - tier.pct)));
-      const buyVol = Math.max(1, Math.floor(tier.targetValue / buyPrice));
-
-      const sellPrice = alignToTick(openingPrice * (1 + tier.pct));
-      const sellVol = Math.max(1, Math.floor(tier.targetValue / sellPrice));
-
-      if (buyVol > 0 && buyPrice > 0) {
-        await tx.orderBook.create({
-          data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice, volume: buyVol }
-        });
-      }
-      if (sellVol > 0 && sellPrice > 0 && availableToSellWild > 0) {
-        const actualSellVol = Math.min(sellVol, availableToSellWild);
-        if (actualSellVol > 0) {
-          await tx.orderBook.create({
-            data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.SELL, price: sellPrice, volume: actualSellVol }
-          });
-          availableToSellWild -= actualSellVol;
+        data: {
+          userId: 'MARKET_MAKER',
+          pairId: pair.id,
+          side: OrderSide.BUY,
+          price: b.price,
+          volume: b.volume
         }
-      }
-    }
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【野性波動模式】：玩家持股 20%~40%，掛出 ±8%(2萬)、±10%(3萬)、±15%(5萬) 梯隊買賣單。`);
-  } else {
-    // 比例 > 40%（後期）：【終極護盤與欺敵模式】
-    // 僅在當日跌停板（Limit Down，-20%）掛出價值 20 萬 TEE 的清算保底買單
-    const buyPrice = alignToTick(Math.max(0.01, openingPrice * 0.80));
-    const buyVol = Math.max(1, Math.floor(200000 / buyPrice));
-
-    if (buyVol > 0 && buyPrice > 0) {
-      await tx.orderBook.create({
-        data: { userId: 'MARKET_MAKER', pairId: pair.id, side: OrderSide.BUY, price: buyPrice, volume: buyVol }
       });
+      deployedBids++;
     }
-    console.log(`[🤖 MarketMaker] ${pair.id} 啟動【終極護盤與欺敵模式】：玩家持股 >40%，於跌停板 ${buyPrice} 掛出價值 20 萬 TEE 保底買單 (${buyVol} 股)。`);
   }
+
+  // 部署賣單（受造市商持股庫存限制，耗盡為止不透支）
+  let availableToSell = mmCurrentShares;
+  let deployedAsks = 0;
+  for (const a of plan.asks) {
+    if (availableToSell <= 0) break;
+    const sellVol = Math.min(a.volume, availableToSell);
+    if (sellVol > 0 && a.price > 0) {
+      await tx.orderBook.create({
+        data: {
+          userId: 'MARKET_MAKER',
+          pairId: pair.id,
+          side: OrderSide.SELL,
+          price: a.price,
+          volume: sellVol
+        }
+      });
+      availableToSell -= sellVol;
+      deployedAsks++;
+    }
+  }
+
+  console.log(`[🤖 MarketMaker] ${pair.id} 啟動【${plan.levelName}】(玩家已持股: ${playerShares} 股)：成功掛出 ${deployedBids} 檔買單、${deployedAsks} 檔賣單。`);
 }
 
 export interface SettlementServiceResult {
