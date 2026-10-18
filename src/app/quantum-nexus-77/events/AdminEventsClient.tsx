@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trophy, Coins, Users, CheckCircle2, Circle, AlertTriangle, ShieldCheck, Lock, Unlock, FolderArchive } from "lucide-react";
+import { Trophy, Coins, Users, CheckCircle2, Circle, AlertTriangle, ShieldCheck, Lock, Unlock, FolderArchive, ChevronDown } from "lucide-react";
 import { settleChampionAction, toggleEventLockAction, toggleEventArchiveAction } from "./actions";
 
 interface OptionStat {
@@ -43,6 +43,8 @@ export default function AdminEventsClient({ initialData }: Props) {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const isSettled = data.isSettled;
+  const isEnded = data.isSettled || data.isArchived;
+  const [isExpanded, setIsExpanded] = useState<boolean>(!isEnded);
 
   // 切換手動截止鎖定
   const handleToggleLock = async (targetLock: boolean) => {
@@ -188,48 +190,131 @@ export default function AdminEventsClient({ initialData }: Props) {
         </div>
       )}
 
-      {/* 手動控制截止鎖定控制列 */}
-      <div className="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-black text-white">企劃預測截止控制</span>
-            {isSettled ? (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                已結算公佈
-              </span>
-            ) : data.isLocked ? (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40">
-                🔒 預測已手動截止
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                🟢 預測開放中
-              </span>
-            )}
+      {/* 企劃主容器（已結束企劃支援折疊） */}
+      <div className="rounded-2xl border border-gray-800 bg-gray-900/40 shadow-xl backdrop-blur-md overflow-hidden transition-all">
+        {/* 卡片頂部摘要列 (點擊可展開/收合) */}
+        <div
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none transition-colors ${
+            isEnded ? 'hover:bg-gray-850/60 bg-gray-900/70' : 'border-b border-gray-800 bg-gray-900/60'
+          }`}
+        >
+          <div className="flex items-center gap-3.5 truncate">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-md ${
+              isSettled
+                ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                : data.isArchived
+                ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                : 'bg-emerald-500/20 border-emerald-500/40 text-[#00FFA3]'
+            }`}>
+              <Trophy className="w-5 h-5" />
+            </div>
+
+            <div className="space-y-1 truncate text-left">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-base sm:text-lg font-black text-white truncate">
+                  {data.title}
+                </span>
+                {isSettled ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                    <Trophy className="w-3 h-3 text-amber-400" />
+                    已結算落幕
+                  </span>
+                ) : data.isLocked ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-red-400" />
+                    預測已截止
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00FFA3] animate-pulse" />
+                    預測開放中
+                  </span>
+                )}
+                {data.isArchived && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 flex items-center gap-1">
+                    <FolderArchive className="w-3 h-3 text-blue-400" />
+                    已折疊保存
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5 text-xs text-gray-400 font-mono flex-wrap">
+                <span className="text-gray-500">ID: {data.id}</span>
+                <span className="text-gray-700">•</span>
+                <span className="text-amber-200">單人獎金 {data.prize} $TEE</span>
+                <span className="text-gray-700">•</span>
+                <span>總預測 {data.totalPredictions} 人</span>
+                {isSettled && data.winningChoice && (
+                  <>
+                    <span className="text-gray-700">•</span>
+                    <span className="text-yellow-400 font-bold">冠軍：【{data.winningChoice}】</span>
+                    <span className="text-gray-700">•</span>
+                    <span className="text-emerald-400">總發放 {data.totalPayout} $TEE ({data.winnerCount}人)</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-gray-400">
-            {isSettled
-              ? "本企劃已結算發放完畢，預測全面停止。"
-              : data.isLocked
-              ? `已於 ${data.lockedAt ? new Date(data.lockedAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '後台'} 手動截止預測，前台已鎖定禁選。`
-              : "預測處於開放中，前台顯示「🟢 企劃預測開放中」，玩家可隨時選擇與更新。"}
-          </p>
+
+          <div className="flex items-center gap-3 shrink-0 self-end md:self-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => handleToggleArchive(!data.isArchived)}
+              disabled={isSubmitting}
+              className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                data.isArchived
+                  ? 'border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-950/60'
+                  : 'border-gray-750 bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              <FolderArchive className="w-3.5 h-3.5 text-amber-400" />
+              <span>{data.isArchived ? "解除結束標記" : "標記為結束"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="px-3.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700 text-xs font-bold text-gray-200 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+            >
+              <span>{isExpanded ? "收合企劃" : "展開企劃詳情"}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={() => handleToggleArchive(!data.isArchived)}
-            disabled={isSubmitting}
-            className={`px-4 py-2.5 rounded-xl border text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg ${
-              data.isArchived
-                ? 'border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-950/60 shadow-amber-950/20'
-                : 'border-gray-750 bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <FolderArchive className="w-4 h-4 text-amber-400" />
-            <span>{data.isArchived ? "📁 歷史歸檔中（點擊解除）" : "📁 歸檔企劃（書籤保存）"}</span>
-          </button>
+        {/* 展開時顯示之完整管理與統計內容 */}
+        {isExpanded && (
+          <div className="p-6 space-y-8 border-t border-gray-800/80 bg-gray-950/20 animate-in fade-in slide-in-from-top-2 duration-300">
+            {/* 手動控制截止鎖定控制列 */}
+            <div className="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-white">企劃預測截止控制</span>
+                  {isSettled ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      已結算公佈
+                    </span>
+                  ) : data.isLocked ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40">
+                      🔒 預測已手動截止
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      🟢 預測開放中
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">
+                  {isSettled
+                    ? "本企劃已結算發放完畢，預測全面停止。"
+                    : data.isLocked
+                    ? `已於 ${data.lockedAt ? new Date(data.lockedAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '後台'} 手動截止預測，前台已鎖定禁選。`
+                    : "預測處於開放中，前台顯示「🟢 企劃預測開放中」，玩家可隨時選擇與更新。"}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
 
           {!isSettled && (
             data.isLocked ? (
@@ -551,6 +636,9 @@ export default function AdminEventsClient({ initialData }: Props) {
           </div>
         )}
       </section>
+          </div>
+        )}
+      </div>
 
       {/* 二度確認結算 Modal */}
       {showConfirmModal && (
