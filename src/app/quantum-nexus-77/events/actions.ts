@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 import { HOLO_KOUSHIEN_EVENT_ID, VALID_SCHOOL_CHOICES, type SchoolChoice } from '@/utils/eventDeadline';
 import { revalidatePath } from 'next/cache';
+import { patchSpecialEventSchemaIfNeeded } from '@/lib/specialEvent';
 
 /**
  * 管理員確認冠軍並發放獎金
@@ -189,6 +190,8 @@ export async function toggleEventArchiveAction(eventId: string = HOLO_KOUSHIEN_E
   }
 
   try {
+    await patchSpecialEventSchemaIfNeeded();
+
     const updated = await prisma.specialEvent.upsert({
       where: { id: eventId },
       create: {

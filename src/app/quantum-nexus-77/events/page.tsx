@@ -5,6 +5,7 @@ import AdminLoginForm from '../AdminLoginForm';
 import AdminLogoutButton from '../AdminLogoutButton';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 import { HOLO_KOUSHIEN_EVENT_ID, VALID_SCHOOL_CHOICES } from '@/utils/eventDeadline';
+import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 import AdminEventsClient from './AdminEventsClient';
 
 export const dynamic = 'force-dynamic';
@@ -18,20 +19,8 @@ export default async function AdminEventsPage() {
     return <AdminLoginForm />;
   }
 
-  // 1. 取得特別企劃資料（若無則初始化）
-  let specialEvent = await prisma.specialEvent.findUnique({
-    where: { id: HOLO_KOUSHIEN_EVENT_ID },
-  });
-
-  if (!specialEvent) {
-    specialEvent = await prisma.specialEvent.create({
-      data: {
-        id: HOLO_KOUSHIEN_EVENT_ID,
-        title: 'ホロライブ甲子園2026 冠軍預測',
-        prize: 500.0,
-      },
-    });
-  }
+  // 1. 取得特別企劃資料（若無則初始化並自動同步折疊已結束賽事）
+  const specialEvent = await getOrSyncSpecialEvent(HOLO_KOUSHIEN_EVENT_ID);
 
   // 2. 取得所有使用者的預測紀錄
   const allPredictions = await prisma.eventPrediction.findMany({
@@ -73,7 +62,7 @@ export default async function AdminEventsPage() {
     isLocked: specialEvent.isLocked,
     lockedAt: specialEvent.lockedAt?.toISOString() || null,
     isSettled: specialEvent.isSettled,
-    isArchived: specialEvent.isArchived,
+    isArchived: Boolean(specialEvent.isArchived),
     winningChoice: specialEvent.winningChoice,
     settledAt: specialEvent.settledAt?.toISOString() || null,
     winnerCount: specialEvent.winnerCount,

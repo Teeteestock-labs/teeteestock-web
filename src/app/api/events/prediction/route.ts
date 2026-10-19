@@ -7,6 +7,7 @@ import {
   isEventPredictionLocked,
   type SchoolChoice,
 } from '@/utils/eventDeadline';
+import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 
 const RESERVED_USER_IDS = ['MARKET_MAKER', 'SYSTEM_MM', 'SYSTEM'];
 
@@ -32,16 +33,15 @@ export async function GET(request: Request) {
         })
       : null;
 
-    // 查詢特別企劃狀態 (手動鎖定與結算)
-    const specialEvent = await prisma.specialEvent.findUnique({
-      where: { id: HOLO_KOUSHIEN_EVENT_ID },
-    });
+    // 查詢特別企劃狀態 (手動鎖定與結算，並確保甲子園2026自動同步折疊)
+    const specialEvent = await getOrSyncSpecialEvent(HOLO_KOUSHIEN_EVENT_ID);
 
-    const isManualLocked = specialEvent?.isLocked || false;
+    const isManualLocked = specialEvent ? specialEvent.isLocked : true;
     const lockStatus = isEventPredictionLocked(isManualLocked, allowTestUnlock);
     const isSettled = specialEvent?.isSettled || false;
     const winningChoice = specialEvent?.winningChoice || null;
     const hasWon = isSettled && prediction ? prediction.choice === winningChoice : null;
+    const isArchived = specialEvent ? Boolean(specialEvent.isArchived) : true;
 
     return NextResponse.json({
       eventId: HOLO_KOUSHIEN_EVENT_ID,
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         ? `🏆 本企劃已結算，冠軍為【${winningChoice}】`
         : lockStatus.message,
       isSettled,
-      isArchived: specialEvent?.isArchived || false,
+      isArchived,
       winningChoice,
       hasWon,
       prize: specialEvent?.prize || 500.0,
@@ -74,9 +74,7 @@ export async function POST(request: Request) {
     const allowTestUnlock = searchParams.get('test_unlock') === 'true';
 
     // ── 後端安全防禦：先檢查是否已結算或後台手動截止 ──
-    const specialEvent = await prisma.specialEvent.findUnique({
-      where: { id: HOLO_KOUSHIEN_EVENT_ID },
-    });
+    const specialEvent = await getOrSyncSpecialEvent(HOLO_KOUSHIEN_EVENT_ID);
 
     if (specialEvent && (specialEvent.isSettled || specialEvent.isArchived)) {
       return NextResponse.json(
