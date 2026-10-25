@@ -14,7 +14,6 @@ import {
   Bookmark,
   ChevronDown,
   ExternalLink,
-  Users,
   Timer,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -75,8 +74,6 @@ export default function EventsPage() {
   const [winningChoice, setWinningChoice] = useState<string | null>(null);
   const [hasWon, setHasWon] = useState<boolean | null>(null);
   const [totalPool, setTotalPool] = useState<number>(5000);
-  const [totalPredictions, setTotalPredictions] = useState<number>(0);
-  const [prizePerUser, setPrizePerUser] = useState<number>(5000);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // ── 歷屆企劃回顧：ホロライブ甲子園2026 ──
@@ -127,8 +124,6 @@ export default function EventsPage() {
           setHasWon(data.hasWon);
         }
         if (data.totalPool !== undefined) setTotalPool(data.totalPool);
-        if (data.totalPredictions !== undefined) setTotalPredictions(data.totalPredictions);
-        if (data.prize !== undefined) setPrizePerUser(data.prize);
 
         if (data.choice) {
           setSelectedChoice(data.choice);
@@ -246,7 +241,6 @@ export default function EventsPage() {
         .then((r) => r.json())
         .then((d) => {
           if (d.totalPool !== undefined) setTotalPool(d.totalPool);
-          if (d.totalPredictions !== undefined) setTotalPredictions(d.totalPredictions);
         })
         .catch(() => {});
     } catch (err) {
@@ -256,16 +250,6 @@ export default function EventsPage() {
       setIsSubmitting(false);
     }
   };
-
-  // 下一級階梯還需人數
-  const nextTierNeeded = totalPredictions <= 10
-    ? 11 - totalPredictions
-    : 10 - ((totalPredictions - 1) % 10);
-
-  // 階梯進度條百分比
-  const tierProgressPercent = totalPredictions <= 10
-    ? (totalPredictions / 10) * 100
-    : (((totalPredictions - 1) % 10) / 10) * 100;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white flex flex-col pb-24 font-mono select-none">
@@ -355,19 +339,19 @@ export default function EventsPage() {
               </a>
             </div>
 
-            {/* 動態獎金池展示看板 (Dynamic Pool Display) */}
-            <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-[#1c160c] via-[#141009] to-[#0a0805] border border-amber-500/50 shadow-xl shadow-amber-950/30 backdrop-blur-md mb-4 text-left space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+            {/* 總獎金池展示看板 */}
+            <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-[#1c160c] via-[#141009] to-[#0a0805] border border-amber-500/50 shadow-xl shadow-amber-950/30 backdrop-blur-md mb-4 text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
                     <Coins className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="text-xs text-amber-200 font-bold block">
-                      累積動態總獎金池
+                      總獎金池
                     </span>
                     <span className="text-[10px] text-gray-400 font-mono">
-                      由所有猜對者均分（取至十位數）
+                      由預測中獎者均分
                     </span>
                   </div>
                 </div>
@@ -378,31 +362,6 @@ export default function EventsPage() {
                   </span>
                   <span className="text-xs text-amber-300/80 font-bold">$TEE</span>
                 </div>
-              </div>
-
-              {/* 階梯參與進度 */}
-              <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between items-center text-gray-300">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-purple-400" />
-                    目前參與人數：<strong className="text-white text-sm">{totalPredictions}</strong> 人
-                  </span>
-                  <span className="text-amber-300 font-bold text-[11px]">
-                    距下一級 (+5,000 $TEE) 還需 {nextTierNeeded} 人
-                  </span>
-                </div>
-
-                {/* 階梯進度條 */}
-                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden p-0.5">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-[#00FFA3] transition-all duration-500"
-                    style={{ width: `${Math.max(5, Math.min(100, tierProgressPercent))}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-1 text-[11px] text-gray-400/90 leading-relaxed border-t border-gray-800/80">
-                💰 <strong>獎金規則：</strong>基礎獎金 5,000 $TEE，每超過 10 人增加 5,000 $TEE。賽事結束後由所有猜中者均分獎金，小數部分無條件捨去取至十位數。
               </div>
             </div>
 
