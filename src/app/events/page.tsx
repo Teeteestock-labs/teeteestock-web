@@ -33,16 +33,15 @@ interface BannerNotification {
 interface JumpKingOption {
   id: string;
   name: string;
-  desc: string;
 }
 
 const JUMP_KING_OPTIONS: JumpKingOption[] = [
-  { id: "opt_1", name: "～30:00", desc: "神速通關" },
-  { id: "opt_2", name: "30:01～1:00:00", desc: "穩定高水準發揮" },
-  { id: "opt_3", name: "1:00:01～2:00:00", desc: "耐力心理抗壓戰" },
-  { id: "opt_4", name: "2:00:01～4:00:00", desc: "漫長苦戰登頂" },
-  { id: "opt_5", name: "4:00:01～", desc: "超極限耐力完賽" },
-  { id: "opt_6", name: "在比賽中無人完賽", desc: "殘酷深淵無人生還" },
+  { id: "opt_1", name: "～30:00" },
+  { id: "opt_2", name: "30:01～1:00:00" },
+  { id: "opt_3", name: "1:00:01～2:00:00" },
+  { id: "opt_4", name: "2:00:01～4:00:00" },
+  { id: "opt_5", name: "4:00:01～" },
+  { id: "opt_6", name: "在比賽中無人完賽" },
 ];
 
 interface PastSchoolItem {
@@ -405,20 +404,15 @@ export default function EventsPage() {
                       : "bg-[#10141d] border-[#222a3a] text-gray-300 hover:border-gray-600 hover:bg-[#141a26] active:scale-[0.98] cursor-pointer"
                   }`}
                 >
-                  <div className="flex flex-col gap-0.5 truncate text-left">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="text-sm sm:text-base font-black tracking-wide truncate">
-                        {opt.name}
-                      </span>
-                      {isWinner && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 shrink-0">
-                          🏆 優勝
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-gray-400 font-mono truncate">
-                      {opt.desc}
+                  <div className="flex items-center gap-2 truncate text-left">
+                    <span className="text-sm sm:text-base font-black tracking-wide truncate">
+                      {opt.name}
                     </span>
+                    {isWinner && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 shrink-0">
+                        🏆 優勝
+                      </span>
+                    )}
                   </div>
 
                   <div className="shrink-0">
