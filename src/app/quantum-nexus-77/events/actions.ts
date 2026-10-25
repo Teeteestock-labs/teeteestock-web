@@ -3,14 +3,20 @@
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
-import { HOLO_KOUSHIEN_EVENT_ID, VALID_SCHOOL_CHOICES, type SchoolChoice } from '@/utils/eventDeadline';
+import {
+  HOLO_KOUSHIEN_EVENT_ID,
+  JUMP_KING_EVENT_ID,
+  getValidChoicesForEvent,
+  calculateJumpKingPool,
+  calculatePrizePerWinner,
+} from '@/utils/eventDeadline';
 import { revalidatePath } from 'next/cache';
 import { patchSpecialEventSchemaIfNeeded } from '@/lib/specialEvent';
 
 /**
  * 管理員確認冠軍並發放獎金
  */
-export async function settleChampionAction(eventId: string = HOLO_KOUSHIEN_EVENT_ID, champion: string) {
+export async function settleChampionAction(eventId: string = JUMP_KING_EVENT_ID, champion: string) {
   // 1. 驗證管理員身份
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -19,8 +25,9 @@ export async function settleChampionAction(eventId: string = HOLO_KOUSHIEN_EVENT
   }
 
   // 2. 驗證選項
-  if (!VALID_SCHOOL_CHOICES.includes(champion as SchoolChoice)) {
-    return { success: false, error: `無效的冠軍學校選項：${champion}` };
+  const validChoices = getValidChoicesForEvent(eventId);
+  if (!validChoices.includes(champion)) {
+    return { success: false, error: `無效的優勝選項：${champion}` };
   }
 
   // 3. 事務處理：防重複結算、發放獎金、紀錄日誌
@@ -44,50 +51,66 @@ export async function settleChampionAction(eventId: string = HOLO_KOUSHIEN_EVENT
       });
 
       const winnerCount = winningPredictions.length;
-      const prizePerUser = existing?.prize || 500.0;
-      const totalPayout = winnerCount * prizePerUser;
+      let prizePerUser = 0;
+      let totalPayout = 0;
 
-      // 發放獎金給每位猜中者
-      for (const pred of winningPredictions) {
-        // 加值使用者的 UserAccount
-        await tx.userAccount.upsert({
-          where: { userId: pred.userId },
-          create: {
-            userId: pred.userId,
-            balance: 10000.0 + prizePerUser,
-          },
-          update: {
-            balance: { increment: prizePerUser },
-          },
-        });
+      if (eventId === JUMP_KING_EVENT_ID) {
+        const totalPredictions = await tx.eventPrediction.count({ where: { eventId } });
+        const totalPool = calculateJumpKingPool(totalPredictions);
+        prizePerUser = calculatePrizePerWinner(totalPool, winnerCount);
+        totalPayout = winnerCount * prizePerUser;
+      } else {
+        prizePerUser = existing?.prize || 500.0;
+        totalPayout = winnerCount * prizePerUser;
+      }
 
-        // 記錄發放日誌 (具備 @@unique([eventId, userId]) 防重複發放)
-        await tx.eventRewardLog.upsert({
-          where: {
-            eventId_userId: {
+      // 發放獎金給每位猜中者 (若 prizePerUser > 0)
+      if (prizePerUser > 0) {
+        for (const pred of winningPredictions) {
+          // 加值使用者的 UserAccount
+          await tx.userAccount.upsert({
+            where: { userId: pred.userId },
+            create: {
+              userId: pred.userId,
+              balance: 10000.0 + prizePerUser,
+            },
+            update: {
+              balance: { increment: prizePerUser },
+            },
+          });
+
+          // 記錄發放日誌 (具備 @@unique([eventId, userId]) 防重複發放)
+          await tx.eventRewardLog.upsert({
+            where: {
+              eventId_userId: {
+                eventId,
+                userId: pred.userId,
+              },
+            },
+            create: {
               eventId,
               userId: pred.userId,
+              amount: prizePerUser,
+              choice: champion,
             },
-          },
-          create: {
-            eventId,
-            userId: pred.userId,
-            amount: prizePerUser,
-            choice: champion,
-          },
-          update: {
-            amount: prizePerUser,
-            choice: champion,
-          },
-        });
+            update: {
+              amount: prizePerUser,
+              choice: champion,
+            },
+          });
+        }
       }
+
+      const defaultTitle = eventId === JUMP_KING_EVENT_ID
+        ? 'JUMP KING HOLORACE 第一名通關時間預測'
+        : 'ホロライブ甲子園2026 冠軍預測';
 
       // 更新 SpecialEvent 狀態
       const settledEvent = await tx.specialEvent.upsert({
         where: { id: eventId },
         create: {
           id: eventId,
-          title: 'ホロライブ甲子園2026 冠軍預測',
+          title: existing?.title || defaultTitle,
           prize: prizePerUser,
           winningChoice: champion,
           isSettled: true,
@@ -97,6 +120,7 @@ export async function settleChampionAction(eventId: string = HOLO_KOUSHIEN_EVENT
         },
         update: {
           winningChoice: champion,
+          prize: prizePerUser,
           isSettled: true,
           settledAt: new Date(),
           winnerCount,
@@ -131,7 +155,7 @@ export async function settleChampionAction(eventId: string = HOLO_KOUSHIEN_EVENT
 /**
  * 管理員手動開關企劃截止鎖定
  */
-export async function toggleEventLockAction(eventId: string = HOLO_KOUSHIEN_EVENT_ID, lock: boolean) {
+export async function toggleEventLockAction(eventId: string = JUMP_KING_EVENT_ID, lock: boolean) {
   // 1. 驗證管理員身份
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -148,11 +172,15 @@ export async function toggleEventLockAction(eventId: string = HOLO_KOUSHIEN_EVEN
       return { success: false, error: '該企劃已結算，無法再變更鎖定狀態。' };
     }
 
+    const defaultTitle = eventId === JUMP_KING_EVENT_ID
+      ? 'JUMP KING HOLORACE 第一名通關時間預測'
+      : 'ホロライブ甲子園2026 冠軍預測';
+
     const updated = await prisma.specialEvent.upsert({
       where: { id: eventId },
       create: {
         id: eventId,
-        title: 'ホロライブ甲子園2026 冠軍預測',
+        title: existing?.title || defaultTitle,
         isLocked: lock,
         lockedAt: lock ? new Date() : null,
       },
@@ -182,7 +210,7 @@ export async function toggleEventLockAction(eventId: string = HOLO_KOUSHIEN_EVEN
 /**
  * 管理員切換特別企劃歸檔狀態
  */
-export async function toggleEventArchiveAction(eventId: string = HOLO_KOUSHIEN_EVENT_ID, archive: boolean) {
+export async function toggleEventArchiveAction(eventId: string = JUMP_KING_EVENT_ID, archive: boolean) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (sessionToken !== getExpectedAuthToken()) {
@@ -192,11 +220,19 @@ export async function toggleEventArchiveAction(eventId: string = HOLO_KOUSHIEN_E
   try {
     await patchSpecialEventSchemaIfNeeded();
 
+    const existing = await prisma.specialEvent.findUnique({
+      where: { id: eventId },
+    });
+
+    const defaultTitle = eventId === JUMP_KING_EVENT_ID
+      ? 'JUMP KING HOLORACE 第一名通關時間預測'
+      : 'ホロライブ甲子園2026 冠軍預測';
+
     const updated = await prisma.specialEvent.upsert({
       where: { id: eventId },
       create: {
         id: eventId,
-        title: 'ホロライブ甲子園2026 冠軍預測',
+        title: existing?.title || defaultTitle,
         isLocked: archive ? true : false,
         isArchived: archive,
       },

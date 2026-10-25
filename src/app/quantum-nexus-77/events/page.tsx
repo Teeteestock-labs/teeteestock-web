@@ -4,46 +4,47 @@ import Link from 'next/link';
 import AdminLoginForm from '../AdminLoginForm';
 import AdminLogoutButton from '../AdminLogoutButton';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
-import { HOLO_KOUSHIEN_EVENT_ID, VALID_SCHOOL_CHOICES } from '@/utils/eventDeadline';
+import {
+  HOLO_KOUSHIEN_EVENT_ID,
+  JUMP_KING_EVENT_ID,
+  JUMP_KING_LIVE_URL,
+  JUMP_KING_CHOICES,
+  VALID_SCHOOL_CHOICES,
+  calculateJumpKingPool,
+} from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
-import AdminEventsClient from './AdminEventsClient';
+import AdminEventsClient, { type EventData } from './AdminEventsClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminEventsPage() {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-  const isAuthenticated = sessionToken === getExpectedAuthToken();
+async function loadEventData(
+  eventId: string,
+  choices: readonly string[],
+  isDynamic: boolean = false,
+  liveUrl?: string | null
+): Promise<EventData> {
+  const specialEvent = await getOrSyncSpecialEvent(eventId);
 
-  if (!isAuthenticated) {
-    return <AdminLoginForm />;
-  }
-
-  // 1. 取得特別企劃資料（若無則初始化並自動同步折疊已結束賽事）
-  const specialEvent = await getOrSyncSpecialEvent(HOLO_KOUSHIEN_EVENT_ID);
-
-  // 2. 取得所有使用者的預測紀錄
   const allPredictions = await prisma.eventPrediction.findMany({
-    where: { eventId: HOLO_KOUSHIEN_EVENT_ID },
+    where: { eventId },
     orderBy: { createdAt: 'desc' },
   });
 
   const totalPredictions = allPredictions.length;
 
-  // 計算 6 所學校的得票統計
   const countsMap = new Map<string, number>();
-  for (const choice of VALID_SCHOOL_CHOICES) {
+  for (const choice of choices) {
     countsMap.set(choice, 0);
   }
   for (const p of allPredictions) {
     countsMap.set(p.choice, (countsMap.get(p.choice) || 0) + 1);
   }
 
-  const options = VALID_SCHOOL_CHOICES.map((schoolName) => {
-    const count = countsMap.get(schoolName) || 0;
+  const options = choices.map((choiceName) => {
+    const count = countsMap.get(choiceName) || 0;
     const percentage = totalPredictions > 0 ? Math.round((count / totalPredictions) * 100) : 0;
     return {
-      name: schoolName,
+      name: choiceName,
       count,
       percentage,
     };
@@ -55,10 +56,17 @@ export default async function AdminEventsPage() {
     createdAt: p.createdAt.toISOString(),
   }));
 
-  const initialData = {
+  const totalPool = isDynamic
+    ? calculateJumpKingPool(totalPredictions)
+    : specialEvent.totalPayout || specialEvent.prize || 500.0;
+
+  return {
     id: specialEvent.id,
     title: specialEvent.title,
     prize: specialEvent.prize,
+    totalPool,
+    isDynamicPool: isDynamic,
+    liveStreamUrl: liveUrl || null,
     isLocked: specialEvent.isLocked,
     lockedAt: specialEvent.lockedAt?.toISOString() || null,
     isSettled: specialEvent.isSettled,
@@ -71,6 +79,32 @@ export default async function AdminEventsPage() {
     options,
     recentPredictions,
   };
+}
+
+export default async function AdminEventsPage() {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const isAuthenticated = sessionToken === getExpectedAuthToken();
+
+  if (!isAuthenticated) {
+    return <AdminLoginForm />;
+  }
+
+  // 1. 取得 JUMP KING HOLORACE（進行中企劃）
+  const jumpKingData = await loadEventData(
+    JUMP_KING_EVENT_ID,
+    JUMP_KING_CHOICES,
+    true,
+    JUMP_KING_LIVE_URL
+  );
+
+  // 2. 取得甲子園 2026（歷屆已結束企劃）
+  const holoKoushienData = await loadEventData(
+    HOLO_KOUSHIEN_EVENT_ID,
+    VALID_SCHOOL_CHOICES,
+    false,
+    null
+  );
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8 font-sans select-none selection:bg-pink-500/30 selection:text-pink-200">
@@ -108,13 +142,13 @@ export default async function AdminEventsPage() {
               特別企劃管理中樞
             </h1>
             <p className="text-xs text-gray-400 mt-1 font-mono">
-              ホロライブ甲子園2026 冠軍預測 · 選手人氣數據與冠軍發放結算
+              社群重大賽事預測 · JUMP KING HOLORACE &amp; 歷屆企劃派彩管理
             </p>
           </div>
         </header>
 
         {/* Client Interface */}
-        <AdminEventsClient initialData={initialData} />
+        <AdminEventsClient events={[jumpKingData, holoKoushienData]} />
       </div>
     </div>
   );

@@ -4,8 +4,25 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import TickerTape from "@/components/TickerTape";
 import BottomNav from "@/components/BottomNav";
-import { Trophy, CheckCircle2, Circle, Coins, Lock, Sparkles, Bookmark, ChevronDown } from "lucide-react";
+import {
+  Trophy,
+  CheckCircle2,
+  Circle,
+  Coins,
+  Lock,
+  Sparkles,
+  Bookmark,
+  ChevronDown,
+  ExternalLink,
+  Users,
+  Timer,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import {
+  JUMP_KING_EVENT_ID,
+  JUMP_KING_LIVE_URL,
+  HOLO_KOUSHIEN_EVENT_ID,
+} from "@/utils/eventDeadline";
 
 interface BannerNotification {
   id: string;
@@ -14,18 +31,33 @@ interface BannerNotification {
   isFading: boolean;
 }
 
-interface SchoolItem {
+interface JumpKingOption {
+  id: string;
+  name: string;
+  desc: string;
+}
+
+const JUMP_KING_OPTIONS: JumpKingOption[] = [
+  { id: "opt_1", name: "～30:00", desc: "神速通關" },
+  { id: "opt_2", name: "30:01～1:00:00", desc: "穩定高水準發揮" },
+  { id: "opt_3", name: "1:00:01～2:00:00", desc: "耐力心理抗壓戰" },
+  { id: "opt_4", name: "2:00:01～4:00:00", desc: "漫長苦戰登頂" },
+  { id: "opt_5", name: "4:00:01～", desc: "超極限耐力完賽" },
+  { id: "opt_6", name: "在比賽中無人完賽", desc: "殘酷深淵無人生還" },
+];
+
+interface PastSchoolItem {
   id: string;
   name: string;
 }
 
-const SCHOOLS_LEFT: SchoolItem[] = [
+const PAST_SCHOOLS_LEFT: PastSchoolItem[] = [
   { id: "waooon", name: "WAOOON高校" },
   { id: "shirogane", name: "白銀学園高校" },
   { id: "ahoy", name: "AHOY高校" },
 ];
 
-const SCHOOLS_RIGHT: SchoolItem[] = [
+const PAST_SCHOOLS_RIGHT: PastSchoolItem[] = [
   { id: "polpol", name: "ポルポル高校" },
   { id: "konkoyo", name: "こんこよ高校" },
   { id: "kabesaki", name: "壁咲高校" },
@@ -34,17 +66,28 @@ const SCHOOLS_RIGHT: SchoolItem[] = [
 export default function EventsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [selectedSchool, setSelectedSchool] = useState<string | null>(null);
-  const [confirmedSchool, setConfirmedSchool] = useState<string | null>(null);
+
+  // ── 當前進行中企劃：JUMP KING HOLORACE ──
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const [confirmedChoice, setConfirmedChoice] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [isSettled, setIsSettled] = useState<boolean>(false);
-  const [isArchived, setIsArchived] = useState<boolean>(true);
-  const [isBookmarkExpanded, setIsBookmarkExpanded] = useState<boolean>(false);
   const [winningChoice, setWinningChoice] = useState<string | null>(null);
   const [hasWon, setHasWon] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [totalPool, setTotalPool] = useState<number>(5000);
+  const [totalPredictions, setTotalPredictions] = useState<number>(0);
+  const [prizePerUser, setPrizePerUser] = useState<number>(5000);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // ── 歷屆企劃回顧：ホロライブ甲子園2026 ──
+  const [isBookmarkExpanded, setIsBookmarkExpanded] = useState<boolean>(false);
+  const [pastConfirmedChoice, setPastConfirmedChoice] = useState<string | null>(null);
+  const [pastIsSettled, setPastIsSettled] = useState<boolean>(false);
+  const [pastWinningChoice, setPastWinningChoice] = useState<string | null>(null);
+
+  // ── 通知與載入 ──
   const [notifications, setNotifications] = useState<BannerNotification[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // 讀取書籤展開偏好
   useEffect(() => {
@@ -62,46 +105,60 @@ export default function EventsPage() {
     });
   };
 
-  // 載入預測狀態與先前的選擇紀錄 (後端 API)
+  // 載入預測狀態與先前的選擇紀錄
   useEffect(() => {
     let isMounted = true;
     const searchParams = new URLSearchParams(window.location.search);
     const testUnlock = searchParams.get("test_unlock");
-    const url = testUnlock ? `/api/events/prediction?test_unlock=${testUnlock}` : `/api/events/prediction`;
 
-    fetch(url)
+    // 1. 載入當前進行中企劃 (JUMP KING HOLORACE)
+    const jumpKingUrl = testUnlock
+      ? `/api/events/prediction?eventId=${JUMP_KING_EVENT_ID}&test_unlock=${testUnlock}`
+      : `/api/events/prediction?eventId=${JUMP_KING_EVENT_ID}`;
+
+    fetch(jumpKingUrl)
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
-        if (data.isLocked !== undefined) {
-          setIsLocked(data.isLocked);
-        }
+        if (data.isLocked !== undefined) setIsLocked(data.isLocked);
         if (data.isSettled !== undefined) {
           setIsSettled(data.isSettled);
           setWinningChoice(data.winningChoice);
           setHasWon(data.hasWon);
         }
-        if (data.isArchived !== undefined) {
-          setIsArchived(data.isArchived);
-        }
+        if (data.totalPool !== undefined) setTotalPool(data.totalPool);
+        if (data.totalPredictions !== undefined) setTotalPredictions(data.totalPredictions);
+        if (data.prize !== undefined) setPrizePerUser(data.prize);
+
         if (data.choice) {
-          setSelectedSchool(data.choice);
-          setConfirmedSchool(data.choice);
+          setSelectedChoice(data.choice);
+          setConfirmedChoice(data.choice);
         } else {
-          setConfirmedSchool(null);
-          const pending = localStorage.getItem("holo_koushien_pending_choice");
+          setConfirmedChoice(null);
+          const pending = localStorage.getItem("jump_king_pending_choice");
           if (pending) {
-            setSelectedSchool(pending);
-            localStorage.removeItem("holo_koushien_pending_choice");
+            setSelectedChoice(pending);
+            localStorage.removeItem("jump_king_pending_choice");
           }
         }
       })
-      .catch((err) => {
-        console.error("Failed to load prediction status", err);
-      })
+      .catch((err) => console.error("Failed to load jump king prediction:", err))
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });
+
+    // 2. 載入歷屆甲子園 2026 回顧資料
+    fetch(`/api/events/prediction?eventId=${HOLO_KOUSHIEN_EVENT_ID}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.choice) setPastConfirmedChoice(data.choice);
+        if (data.isSettled !== undefined) {
+          setPastIsSettled(data.isSettled);
+          setPastWinningChoice(data.winningChoice);
+        }
+      })
+      .catch((err) => console.error("Failed to load past koushien event:", err));
 
     return () => {
       isMounted = false;
@@ -135,8 +192,8 @@ export default function EventsPage() {
 
   const handleConfirm = async () => {
     if (!user) {
-      if (selectedSchool) {
-        localStorage.setItem("holo_koushien_pending_choice", selectedSchool);
+      if (selectedChoice) {
+        localStorage.setItem("jump_king_pending_choice", selectedChoice);
       }
       router.push("/login?redirect=/events");
       return;
@@ -152,8 +209,8 @@ export default function EventsPage() {
       return;
     }
 
-    if (!selectedSchool) {
-      addNotification("failed", "請選擇一個選項");
+    if (!selectedChoice) {
+      addNotification("failed", "請選擇一個時間區間選項");
       return;
     }
 
@@ -166,7 +223,10 @@ export default function EventsPage() {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ choice: selectedSchool }),
+        body: JSON.stringify({
+          eventId: JUMP_KING_EVENT_ID,
+          choice: selectedChoice,
+        }),
       });
 
       const data = await res.json();
@@ -178,9 +238,17 @@ export default function EventsPage() {
         return;
       }
 
-      setConfirmedSchool(selectedSchool);
-      localStorage.setItem("holo_koushien_2026_choice", selectedSchool);
-      addNotification("success", `你在《ホロライブ甲子園2026 冠軍預測》選擇了【${selectedSchool}】`);
+      setConfirmedChoice(selectedChoice);
+      addNotification("success", `你在《JUMP KING HOLORACE》選擇了【${selectedChoice}】`);
+
+      // 重新整理參與人數與獎金池試算
+      fetch(url)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.totalPool !== undefined) setTotalPool(d.totalPool);
+          if (d.totalPredictions !== undefined) setTotalPredictions(d.totalPredictions);
+        })
+        .catch(() => {});
     } catch (err) {
       console.error("Failed to submit prediction", err);
       addNotification("failed", "網路錯誤，請稍後再試");
@@ -189,64 +257,15 @@ export default function EventsPage() {
     }
   };
 
-  const renderSchoolCard = (school: SchoolItem) => {
-    const isSelected = selectedSchool === school.name || confirmedSchool === school.name;
-    const isWinner = isSettled && winningChoice === school.name;
+  // 下一級階梯還需人數
+  const nextTierNeeded = totalPredictions <= 10
+    ? 11 - totalPredictions
+    : 10 - ((totalPredictions - 1) % 10);
 
-    return (
-      <button
-        key={school.id}
-        type="button"
-        disabled={isLocked || isSettled || isArchived}
-        onClick={() => {
-          if (!isLocked && !isSettled && !isArchived) {
-            setSelectedSchool(school.name);
-          }
-        }}
-        className={`w-full p-3.5 rounded-xl border text-left transition-all duration-200 flex items-center justify-between gap-2.5 select-none ${
-          isWinner
-            ? "bg-amber-950/40 border-amber-400 shadow-[0_0_24px_rgba(245,158,11,0.35)] ring-1 ring-amber-400/80 text-white cursor-default"
-            : isSettled || isArchived
-            ? isSelected
-              ? "bg-[#142320]/80 border-[#00FFA3]/60 text-white cursor-default opacity-95 shadow-[0_0_12px_rgba(0,255,163,0.15)]"
-              : "bg-[#0b0e14] border-[#181f2c] text-gray-500 cursor-default opacity-50"
-            : isLocked
-            ? isSelected
-              ? "bg-[#142320]/80 border-[#00FFA3]/60 text-white cursor-not-allowed opacity-95"
-              : "bg-[#0b0e14] border-[#181f2c] text-gray-500 cursor-not-allowed opacity-45"
-            : isSelected
-            ? "bg-[#142320] border-[#00FFA3] shadow-[0_0_16px_rgba(0,255,163,0.22)] text-white active:scale-[0.98] cursor-pointer"
-            : "bg-[#10141d] border-[#222a3a] text-gray-300 hover:border-gray-600 hover:bg-[#141a26] active:scale-[0.98] cursor-pointer"
-        }`}
-      >
-        <div className="flex items-center gap-1.5 truncate">
-          <span className="text-xs sm:text-sm font-black tracking-wide truncate">
-            {school.name}
-          </span>
-          {isWinner && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 shrink-0">
-              🏆 冠軍
-            </span>
-          )}
-          {isArchived && isSelected && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#00FFA3]/20 text-[#00FFA3] border border-[#00FFA3]/30 shrink-0">
-              你的選擇
-            </span>
-          )}
-        </div>
-
-        <div className="shrink-0">
-          {isWinner ? (
-            <Trophy className="w-4 h-4 text-amber-400" />
-          ) : isSelected ? (
-            <CheckCircle2 className={`w-4 h-4 ${isLocked || isSettled || isArchived ? "text-[#00FFA3]" : "text-[#00FFA3]"}`} />
-          ) : (
-            <Circle className={`w-4 h-4 ${isLocked || isSettled || isArchived ? "text-gray-700" : "text-gray-600"}`} />
-          )}
-        </div>
-      </button>
-    );
-  };
+  // 階梯進度條百分比
+  const tierProgressPercent = totalPredictions <= 10
+    ? (totalPredictions / 10) * 100
+    : (((totalPredictions - 1) % 10) / 10) * 100;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white flex flex-col pb-24 font-mono select-none">
@@ -290,9 +309,9 @@ export default function EventsPage() {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-start px-4 py-8 max-w-2xl mx-auto w-full">
-        {/* 企劃標題區 */}
+        {/* 企劃主標題區 */}
         <div className="text-center mb-6 w-full">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#181a20] border border-[#2b2f36] text-[11px] text-[#ff69b4] font-bold mb-3 shadow-inner">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#181a20] border border-[#2b2f36] text-[11px] text-[#00FFA3] font-bold mb-3 shadow-inner">
             <Trophy className="w-3.5 h-3.5 text-amber-400" />
             特別企劃 · SPECIAL EVENTS
           </div>
@@ -302,262 +321,414 @@ export default function EventsPage() {
           </h1>
 
           <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
-            期間限定社群預測、重大活動與歷史榮譽殿堂。
+            期間限定重大賽事預測活動，猜中瓜分大額 $TEE 榮譽獎金池！
           </p>
         </div>
 
-        {/* ── 進行中的特別企劃區 ── */}
-        {!isArchived ? (
-          <div className="w-full flex flex-col items-center mb-8">
-            <div className="text-center mb-6 w-full">
-              <h2 className="text-lg sm:text-xl font-black text-white tracking-wide mb-2">
-                ホロライブ甲子園2026 冠軍預測
-              </h2>
+        {/* ── 進行中的特別企劃：JUMP KING HOLORACE ── */}
+        <div className="w-full flex flex-col items-center mb-10">
+          <div className="text-center mb-5 w-full">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-black mb-2">
+              <Timer className="w-3.5 h-3.5 text-amber-400" />
+              <span>賽事時間預測活動</span>
+            </div>
 
-              <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto mb-4">
-                六校爭霸，誰能登頂！請選擇你心目中的優勝高校（單選）。
-              </p>
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide mb-2 bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
+              JUMP KING HOLORACE
+            </h2>
 
-              {/* 獎金展示區 */}
-              <div className="inline-flex items-center justify-center px-6 py-2.5 rounded-2xl bg-gradient-to-b from-[#1c160c] to-[#0e0b06] border border-amber-500/40 shadow-xl shadow-amber-950/20 backdrop-blur-md mb-4">
-                <div className="flex items-center gap-2 font-black text-white">
-                  <Coins className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="text-xs sm:text-sm text-amber-200">預測正確者獎金</span>
-                  <span className="font-mono text-base sm:text-lg text-[#FFD700] tracking-wider drop-shadow-[0_0_10px_rgba(255,215,0,0.4)]">
-                    500 $TEE
+            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-md mx-auto mb-4 font-semibold">
+              猜測第一名到達者（優勝者）所花費的通關時間（單選）。
+            </p>
+
+            {/* YouTube 現場直播按鈕 (外部連結導流) */}
+            <div className="mb-4">
+              <a
+                href={JUMP_KING_LIVE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600/25 via-red-500/20 to-red-600/25 hover:from-red-600/40 hover:to-red-600/40 border border-red-500/50 text-red-200 hover:text-white text-xs sm:text-sm font-black transition-all shadow-lg shadow-red-950/30 active:scale-95 group select-none"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                <span>📺 前往 YouTube 現場直播觀看賽事 ↗</span>
+                <ExternalLink className="w-3.5 h-3.5 text-red-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </a>
+            </div>
+
+            {/* 動態獎金池展示看板 (Dynamic Pool Display) */}
+            <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-[#1c160c] via-[#141009] to-[#0a0805] border border-amber-500/50 shadow-xl shadow-amber-950/30 backdrop-blur-md mb-4 text-left space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                    <Coins className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-amber-200 font-bold block">
+                      累積動態總獎金池
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      由所有猜對者均分（取至十位數）
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-baseline gap-1.5 self-end sm:self-center">
+                  <span className="font-mono text-2xl sm:text-3xl font-black text-[#FFD700] tracking-wider drop-shadow-[0_0_12px_rgba(255,215,0,0.5)]">
+                    {totalPool.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-amber-300/80 font-bold">$TEE</span>
+                </div>
+              </div>
+
+              {/* 階梯參與進度 */}
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex justify-between items-center text-gray-300">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-purple-400" />
+                    目前參與人數：<strong className="text-white text-sm">{totalPredictions}</strong> 人
+                  </span>
+                  <span className="text-amber-300 font-bold text-[11px]">
+                    距下一級 (+5,000 $TEE) 還需 {nextTierNeeded} 人
                   </span>
                 </div>
-              </div>
 
-              {isSettled && (
-                <div className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 text-amber-200 text-sm sm:text-base font-black flex items-center justify-center gap-2 shadow-xl shadow-amber-950/30 text-center">
-                  <span>🏆 ホロライブ甲子園2026 冠軍預測 結果：【{winningChoice}】</span>
+                {/* 階梯進度條 */}
+                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden p-0.5">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-[#00FFA3] transition-all duration-500"
+                    style={{ width: `${Math.max(5, Math.min(100, tierProgressPercent))}%` }}
+                  />
                 </div>
-              )}
-            </div>
-
-            {/* 六個選項：左右排列各 3 個 */}
-            <div className="grid grid-cols-2 gap-3 w-full mb-6">
-              <div className="flex flex-col gap-3">
-                {SCHOOLS_LEFT.map(renderSchoolCard)}
               </div>
-              <div className="flex flex-col gap-3">
-                {SCHOOLS_RIGHT.map(renderSchoolCard)}
+
+              <div className="pt-1 text-[11px] text-gray-400/90 leading-relaxed border-t border-gray-800/80">
+                💰 <strong>獎金規則：</strong>基礎獎金 5,000 $TEE，每超過 10 人增加 5,000 $TEE。賽事結束後由所有猜中者均分獎金，小數部分無條件捨去取至十位數。
               </div>
             </div>
 
-            {/* 確定按鈕 / 狀態列 */}
-            <div className="w-full flex flex-col items-center gap-3">
-              {isLocked ? (
-                <>
-                  <button
-                    type="button"
-                    disabled
-                    className="w-full py-3.5 px-6 rounded-xl font-black text-sm tracking-widest uppercase shadow-none bg-[#161a22] border border-gray-700/60 text-gray-400 cursor-not-allowed select-none flex items-center justify-center gap-2"
-                  >
-                    <Lock className="w-4 h-4 text-gray-400" />
-                    <span>🔒 本企劃預測已截止</span>
-                  </button>
-
-                  {confirmedSchool ? (
-                    <p className="text-[11px] text-gray-400 font-mono text-center">
-                      你最終的預測選擇：<span className="text-[#00FFA3] font-bold">【{confirmedSchool}】</span>（已鎖定禁止變更）
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-gray-500 font-mono text-center">
-                      目前未完成預測選擇（已截止鎖定）
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleConfirm}
-                    disabled={isSubmitting}
-                    className="w-full py-3.5 px-3 rounded-xl font-black text-xs sm:text-sm tracking-normal transition-all duration-150 shadow-xl active:scale-[0.98] bg-gradient-to-r from-[#00FFA3]/90 to-[#00d084] hover:brightness-110 text-slate-950 shadow-emerald-950/40 cursor-pointer disabled:opacity-50 text-center"
-                  >
-                    {isSubmitting ? "儲存中..." : "確定送出預測"}
-                  </button>
-
-                  {!user && (
-                    <p className="text-[13.5px] text-amber-400/90 font-mono text-center">
-                      ⚠️ 目前為未登入狀態，預測前請先登入以保存紀錄與領取獎金
-                    </p>
-                  )}
-
-                  {confirmedSchool && (
-                    <p className="text-[11px] text-gray-400 font-mono text-center">
-                      你目前的選擇：<span className="text-[#00FFA3] font-bold">【{confirmedSchool}】</span>（可重新選擇並點確定更新）
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
+            {/* 結算結果大橫幅 */}
+            {isSettled && winningChoice && (
+              <div className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 text-amber-200 text-sm sm:text-base font-black flex items-center justify-center gap-2 shadow-xl shadow-amber-950/30 text-center">
+                <span>🏆 JUMP KING HOLORACE 優勝通關時間：【{winningChoice}】</span>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="w-full p-6 rounded-2xl bg-[#10141d]/70 border border-[#222a3a] text-center space-y-3 backdrop-blur-md shadow-xl mb-8">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-amber-500/10 to-pink-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Sparkles className="w-6 h-6 text-amber-300" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-base font-black text-white tracking-wide">目前尚無進行中的特別企劃</h2>
-              <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
-                甲子園 2026 預測活動已圓滿落幕！下一期精彩企劃正加緊籌備中，敬請鎖定。歡迎於下方歷史書籤查閱過往企劃紀錄。
-              </p>
-            </div>
+
+          {/* 六個選項卡片：左右排列各 3 個 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-6">
+            {JUMP_KING_OPTIONS.map((opt) => {
+              const isSelected = selectedChoice === opt.name || confirmedChoice === opt.name;
+              const isWinner = isSettled && winningChoice === opt.name;
+
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  disabled={isLocked || isSettled}
+                  onClick={() => {
+                    if (!isLocked && !isSettled) {
+                      setSelectedChoice(opt.name);
+                    }
+                  }}
+                  className={`w-full p-4 rounded-xl border text-left transition-all duration-200 flex items-center justify-between gap-3 select-none ${
+                    isWinner
+                      ? "bg-amber-950/40 border-amber-400 shadow-[0_0_24px_rgba(245,158,11,0.35)] ring-1 ring-amber-400/80 text-white cursor-default"
+                      : isSettled
+                      ? isSelected
+                        ? "bg-[#142320]/80 border-[#00FFA3]/60 text-white cursor-default opacity-95 shadow-[0_0_12px_rgba(0,255,163,0.15)]"
+                        : "bg-[#0b0e14] border-[#181f2c] text-gray-500 cursor-default opacity-50"
+                      : isLocked
+                      ? isSelected
+                        ? "bg-[#142320]/80 border-[#00FFA3]/60 text-white cursor-not-allowed opacity-95"
+                        : "bg-[#0b0e14] border-[#181f2c] text-gray-500 cursor-not-allowed opacity-45"
+                      : isSelected
+                      ? "bg-[#142320] border-[#00FFA3] shadow-[0_0_16px_rgba(0,255,163,0.22)] text-white active:scale-[0.98] cursor-pointer"
+                      : "bg-[#10141d] border-[#222a3a] text-gray-300 hover:border-gray-600 hover:bg-[#141a26] active:scale-[0.98] cursor-pointer"
+                  }`}
+                >
+                  <div className="flex flex-col gap-0.5 truncate text-left">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="text-sm sm:text-base font-black tracking-wide truncate">
+                        {opt.name}
+                      </span>
+                      {isWinner && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 shrink-0">
+                          🏆 優勝
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-gray-400 font-mono truncate">
+                      {opt.desc}
+                    </span>
+                  </div>
+
+                  <div className="shrink-0">
+                    {isWinner ? (
+                      <Trophy className="w-5 h-5 text-amber-400" />
+                    ) : isSelected ? (
+                      <CheckCircle2 className="w-5 h-5 text-[#00FFA3]" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-gray-600" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        )}
+
+          {/* 送出預測 / 鎖定狀態列 */}
+          <div className="w-full flex flex-col items-center gap-3">
+            {isLocked ? (
+              <>
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-3.5 px-6 rounded-xl font-black text-sm tracking-widest uppercase shadow-none bg-[#161a22] border border-gray-700/60 text-gray-400 cursor-not-allowed select-none flex items-center justify-center gap-2"
+                >
+                  <Lock className="w-4 h-4 text-gray-400" />
+                  <span>🔒 本企劃預測已截止</span>
+                </button>
+
+                {confirmedChoice ? (
+                  <p className="text-[11px] text-gray-400 font-mono text-center">
+                    你最終的預測選擇：<span className="text-[#00FFA3] font-bold">【{confirmedChoice}】</span>（已鎖定禁止變更）
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-gray-500 font-mono text-center">
+                    目前未完成預測選擇（已截止鎖定）
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 px-3 rounded-xl font-black text-xs sm:text-sm tracking-normal transition-all duration-150 shadow-xl active:scale-[0.98] bg-gradient-to-r from-[#00FFA3]/90 to-[#00d084] hover:brightness-110 text-slate-950 shadow-emerald-950/40 cursor-pointer disabled:opacity-50 text-center"
+                >
+                  {isSubmitting ? "儲存中..." : "確定送出預測"}
+                </button>
+
+                {!user && (
+                  <p className="text-[13.5px] text-amber-400/90 font-mono text-center">
+                    ⚠️ 目前為未登入狀態，預測前請先登入以保存紀錄與領取獎金
+                  </p>
+                )}
+
+                {confirmedChoice && (
+                  <p className="text-[11px] text-gray-400 font-mono text-center">
+                    你目前的選擇：<span className="text-[#00FFA3] font-bold">【{confirmedChoice}】</span>（可重新選擇並點確定更新）
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
 
         {/* ── 歷屆企劃回顧區：以書籤折疊方式保存 ── */}
-        {isArchived && (
-          <section className="w-full space-y-3">
-            <div className="flex items-center justify-between border-b border-gray-800 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-amber-400 fill-amber-400/20" />
-                <h2 className="text-sm font-bold text-white tracking-wide">歷屆企劃回顧 (Past Events)</h2>
-              </div>
-              <span className="text-[11px] text-gray-500 font-mono">1 筆歷史書籤</span>
+        <section className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-gray-800 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+              <h2 className="text-sm font-bold text-white tracking-wide">歷屆企劃回顧 (Past Events)</h2>
             </div>
+            <span className="text-[11px] text-gray-500 font-mono">1 筆歷史書籤</span>
+          </div>
 
-            {/* 書籤折疊元件 (Bookmark Accordion) */}
-            <div className="w-full rounded-2xl border border-gray-800/90 bg-gray-900/30 overflow-hidden shadow-xl backdrop-blur-md transition-all">
-              {/* 書籤頂部觸發列 */}
-              <div
-                onClick={toggleBookmark}
-                className="p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-850/50 transition-colors select-none group"
-              >
-                <div className="flex items-center gap-3 truncate">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-yellow-600/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-sm shadow-amber-950/30 group-hover:border-amber-400/60 transition-colors">
-                    <Bookmark className="w-4 h-4 fill-amber-400/40" />
-                  </div>
-
-                  <div className="flex flex-col gap-1 truncate text-left">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors truncate">
-                        ホロライブ甲子園2026 冠軍預測
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-400/30 shrink-0">
-                        📑 歷史企劃書籤
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-800/80 text-gray-400 border border-gray-700 shrink-0">
-                        🔒 賽事已圓滿落幕
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 text-xs text-gray-400 font-mono">
-                      <span className="text-amber-200/90 font-semibold">獎金 500 $TEE</span>
-                      <span className="text-gray-600">•</span>
-                      {confirmedSchool ? (
-                        <span className="text-[#00FFA3] font-semibold">你的預測：【{confirmedSchool}】</span>
-                      ) : (
-                        <span className="text-gray-500">未參與預測</span>
-                      )}
-                      {isSettled && winningChoice && (
-                        <>
-                          <span className="text-gray-600">•</span>
-                          <span className="text-yellow-400 font-semibold">冠軍：【{winningChoice}】</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+          {/* 書籤折疊元件 (Bookmark Accordion) */}
+          <div className="w-full rounded-2xl border border-gray-800/90 bg-gray-900/30 overflow-hidden shadow-xl backdrop-blur-md transition-all">
+            {/* 書籤頂部觸發列 */}
+            <div
+              onClick={toggleBookmark}
+              className="p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-850/50 transition-colors select-none group"
+            >
+              <div className="flex items-center gap-3 truncate">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-yellow-600/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-sm shadow-amber-950/30 group-hover:border-amber-400/60 transition-colors">
+                  <Bookmark className="w-4 h-4 fill-amber-400/40" />
                 </div>
 
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-800/60 group-hover:bg-gray-800 text-xs font-bold text-amber-300/90 group-hover:text-amber-200 border border-gray-700/60 shrink-0 transition-all">
-                  <span className="hidden sm:inline">{isBookmarkExpanded ? "收合書籤" : "展開查閱"}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isBookmarkExpanded ? "rotate-180" : ""}`} />
-                </div>
-              </div>
-
-              {/* 書籤展開內部內容 */}
-              {isBookmarkExpanded && (
-                <div className="p-4 sm:p-6 border-t border-gray-800/80 bg-gray-950/40 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                  {/* 說明與獎金 */}
-                  <div className="text-center space-y-3">
-                    <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
-                      六校爭霸，誰能登頂！本企劃已於 2026 年 10 月 17 日賽事圓滿落幕。
-                    </p>
-
-                    <div className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-gradient-to-b from-[#1c160c] to-[#0e0b06] border border-amber-500/40 shadow-lg shadow-amber-950/20 backdrop-blur-md">
-                      <div className="flex items-center gap-2 font-black text-white text-xs">
-                        <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="text-amber-200">正確預測獎金</span>
-                        <span className="font-mono text-sm text-[#FFD700] tracking-wider drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]">
-                          500 $TEE
-                        </span>
-                      </div>
-                    </div>
-
-                    {isSettled && winningChoice && (
-                      <div className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 text-amber-200 text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-amber-950/30 text-center">
-                        <span>🏆 ホロライブ甲子園2026 冠軍預測 結果：【{winningChoice}】</span>
-                      </div>
-                    )}
+                <div className="flex flex-col gap-1 truncate text-left">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors truncate">
+                      ホロライブ甲子園2026 冠軍預測
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-400/30 shrink-0">
+                      📑 歷史企劃書籤
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-800/80 text-gray-400 border border-gray-700 shrink-0">
+                      🔒 賽事已圓滿落幕
+                    </span>
                   </div>
 
-                  {/* 六校卡片展示 (回顧檢視) */}
-                  <div className="grid grid-cols-2 gap-3 w-full">
-                    <div className="flex flex-col gap-3">
-                      {SCHOOLS_LEFT.map(renderSchoolCard)}
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      {SCHOOLS_RIGHT.map(renderSchoolCard)}
-                    </div>
-                  </div>
-
-                  {/* 個人紀錄與成果反饋 */}
-                  <div className="w-full space-y-3">
-                    {isSettled ? (
-                      confirmedSchool === winningChoice ? (
-                        <div className="w-full p-4 rounded-xl bg-gradient-to-b from-[#142320] to-[#0d1715] border border-[#00FFA3]/70 text-center space-y-1">
-                          <div className="text-sm font-black text-[#00FFA3] flex items-center justify-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-amber-300" />
-                            <span>🎉 恭喜預測正確！已發放獎金 500 $TEE</span>
-                          </div>
-                          <p className="text-xs text-emerald-200/90 font-mono">
-                            你預測的【{confirmedSchool}】榮獲本屆大賽冠軍！
-                          </p>
-                        </div>
-                      ) : confirmedSchool ? (
-                        <div className="w-full p-4 rounded-xl bg-gray-900/60 border border-gray-800 text-center space-y-1">
-                          <div className="text-xs font-bold text-gray-300">
-                            你選擇了【{confirmedSchool}】，本屆冠軍為【{winningChoice}】。感謝熱情參與！
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="w-full p-4 rounded-xl bg-gray-900/60 border border-gray-800 text-center space-y-1">
-                          <div className="text-xs font-bold text-gray-400">
-                            本企劃已圓滿結算，感謝大家的熱情支持！
-                          </div>
-                        </div>
-                      )
+                  <div className="flex items-center gap-2.5 text-xs text-gray-400 font-mono flex-wrap">
+                    <span className="text-amber-200/90 font-semibold">單人獎金 500 $TEE</span>
+                    <span className="text-gray-600">•</span>
+                    {pastConfirmedChoice ? (
+                      <span className="text-[#00FFA3] font-semibold">你的預測：【{pastConfirmedChoice}】</span>
                     ) : (
-                      confirmedSchool ? (
-                        <div className="w-full p-3.5 rounded-xl bg-[#142320]/60 border border-[#00FFA3]/40 text-center">
-                          <p className="text-xs text-gray-300 font-mono">
-                            你在本企劃中留下的預測選擇：<span className="text-[#00FFA3] font-bold">【{confirmedSchool}】</span>
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="w-full p-3.5 rounded-xl bg-gray-900/60 border border-gray-800 text-center">
-                          <p className="text-xs text-gray-400 font-mono">
-                            你未於截止前參與本企劃預測（預測已截止）
-                          </p>
-                        </div>
-                      )
+                      <span className="text-gray-500">未參與預測</span>
                     )}
-
-                    {/* 落幕提示條 */}
-                    <div className="w-full py-3 px-4 rounded-xl font-black text-xs bg-[#12161f] border border-gray-800 text-gray-400 select-none flex items-center justify-center gap-2">
-                      <Trophy className="w-4 h-4 text-amber-500/70" />
-                      <span>本特別企劃已圓滿落幕，感謝所有玩家的熱情參與！</span>
-                    </div>
+                    {pastIsSettled && pastWinningChoice && (
+                      <>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-yellow-400 font-semibold">冠軍：【{pastWinningChoice}】</span>
+                      </>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-800/60 group-hover:bg-gray-800 text-xs font-bold text-amber-300/90 group-hover:text-amber-200 border border-gray-700/60 shrink-0 transition-all">
+                <span className="hidden sm:inline">{isBookmarkExpanded ? "收合書籤" : "展開查閱"}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isBookmarkExpanded ? "rotate-180" : ""}`} />
+              </div>
             </div>
-          </section>
-        )}
+
+            {/* 書籤展開內部內容 */}
+            {isBookmarkExpanded && (
+              <div className="p-4 sm:p-6 border-t border-gray-800/80 bg-gray-950/40 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                {/* 說明與獎金 */}
+                <div className="text-center space-y-3">
+                  <p className="text-xs text-gray-400 leading-relaxed max-w-md mx-auto">
+                    六校爭霸，誰能登頂！本企劃已於 2026 年 10 月 17 日賽事圓滿落幕。
+                  </p>
+
+                  <div className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-gradient-to-b from-[#1c160c] to-[#0e0b06] border border-amber-500/40 shadow-lg shadow-amber-950/20 backdrop-blur-md">
+                    <div className="flex items-center gap-2 font-black text-white text-xs">
+                      <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="text-amber-200">正確預測獎金</span>
+                      <span className="font-mono text-sm text-[#FFD700] tracking-wider drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]">
+                        500 $TEE
+                      </span>
+                    </div>
+                  </div>
+
+                  {pastIsSettled && pastWinningChoice && (
+                    <div className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 text-amber-200 text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-amber-950/30 text-center">
+                      <span>🏆 ホロライブ甲子園2026 冠軍預測 結果：【{pastWinningChoice}】</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 六校卡片展示 (回顧檢視) */}
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <div className="flex flex-col gap-3">
+                    {PAST_SCHOOLS_LEFT.map((school) => {
+                      const isSelected = pastConfirmedChoice === school.name;
+                      const isWinner = pastIsSettled && pastWinningChoice === school.name;
+
+                      return (
+                        <div
+                          key={school.id}
+                          className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-2 select-none ${
+                            isWinner
+                              ? "bg-amber-950/40 border-amber-400 text-white"
+                              : isSelected
+                              ? "bg-[#142320]/80 border-[#00FFA3]/60 text-white"
+                              : "bg-[#0b0e14] border-[#181f2c] text-gray-500 opacity-60"
+                          }`}
+                        >
+                          <span className="text-xs font-bold truncate">{school.name}</span>
+                          {isWinner && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400 text-slate-950">
+                              🏆 冠軍
+                            </span>
+                          )}
+                          {isSelected && !isWinner && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#00FFA3]/20 text-[#00FFA3]">
+                              你的選擇
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {PAST_SCHOOLS_RIGHT.map((school) => {
+                      const isSelected = pastConfirmedChoice === school.name;
+                      const isWinner = pastIsSettled && pastWinningChoice === school.name;
+
+                      return (
+                        <div
+                          key={school.id}
+                          className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-2 select-none ${
+                            isWinner
+                              ? "bg-amber-950/40 border-amber-400 text-white"
+                              : isSelected
+                              ? "bg-[#142320]/80 border-[#00FFA3]/60 text-white"
+                              : "bg-[#0b0e14] border-[#181f2c] text-gray-500 opacity-60"
+                          }`}
+                        >
+                          <span className="text-xs font-bold truncate">{school.name}</span>
+                          {isWinner && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400 text-slate-950">
+                              🏆 冠軍
+                            </span>
+                          )}
+                          {isSelected && !isWinner && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#00FFA3]/20 text-[#00FFA3]">
+                              你的選擇
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 個人紀錄與成果反饋 */}
+                <div className="w-full space-y-3">
+                  {pastIsSettled ? (
+                    pastConfirmedChoice === pastWinningChoice ? (
+                      <div className="w-full p-4 rounded-xl bg-gradient-to-b from-[#142320] to-[#0d1715] border border-[#00FFA3]/70 text-center space-y-1">
+                        <div className="text-sm font-black text-[#00FFA3] flex items-center justify-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-amber-300" />
+                          <span>🎉 恭喜預測正確！已發放獎金 500 $TEE</span>
+                        </div>
+                        <p className="text-xs text-emerald-200/90 font-mono">
+                          你預測的【{pastConfirmedChoice}】榮獲本屆大賽冠軍！
+                        </p>
+                      </div>
+                    ) : pastConfirmedChoice ? (
+                      <div className="w-full p-4 rounded-xl bg-gray-900/60 border border-gray-800 text-center space-y-1">
+                        <div className="text-xs font-bold text-gray-300">
+                          你選擇了【{pastConfirmedChoice}】，本屆冠軍為【{pastWinningChoice}】。感謝熱情參與！
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full p-4 rounded-xl bg-gray-900/60 border border-gray-800 text-center space-y-1">
+                        <div className="text-xs font-bold text-gray-400">
+                          本企劃已圓滿結算，感謝大家的熱情支持！
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    pastConfirmedChoice ? (
+                      <div className="w-full p-3.5 rounded-xl bg-[#142320]/60 border border-[#00FFA3]/40 text-center">
+                        <p className="text-xs text-gray-300 font-mono">
+                          你在本企劃中留下的預測選擇：<span className="text-[#00FFA3] font-bold">【{pastConfirmedChoice}】</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="w-full p-3.5 rounded-xl bg-gray-900/60 border border-gray-800 text-center">
+                        <p className="text-xs text-gray-400 font-mono">
+                          你未於截止前參與本企劃預測（賽事已圓滿落幕）
+                        </p>
+                      </div>
+                    )
+                  )}
+
+                  {/* 落幕提示條 */}
+                  <div className="w-full py-3 px-4 rounded-xl font-black text-xs bg-[#12161f] border border-gray-800 text-gray-400 select-none flex items-center justify-center gap-2">
+                    <Trophy className="w-4 h-4 text-amber-500/70" />
+                    <span>本特別企劃已圓滿落幕，感謝所有玩家的熱情參與！</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
       <BottomNav />

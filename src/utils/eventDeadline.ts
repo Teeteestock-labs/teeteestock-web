@@ -1,4 +1,6 @@
 export const HOLO_KOUSHIEN_EVENT_ID = 'holo_koushien_2026';
+export const JUMP_KING_EVENT_ID = 'jump_king_holorace';
+export const JUMP_KING_LIVE_URL = 'https://www.youtube.com/watch?v=b6mcVgI0JjY';
 
 export const VALID_SCHOOL_CHOICES = [
   'WAOOON高校',
@@ -9,7 +11,48 @@ export const VALID_SCHOOL_CHOICES = [
   '壁咲高校',
 ] as const;
 
+export const JUMP_KING_CHOICES = [
+  '～30:00',
+  '30:01～1:00:00',
+  '1:00:01～2:00:00',
+  '2:00:01～4:00:00',
+  '4:00:01～',
+  '在比賽中無人完賽',
+] as const;
+
 export type SchoolChoice = typeof VALID_SCHOOL_CHOICES[number];
+export type JumpKingChoice = typeof JUMP_KING_CHOICES[number];
+
+/**
+ * 取得指定特別企劃的合法選項清單
+ */
+export function getValidChoicesForEvent(eventId: string = JUMP_KING_EVENT_ID): readonly string[] {
+  if (eventId === HOLO_KOUSHIEN_EVENT_ID) {
+    return VALID_SCHOOL_CHOICES;
+  }
+  return JUMP_KING_CHOICES;
+}
+
+/**
+ * 計算 JUMP KING HOLORACE 當前動態獎金池
+ * 基礎獎金 5000，每超過 10 人增加 5000
+ * (1~10人: 5000 / 11~20人: 10000 / 21~30人: 15000 ...)
+ */
+export function calculateJumpKingPool(participantCount: number): number {
+  if (participantCount <= 10) {
+    return 5000;
+  }
+  return 5000 + Math.floor((participantCount - 1) / 10) * 5000;
+}
+
+/**
+ * 計算單一獲獎者均分獎金（取至十位數，無條件捨去）
+ */
+export function calculatePrizePerWinner(totalPool: number, winnerCount: number): number {
+  if (winnerCount <= 0) return 0;
+  const rawShare = totalPool / winnerCount;
+  return Math.floor(rawShare / 10) * 10;
+}
 
 export interface PredictionLockStatus {
   isLocked: boolean;

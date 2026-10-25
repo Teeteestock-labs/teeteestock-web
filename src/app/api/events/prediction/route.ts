@@ -3,9 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getAuthenticatedUser } from '@/lib/auth';
 import {
   HOLO_KOUSHIEN_EVENT_ID,
-  VALID_SCHOOL_CHOICES,
+  JUMP_KING_EVENT_ID,
+  JUMP_KING_LIVE_URL,
+  getValidChoicesForEvent,
+  calculateJumpKingPool,
   isEventPredictionLocked,
-  type SchoolChoice,
 } from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 
@@ -15,6 +17,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const allowTestUnlock = searchParams.get('test_unlock') === 'true';
+    const targetEventId = searchParams.get('eventId') || JUMP_KING_EVENT_ID;
 
     // 取得使用者身分 (未登入者為 null，避免回傳 default_player 資料)
     const authUser = await getAuthenticatedUser(request);
@@ -27,34 +30,49 @@ export async function GET(request: Request) {
           where: {
             userId_eventId: {
               userId: targetUserId,
-              eventId: HOLO_KOUSHIEN_EVENT_ID,
+              eventId: targetEventId,
             },
           },
         })
       : null;
 
-    // 查詢特別企劃狀態 (手動鎖定與結算，並確保甲子園2026自動同步折疊)
-    const specialEvent = await getOrSyncSpecialEvent(HOLO_KOUSHIEN_EVENT_ID);
+    // 查詢特別企劃狀態 (若未初始化則自動初始化)
+    const specialEvent = await getOrSyncSpecialEvent(targetEventId);
 
-    const isManualLocked = specialEvent ? specialEvent.isLocked : true;
+    const isManualLocked = specialEvent ? specialEvent.isLocked : false;
     const lockStatus = isEventPredictionLocked(isManualLocked, allowTestUnlock);
     const isSettled = specialEvent?.isSettled || false;
     const winningChoice = specialEvent?.winningChoice || null;
     const hasWon = isSettled && prediction ? prediction.choice === winningChoice : null;
-    const isArchived = specialEvent ? Boolean(specialEvent.isArchived) : true;
+    const isArchived = specialEvent ? Boolean(specialEvent.isArchived) : false;
+
+    // 計算總參與人數與動態獎金池
+    const totalPredictions = await prisma.eventPrediction.count({
+      where: { eventId: targetEventId },
+    });
+
+    const isJumpKing = targetEventId === JUMP_KING_EVENT_ID;
+    const totalPool = isJumpKing
+      ? calculateJumpKingPool(totalPredictions)
+      : specialEvent?.totalPayout || specialEvent?.prize || 500.0;
 
     return NextResponse.json({
-      eventId: HOLO_KOUSHIEN_EVENT_ID,
+      eventId: targetEventId,
+      title: specialEvent?.title || '特別企劃',
       choice: prediction?.choice || null,
       isLocked: isSettled ? true : lockStatus.isLocked,
       message: isSettled
-        ? `🏆 本企劃已結算，冠軍為【${winningChoice}】`
+        ? `🏆 本企劃已結算，優勝為【${winningChoice}】`
         : lockStatus.message,
       isSettled,
       isArchived,
       winningChoice,
       hasWon,
-      prize: specialEvent?.prize || 500.0,
+      prize: specialEvent?.prize || 5000.0,
+      totalPool,
+      totalPredictions,
+      choices: getValidChoicesForEvent(targetEventId),
+      liveStreamUrl: isJumpKing ? JUMP_KING_LIVE_URL : null,
       settledAt: specialEvent?.settledAt || null,
       userId: targetUserId,
       updatedAt: prediction?.updatedAt || null,
@@ -73,8 +91,12 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const allowTestUnlock = searchParams.get('test_unlock') === 'true';
 
+    const body = await request.json().catch(() => ({}));
+    const { choice, eventId } = body;
+    const targetEventId = eventId || JUMP_KING_EVENT_ID;
+
     // ── 後端安全防禦：先檢查是否已結算或後台手動截止 ──
-    const specialEvent = await getOrSyncSpecialEvent(HOLO_KOUSHIEN_EVENT_ID);
+    const specialEvent = await getOrSyncSpecialEvent(targetEventId);
 
     if (specialEvent && (specialEvent.isSettled || specialEvent.isArchived)) {
       return NextResponse.json(
@@ -92,13 +114,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => ({}));
-    const { choice, userId: bodyUserId } = body;
-
     // 檢查選項合法性
-    if (!choice || !VALID_SCHOOL_CHOICES.includes(choice as SchoolChoice)) {
+    const validChoices = getValidChoicesForEvent(targetEventId);
+    if (!choice || !validChoices.includes(choice)) {
       return NextResponse.json(
-        { error: '請選擇有效的預測學校選項。' },
+        { error: '請選擇有效的預測選項。' },
         { status: 400 }
       );
     }
@@ -126,12 +146,12 @@ export async function POST(request: Request) {
       where: {
         userId_eventId: {
           userId: targetUserId,
-          eventId: HOLO_KOUSHIEN_EVENT_ID,
+          eventId: targetEventId,
         },
       },
       create: {
         userId: targetUserId,
-        eventId: HOLO_KOUSHIEN_EVENT_ID,
+        eventId: targetEventId,
         choice,
       },
       update: {
@@ -141,7 +161,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      eventId: HOLO_KOUSHIEN_EVENT_ID,
+      eventId: targetEventId,
       choice: prediction.choice,
       updatedAt: prediction.updatedAt,
     });

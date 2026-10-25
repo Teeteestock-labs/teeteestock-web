@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { HOLO_KOUSHIEN_EVENT_ID } from '@/utils/eventDeadline';
+import { HOLO_KOUSHIEN_EVENT_ID, JUMP_KING_EVENT_ID } from '@/utils/eventDeadline';
 
 let isSchemaPatched = false;
 
@@ -11,7 +11,7 @@ export async function patchSpecialEventSchemaIfNeeded() {
   try {
     // 若線上資料庫尚未執行 prisma db push，自動補齊 isArchived 欄位
     await prisma.$executeRawUnsafe(
-      'ALTER TABLE SpecialEvent ADD COLUMN isArchived BOOLEAN NOT NULL DEFAULT 1;'
+      'ALTER TABLE SpecialEvent ADD COLUMN isArchived BOOLEAN NOT NULL DEFAULT 0;'
     );
   } catch {
     // 欄位已存在或非 SQLite，忽略
@@ -20,9 +20,9 @@ export async function patchSpecialEventSchemaIfNeeded() {
 }
 
 /**
- * 取得特別企劃資料，並保證甲子園2026 (holo_koushien_2026) 在線上環境自動同步為結束/折疊狀態
+ * 取得特別企劃資料，並針對甲子園 2026 自動同步結束折疊，針對 JUMP KING HOLORACE 初始化開放中狀態
  */
-export async function getOrSyncSpecialEvent(eventId: string = HOLO_KOUSHIEN_EVENT_ID) {
+export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID) {
   await patchSpecialEventSchemaIfNeeded();
 
   let specialEvent: any = null;
@@ -34,35 +34,41 @@ export async function getOrSyncSpecialEvent(eventId: string = HOLO_KOUSHIEN_EVEN
     console.warn('[SpecialEvent] findUnique failed:', err);
   }
 
-  // 1. 若資料庫尚無此企劃紀錄，自動初始化並預設為已結束(折疊)與截止
+  const isJumpKing = eventId === JUMP_KING_EVENT_ID;
+  const defaultTitle = isJumpKing ? 'JUMP KING HOLORACE 第一名通關時間預測' : 'ホロライブ甲子園2026 冠軍預測';
+  const defaultPrize = isJumpKing ? 5000.0 : 500.0;
+  const defaultLocked = isJumpKing ? false : true;
+  const defaultArchived = isJumpKing ? false : true;
+
+  // 1. 若資料庫尚無此企劃紀錄，自動初始化
   if (!specialEvent) {
     try {
       specialEvent = await prisma.specialEvent.create({
         data: {
           id: eventId,
-          title: 'ホロライブ甲子園2026 冠軍預測',
-          prize: 500.0,
-          isLocked: true,
-          isArchived: true,
+          title: defaultTitle,
+          prize: defaultPrize,
+          isLocked: defaultLocked,
+          isArchived: defaultArchived,
         },
       });
     } catch {
       specialEvent = {
         id: eventId,
-        title: 'ホロライブ甲子園2026 冠軍預測',
-        prize: 500.0,
+        title: defaultTitle,
+        prize: defaultPrize,
         winningChoice: null,
-        isLocked: true,
+        isLocked: defaultLocked,
         lockedAt: null,
         isSettled: false,
         settledAt: null,
         totalPayout: 0,
         winnerCount: 0,
-        isArchived: true,
+        isArchived: defaultArchived,
       };
     }
   } else if (!specialEvent.isArchived && specialEvent.id === HOLO_KOUSHIEN_EVENT_ID) {
-    // 2. 若線上既有資料庫尚未標記為結束，自動自癒同步為已結束(折疊)與鎖定
+    // 2. 若線上既有資料庫甲子園尚未標記為結束，自動同步為已結束(折疊)與鎖定
     try {
       specialEvent = await prisma.specialEvent.update({
         where: { id: eventId },
