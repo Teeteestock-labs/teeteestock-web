@@ -460,7 +460,9 @@ export default function EventsPage() {
                   disabled={isSubmitting}
                   className="w-full py-3.5 px-3 rounded-xl font-black text-xs sm:text-sm tracking-normal transition-all duration-150 shadow-xl active:scale-[0.98] bg-gradient-to-r from-[#00FFA3]/90 to-[#00d084] hover:brightness-110 text-slate-950 shadow-emerald-950/40 cursor-pointer disabled:opacity-50 text-center"
                 >
-                  {isSubmitting ? "儲存中..." : "確定送出預測"}
+                  {isSubmitting
+                    ? "儲存中..."
+                    : "確定預測 （預測截止時間10/30（五）13：00）"}
                 </button>
 
                 {!user && (
