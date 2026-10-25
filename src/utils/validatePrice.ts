@@ -148,10 +148,10 @@ export function generateMMLevelOrders(openingPrice: number, playerShares: number
     }
 
     if (level === 1) {
-      // Lv.1: 關鍵 1~8 檔 (18,000 $TEE)，取消非關鍵檔
+      // Lv.1: 關鍵 1~8 檔 (1,800 $TEE)，取消非關鍵檔
       for (let t = 1; t <= 8; t++) {
-        if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(18000, bTicks[t]), isCritical: true });
-        if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(18000, aTicks[t]), isCritical: true });
+        if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(1800, bTicks[t]), isCritical: true });
+        if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(1800, aTicks[t]), isCritical: true });
       }
     } else if (level === 2) {
       // Lv.2: 關鍵奇數檔 1, 3, 5, 7, 9, 11 (15,000 $TEE)；非關鍵偶數檔 2, 4, 6, 8, 10 (2,500 ~ 5,000 $TEE)
