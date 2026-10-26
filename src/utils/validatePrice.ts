@@ -80,7 +80,7 @@ export interface MMOrderTier {
 }
 
 export interface MMOrderPlan {
-  level: number;
+  level: number | string;
   levelName: string;
   bids: MMOrderTier[];
   asks: MMOrderTier[];
@@ -96,28 +96,40 @@ function calcCeilVolume(notionalValue: number, price: number): number {
 }
 
 /**
- * 依據玩家已持股數（已發行股數）門檻，計算造市商 Lv.1 ~ Lv.7 階梯掛單配置（MMlevelrule）
+ * 依據玩家已持股數（已發行股數）門檻，計算造市商 Lv.0-1 ~ Lv.0-4 及 Lv.1 ~ Lv.7 階梯掛單配置（MMlevelrule 方案 C）
  */
 export function generateMMLevelOrders(openingPrice: number, playerShares: number): MMOrderPlan {
-  let level = 1;
-  let levelName = 'Lv.1【初萌冷啟動】';
+  let level: number | string = '0.1';
+  let levelName = 'Lv.0-1【極微冷啟動】';
 
-  if (playerShares <= 10000) {
+  if (playerShares <= 1000) {
+    level = '0.1';
+    levelName = 'Lv.0-1【極微冷啟動】';
+  } else if (playerShares <= 3000) {
+    level = '0.2';
+    levelName = 'Lv.0-2【初萌微光】';
+  } else if (playerShares <= 5000) {
+    level = '0.3';
+    levelName = 'Lv.0-3【微型突破】';
+  } else if (playerShares <= 9999) {
+    level = '0.4';
+    levelName = 'Lv.0-4【微型展開】';
+  } else if (playerShares <= 20000) {
     level = 1;
     levelName = 'Lv.1【初萌冷啟動】';
-  } else if (playerShares <= 30000) {
+  } else if (playerShares <= 40000) {
     level = 2;
     levelName = 'Lv.2【微光交錯】';
-  } else if (playerShares <= 50000) {
+  } else if (playerShares <= 60000) {
     level = 3;
     levelName = 'Lv.3【社群突破】';
-  } else if (playerShares <= 100000) {
+  } else if (playerShares <= 110000) {
     level = 4;
     levelName = 'Lv.4【籌碼展開】';
-  } else if (playerShares <= 200000) {
+  } else if (playerShares <= 210000) {
     level = 5;
     levelName = 'Lv.5【主力成型】';
-  } else if (playerShares <= 300000) {
+  } else if (playerShares <= 310000) {
     level = 6;
     levelName = 'Lv.6【野性博弈】';
   } else {
@@ -128,8 +140,15 @@ export function generateMMLevelOrders(openingPrice: number, playerShares: number
   const bidsMap = new Map<number, { volume: number; isCritical: boolean }>();
   const asksMap = new Map<number, { volume: number; isCritical: boolean }>();
 
-  if (level <= 3) {
-    // ── 依 Tick 檔位鋪設（Lv.1 ~ Lv.3）──
+  if (
+    level === '0.1' ||
+    level === '0.2' ||
+    level === '0.3' ||
+    level === 1 ||
+    level === 2 ||
+    level === 3
+  ) {
+    // ── 依 Tick 檔位鋪設（Lv.0-1 ~ Lv.0-3 及 Lv.1 ~ Lv.3）──
     const bTicks: { [tier: number]: number } = {};
     let pBid = openingPrice;
     for (let i = 1; i <= 14; i++) {
@@ -147,11 +166,41 @@ export function generateMMLevelOrders(openingPrice: number, playerShares: number
       aTicks[i] = pAsk;
     }
 
-    if (level === 1) {
-      // Lv.1: 關鍵 1~8 檔 (1,800 $TEE)，取消非關鍵檔
+    if (level === '0.1') {
+      // Lv.0-1: 關鍵 1~8 檔 (1,800 $TEE)，取消非關鍵檔
       for (let t = 1; t <= 8; t++) {
         if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(1800, bTicks[t]), isCritical: true });
         if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(1800, aTicks[t]), isCritical: true });
+      }
+    } else if (level === '0.2') {
+      // Lv.0-2: 關鍵奇數檔 1, 3, 5, 7, 9, 11 (1,500 $TEE)；非關鍵偶數檔 2, 4, 6, 8, 10 (250 ~ 500 $TEE)
+      const critTicks = [1, 3, 5, 7, 9, 11];
+      const nonCritTicks = [2, 4, 6, 8, 10];
+      for (const t of critTicks) {
+        if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(1500, bTicks[t]), isCritical: true });
+        if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(1500, aTicks[t]), isCritical: true });
+      }
+      for (const t of nonCritTicks) {
+        if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(getRandomInt(250, 500), bTicks[t]), isCritical: false });
+        if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(getRandomInt(250, 500), aTicks[t]), isCritical: false });
+      }
+    } else if (level === '0.3') {
+      // Lv.0-3: 關鍵偶數檔 2, 4, 6, 8, 10 (1,300 $TEE)；非關鍵奇數檔 1, 3, 5, 7, 9 (250 ~ 500 $TEE)
+      const critTicks = [2, 4, 6, 8, 10];
+      const nonCritTicks = [1, 3, 5, 7, 9];
+      for (const t of critTicks) {
+        if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(1300, bTicks[t]), isCritical: true });
+        if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(1300, aTicks[t]), isCritical: true });
+      }
+      for (const t of nonCritTicks) {
+        if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(getRandomInt(250, 500), bTicks[t]), isCritical: false });
+        if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(getRandomInt(250, 500), aTicks[t]), isCritical: false });
+      }
+    } else if (level === 1) {
+      // Lv.1: 關鍵 1~8 檔 (18,000 $TEE)，取消非關鍵檔
+      for (let t = 1; t <= 8; t++) {
+        if (bTicks[t]) bidsMap.set(bTicks[t], { volume: calcCeilVolume(18000, bTicks[t]), isCritical: true });
+        if (aTicks[t]) asksMap.set(aTicks[t], { volume: calcCeilVolume(18000, aTicks[t]), isCritical: true });
       }
     } else if (level === 2) {
       // Lv.2: 關鍵奇數檔 1, 3, 5, 7, 9, 11 (15,000 $TEE)；非關鍵偶數檔 2, 4, 6, 8, 10 (2,500 ~ 5,000 $TEE)
@@ -179,14 +228,22 @@ export function generateMMLevelOrders(openingPrice: number, playerShares: number
       }
     }
   } else {
-    // ── 依百分比階梯鋪設（Lv.4 ~ Lv.7）──
+    // ── 依百分比階梯鋪設（Lv.0-4 及 Lv.4 ~ Lv.7）──
     let critPcts: number[] = [];
     let nonCritPcts: number[] = [];
     let critVal = 5000;
     let nonCritMin = 3500;
     let nonCritMax = 7000;
 
-    if (level === 4) {
+    if (level === '0.4') {
+      // Lv.0-4: 關鍵 1%, 3%, 5%, 8%, 10%, 13%, 15%, 18%, 20% (500 $TEE)
+      // 非關鍵: 其餘 1% 點位 (350 ~ 700 $TEE)
+      critPcts = [0.01, 0.03, 0.05, 0.08, 0.10, 0.13, 0.15, 0.18, 0.20];
+      nonCritPcts = [0.02, 0.04, 0.06, 0.07, 0.09, 0.11, 0.12, 0.14, 0.16, 0.17, 0.19];
+      critVal = 500;
+      nonCritMin = 350;
+      nonCritMax = 700;
+    } else if (level === 4) {
       // Lv.4: 關鍵 1%, 3%, 5%, 8%, 10%, 13%, 15%, 18%, 20% (5,000 $TEE)
       // 非關鍵: 其餘 1% 點位 (3,500 ~ 7,000 $TEE)
       critPcts = [0.01, 0.03, 0.05, 0.08, 0.10, 0.13, 0.15, 0.18, 0.20];
