@@ -685,8 +685,16 @@ if (isOnceMode) {
     try {
       const result = await prisma.teeteeEvents.deleteMany({
         where: {
-          status: { in: [ReviewStatus.APPROVED, ReviewStatus.REJECTED] },
-          isSettled: true
+          OR: [
+            {
+              status: { in: [ReviewStatus.APPROVED, ReviewStatus.REJECTED] },
+              isSettled: true
+            },
+            {
+              pairId: 'hololive',
+              status: { in: [ReviewStatus.APPROVED, ReviewStatus.REJECTED] }
+            }
+          ]
         }
       });
       console.log(`[Cleanup Cron] Successfully cleaned up ${result.count} history events.`);

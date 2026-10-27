@@ -624,6 +624,46 @@ export async function runDailyRolloverOrSettlement(options?: {
         });
       }
 
+      // 12. Archive reviewed events for hololive channel (APPROVED and REJECTED)
+      // Unreviewed PENDING events remain intact in teeteeEvents for future review.
+      const reviewedHololiveEvents = await tx.teeteeEvents.findMany({
+        where: {
+          pairId: 'hololive',
+          status: { in: [ReviewStatus.APPROVED, ReviewStatus.REJECTED] }
+        }
+      });
+
+      for (const evt of reviewedHololiveEvents) {
+        const exists = await tx.archivedEvents.findUnique({
+          where: {
+            pairId_url: {
+              pairId: evt.pairId,
+              url: evt.url
+            }
+          }
+        });
+        if (!exists) {
+          await tx.archivedEvents.create({
+            data: {
+              id: evt.id,
+              pairId: evt.pairId,
+              url: evt.url,
+              type: evt.type,
+              title: evt.title,
+              timestamp: evt.timestamp,
+              reporter: evt.reporter,
+              status: evt.status,
+              createdAt: evt.createdAt,
+              reason: evt.reason || ""
+            }
+          });
+        }
+
+        await tx.teeteeEvents.delete({
+          where: { id: evt.id }
+        });
+      }
+
       // Reset pending dividend settle status and clear manual trigger timestamp
       await tx.systemConfig.update({
         where: { id: 1 },

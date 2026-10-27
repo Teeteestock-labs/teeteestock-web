@@ -12,8 +12,16 @@ export async function POST(request: Request) {
   try {
     const result = await prisma.teeteeEvents.deleteMany({
       where: {
-        status: { in: [ReviewStatus.APPROVED, ReviewStatus.REJECTED] },
-        isSettled: true
+        OR: [
+          {
+            status: { in: [ReviewStatus.APPROVED, ReviewStatus.REJECTED] },
+            isSettled: true
+          },
+          {
+            pairId: 'hololive',
+            status: { in: [ReviewStatus.APPROVED, ReviewStatus.REJECTED] }
+          }
+        ]
       }
     });
 
