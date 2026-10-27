@@ -6,7 +6,7 @@ import { parseStringPromise } from 'xml2js';
 import dotenv from 'dotenv';
 import { prisma } from '../lib/prisma';
 import { EventType, ReviewStatus } from '../types/enums';
-import { runDailyRolloverOrSettlement, getDividendCooldownInfo, stageManualDividendSettlement } from '../services/settlementService';
+import { getDividendCooldownInfo, stageManualDividendSettlement } from '../services/settlementService';
 
 // Set DNS order to ipv4first to prevent Happy Eyeballs IPv6 connection timeouts on Linux VMs
 if (dns && typeof dns.setDefaultResultOrder === 'function') {
@@ -699,20 +699,6 @@ if (isOnceMode) {
 
   console.log(`Cleanup cron scheduler started. Will run every Tuesday at 02:00 Taipei time. (Cron: ${cleanupCronExpression})`);
 
-  // Schedule daily rollover at 18:30:00 Taipei time from Tuesday to Sunday (30 18 * * 0,2,3,4,5,6, excludes Monday)
-  const rolloverCronExpression = '30 18 * * 0,2,3,4,5,6';
-  cron.schedule(rolloverCronExpression, async () => {
-    console.log('[Daily Rollover Cron] Triggering daily rollover at 18:30...');
-    try {
-      const serviceResult = await runDailyRolloverOrSettlement();
-      console.log(`[Daily Rollover Cron] Completed: action=${serviceResult.actionExecuted}, message=${serviceResult.message}`);
-    } catch (err) {
-      console.error('[Daily Rollover Cron] Execution failed:', err);
-    }
-  }, {
-    timezone: 'Asia/Taipei'
-  });
-  console.log(`Daily Rollover cron scheduler started. Will run Tue-Sun at 18:30 Taipei time. (Cron: ${rolloverCronExpression})`);
 
   // Schedule Monday 23:59 auto-staging for manual dividend button if not in cooldown
   const mondayStageCronExpression = '59 23 * * 1';

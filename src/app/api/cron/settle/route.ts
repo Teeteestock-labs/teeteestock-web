@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     await prisma.systemConfig.update({
       where: { id: 1 },
-      data: { marketStatus: serviceResult.actionExecuted === 'settle' ? 'SETTLING' : 'CLOSED' }
+      data: { marketStatus: serviceResult.actionExecuted === 'settle' ? 'CLOSED_SETTLED' : 'CLOSED' }
     });
 
     return NextResponse.json({

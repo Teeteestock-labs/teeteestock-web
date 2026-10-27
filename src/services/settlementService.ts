@@ -28,6 +28,24 @@ async function lockCpPairRow(tx: any, pairId: string) {
 }
 
 /**
+ * Acquire an exclusive row-level lock on SystemConfig (id = 1) to prevent concurrent settlement/rollover.
+ */
+async function lockSystemConfigRow(tx: any) {
+  const provider = (prisma as any)._activeProvider;
+  if (provider === 'postgresql' || provider === 'postgres') {
+    await tx.$executeRawUnsafe(`SELECT 1 FROM "SystemConfig" WHERE "id" = 1 FOR UPDATE`);
+  } else if (provider === 'mysql') {
+    await tx.$executeRawUnsafe(`SELECT 1 FROM SystemConfig WHERE id = 1 FOR UPDATE`);
+  } else {
+    // For SQLite, perform a dummy update to immediately lock the row
+    await tx.systemConfig.update({
+      where: { id: 1 },
+      data: { id: 1 }
+    });
+  }
+}
+
+/**
  * Expire all pending orders in the OrderBook for a given trading pair.
  * No database refunds are needed because order placement does not deduct balance/shares from the database.
  */
@@ -252,20 +270,19 @@ export async function runDailyRolloverOrSettlement(options?: {
 
   // Guard against duplicate settlement（無論自動或手動觸發皆適用）
   if (action === 'settle') {
-    const anyPair = await prisma.cpPairs.findFirst({
-      where: { lastSettledAt: { not: null } },
-      orderBy: { lastSettledAt: 'desc' }
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    const recentSettlement = await prisma.settlementLog.findFirst({
+      where: { createdAt: { gte: fortyEightHoursAgo } },
+      orderBy: { createdAt: 'desc' }
     });
-    if (anyPair?.lastSettledAt) {
-      const hoursSinceLastSettlement = (now.getTime() - anyPair.lastSettledAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSinceLastSettlement < 48) {
-        console.log(`[Settlement] Skipping: last settlement was ${hoursSinceLastSettlement.toFixed(1)} hours ago (< 48h guard).`);
-        return {
-          actionExecuted: 'none' as any,
-          results: [],
-          message: `Settlement skipped: already settled ${hoursSinceLastSettlement.toFixed(1)} hours ago.`
-        };
-      }
+    if (recentSettlement) {
+      const hoursSinceLastSettlement = (now.getTime() - recentSettlement.createdAt.getTime()) / (1000 * 60 * 60);
+      console.log(`[Settlement] Skipping: last settlement was ${hoursSinceLastSettlement.toFixed(1)} hours ago (< 48h guard).`);
+      return {
+        actionExecuted: 'none' as any,
+        results: [],
+        message: `Settlement skipped: already settled ${hoursSinceLastSettlement.toFixed(1)} hours ago.`
+      };
     }
   }
 
@@ -284,6 +301,9 @@ export async function runDailyRolloverOrSettlement(options?: {
   if (action === 'rollover') {
     // ── Scenario 1: Weekday Rollover (Tue-Sat 24:00) ──
     const results = await prisma.$transaction(async (tx) => {
+      // Lock SystemConfig row to prevent concurrent rollover execution
+      await lockSystemConfigRow(tx);
+
       const pairs = await tx.cpPairs.findMany({
         where: { status: { not: MarketStatus.DELISTED }, id: { not: 'hololive' } }
       });
@@ -341,6 +361,26 @@ export async function runDailyRolloverOrSettlement(options?: {
   } else {
     // ── Scenario 2: Sunday Settlement (Sun 24:00) ──
     const result = await prisma.$transaction(async (tx) => {
+      // 1. Acquire exclusive lock on SystemConfig to serialize concurrent settlements
+      await lockSystemConfigRow(tx);
+
+      // 2. Atomic In-Transaction Idempotency Guard: Check if settlement already executed in the last 48 hours
+      const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+      const recentSettlement = await tx.settlementLog.findFirst({
+        where: { createdAt: { gte: fortyEightHoursAgo } },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (recentSettlement) {
+        const hoursSinceLastSettlement = (now.getTime() - recentSettlement.createdAt.getTime()) / (1000 * 60 * 60);
+        console.log(`[Settlement] Aborting inside transaction: already settled ${hoursSinceLastSettlement.toFixed(1)} hours ago (< 48h guard).`);
+        await tx.systemConfig.update({
+          where: { id: 1 },
+          data: { pendingDividendSettle: false }
+        });
+        return { aborted: true, reason: `Settlement skipped: already settled ${hoursSinceLastSettlement.toFixed(1)} hours ago.` };
+      }
+
       const pairs = await tx.cpPairs.findMany({
         where: { status: { not: MarketStatus.DELISTED }, id: { not: 'hololive' } }
       });
@@ -584,20 +624,31 @@ export async function runDailyRolloverOrSettlement(options?: {
         });
       }
 
-      // Reset pending dividend settle status
+      // Reset pending dividend settle status and clear manual trigger timestamp
       await tx.systemConfig.update({
         where: { id: 1 },
-        data: { pendingDividendSettle: false }
+        data: {
+          pendingDividendSettle: false,
+          lastDividendTriggeredAt: null
+        }
       });
 
-      return { results: settlementLogs, delistedPairIds };
+      return { aborted: false, results: settlementLogs, delistedPairIds };
     }, { timeout: 25000 });
+
+    if ((result as any).aborted) {
+      return {
+        actionExecuted: 'none' as any,
+        results: [],
+        message: (result as any).reason
+      };
+    }
 
     return {
       actionExecuted: 'settle',
-      results: result.results,
-      delistedPairs: result.delistedPairIds,
-      message: `Weekly Sunday settlement and dividend payout completed successfully for ${result.results.length} pairs.`
+      results: (result as any).results,
+      delistedPairs: (result as any).delistedPairIds,
+      message: `Weekly Sunday settlement and dividend payout completed successfully for ${(result as any).results.length} pairs.`
     };
   }
 }
@@ -709,12 +760,12 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
 
   // 2. Transition from CLOSED/SETTLING to CLOSED_SETTLED (Daily Rollover / Weekly Settlement at 18:30)
   if ((currentStatus === 'CLOSED' || currentStatus === 'SETTLING') && clockStatus === 'ROLLOVER') {
-    console.log(`[State Machine] Transitioning ${currentStatus} -> SETTLING (Executing Rollover/Settlement) at ${now.toISOString()}`);
+    console.log(`[State Machine] Transitioning ${currentStatus} -> ROLLOVER_IN_PROGRESS (Executing Rollover/Settlement) at ${now.toISOString()}`);
     
-    // Atomic check-and-set: 先設為 SETTLING 表示進行中
+    // Atomic check-and-set: 先設為 ROLLOVER_IN_PROGRESS 表示進行中，防止並發 tick 重複進入
     const updatedSettled = await prisma.systemConfig.updateMany({
       where: { id: 1, marketStatus: currentStatus },
-      data: { marketStatus: 'SETTLING' }
+      data: { marketStatus: 'ROLLOVER_IN_PROGRESS' }
     });
     
     if (updatedSettled.count > 0) {
@@ -725,14 +776,14 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
         await runDailyRolloverOrSettlement({ forceAction: action, targetDate: now });
         // 成功後才轉換到 CLOSED_SETTLED
         await prisma.systemConfig.updateMany({
-          where: { id: 1, marketStatus: 'SETTLING' },
+          where: { id: 1, marketStatus: 'ROLLOVER_IN_PROGRESS' },
           data: { marketStatus: 'CLOSED_SETTLED' }
         });
       } catch (err) {
         console.error('[Rollover/Settlement Error]:', err);
         // 失敗時回滾到 CLOSED，讓下次 tick 可以重試
         await prisma.systemConfig.updateMany({
-          where: { id: 1, marketStatus: 'SETTLING' },
+          where: { id: 1, marketStatus: 'ROLLOVER_IN_PROGRESS' },
           data: { marketStatus: 'CLOSED' }
         });
         return 'CLOSED';
@@ -765,7 +816,7 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
   }
 
   // 5. Missed Transition Recovery logic
-  if (clockStatus === 'PRE_MARKET' && (currentStatus === 'CLOSED' || currentStatus === 'SETTLING')) {
+  if (clockStatus === 'PRE_MARKET' && (currentStatus === 'CLOSED' || currentStatus === 'SETTLING' || currentStatus === 'ROLLOVER_IN_PROGRESS')) {
     // Rollover was missed
     console.log(`[State Machine] Recovering missed Rollover at PRE_MARKET.`);
     const updatedRecover = await prisma.systemConfig.updateMany({
@@ -774,12 +825,11 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
     });
     if (updatedRecover.count > 0) {
       try {
-        const anySettledPair = await prisma.cpPairs.findFirst({
-          where: { lastSettledAt: { not: null } },
-          orderBy: { lastSettledAt: 'desc' }
+        const recentSettlement = await prisma.settlementLog.findFirst({
+          orderBy: { createdAt: 'desc' }
         });
-        const hoursSinceLastSettle = anySettledPair?.lastSettledAt
-          ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
+        const hoursSinceLastSettle = recentSettlement?.createdAt
+          ? (now.getTime() - recentSettlement.createdAt.getTime()) / (1000 * 60 * 60)
           : 999;
         const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes >= 1110);
         const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
@@ -796,10 +846,10 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
     return 'PRE_MARKET';
   }
 
-  if (clockStatus === 'OPEN' && (currentStatus === 'CLOSED' || currentStatus === 'SETTLING' || currentStatus === 'CLOSED_SETTLED' || currentStatus === 'PRE_MARKET')) {
+  if (clockStatus === 'OPEN' && (currentStatus === 'CLOSED' || currentStatus === 'SETTLING' || currentStatus === 'ROLLOVER_IN_PROGRESS' || currentStatus === 'CLOSED_SETTLED' || currentStatus === 'PRE_MARKET')) {
     console.log(`[State Machine] Recovering missed open transition.`);
     let finalStatus = currentStatus;
-    if (finalStatus === 'CLOSED' || finalStatus === 'SETTLING') {
+    if (finalStatus === 'CLOSED' || finalStatus === 'SETTLING' || finalStatus === 'ROLLOVER_IN_PROGRESS') {
       // Run missed rollover first
       const updatedRecover = await prisma.systemConfig.updateMany({
         where: { id: 1, marketStatus: finalStatus },
@@ -807,12 +857,11 @@ export async function checkAndTickMarketStatus(now: Date = new Date()): Promise<
       });
       if (updatedRecover.count > 0) {
         try {
-          const anySettledPair = await prisma.cpPairs.findFirst({
-            where: { lastSettledAt: { not: null } },
-            orderBy: { lastSettledAt: 'desc' }
+          const recentSettlement = await prisma.settlementLog.findFirst({
+            orderBy: { createdAt: 'desc' }
           });
-          const hoursSinceLastSettle = anySettledPair?.lastSettledAt
-            ? (now.getTime() - anySettledPair.lastSettledAt.getTime()) / (1000 * 60 * 60)
+          const hoursSinceLastSettle = recentSettlement?.createdAt
+            ? (now.getTime() - recentSettlement.createdAt.getTime()) / (1000 * 60 * 60)
             : 999;
           const isWeeklyWindow = (tz.dayOfWeek === 1 && totalMinutes >= 1430) || (tz.dayOfWeek === 2 && totalMinutes >= 1110);
           const action: 'settle' | 'rollover' = (isWeeklyWindow && hoursSinceLastSettle >= 48) ? 'settle' : 'rollover';
