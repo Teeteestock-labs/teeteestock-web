@@ -348,7 +348,8 @@ export default function MarketDetailClient({ id }: { id: string }) {
         );
     }
 
-    const isUp = pair.change24h >= 0;
+    const isUp = pair.change24h > 0;
+    const isDown = pair.change24h < 0;
     const priceDiff = pair.price - (pair.yesterdayPrice || pair.price);
 
     const historyPoints = pair.history || [];
@@ -420,12 +421,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
                             let priceClass = "font-mono font-black leading-none text-3xl sm:text-4xl";
                             if (!isLimitState) {
-                                priceClass += isUp ? " text-[#FF3B3B]" : " text-[#00FFA3]";
+                                priceClass += isUp ? " text-[#FF3B3B]" : isDown ? " text-[#00FFA3]" : " text-white";
                             }
 
                             let changeClass = "font-mono font-bold flex items-center justify-end gap-1.5 leading-none mt-1 text-xs sm:text-sm";
                             if (!isLimitState) {
-                                changeClass += isUp ? " text-[#FF3B3B]" : " text-[#00FFA3]";
+                                changeClass += isUp ? " text-[#FF3B3B]" : isDown ? " text-[#00FFA3]" : " text-gray-400";
                             }
 
                             return (
@@ -440,7 +441,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                             {pair.price.toFixed(2)}
                                         </p>
                                         <p className={changeClass}>
-                                            <span>{isUp ? '▲' : '▼'} {Math.abs(priceDiff).toFixed(2)}</span>
+                                            <span>{isUp ? '▲ ' : isDown ? '▼ ' : ''}{Math.abs(priceDiff).toFixed(2)}</span>
                                             <span>({isUp ? '+' : ''}{pair.change24h.toFixed(2)}%)</span>
                                         </p>
                                     </div>

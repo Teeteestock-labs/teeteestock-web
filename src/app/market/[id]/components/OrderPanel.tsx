@@ -165,15 +165,20 @@ const OrderPanel = memo(({
                         <div className="text-[#848E9C] font-mono truncate">
                             庫存: <span className="text-white">{myHolding.toLocaleString()}</span> 股
                         </div>
-                        {myHolding > 0 && (
-                            <div className="text-[9px] font-mono truncate flex items-center justify-end gap-1">
-                                <span className="text-gray-400">均價: {avgCost.toFixed(1)}</span>
-                                <span className="text-gray-600">|</span>
-                                <span className={profitLoss >= 0 ? 'text-[#FF3B3B]' : 'text-[#00FFA3]'}>
-                                    {profitLoss >= 0 ? '▲' : '▼'}{Math.abs(Math.round(profitLoss))} ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
-                                </span>
-                            </div>
-                        )}
+                        {myHolding > 0 && (() => {
+                            const isProfitUp = profitLoss > 0;
+                            const isProfitDown = profitLoss < 0;
+                            const profitColor = isProfitUp ? 'text-[#FF3B3B]' : isProfitDown ? 'text-[#00FFA3]' : 'text-gray-400';
+                            return (
+                                <div className="text-[9px] font-mono truncate flex items-center justify-end gap-1">
+                                    <span className="text-gray-400">均價: {avgCost.toFixed(1)}</span>
+                                    <span className="text-gray-600">|</span>
+                                    <span className={profitColor}>
+                                        {isProfitUp ? '▲ ' : isProfitDown ? '▼ ' : ''}{Math.abs(Math.round(profitLoss))} ({isProfitUp ? '+' : ''}{profitPercentage.toFixed(1)}%)
+                                    </span>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -348,7 +353,7 @@ const OrderPanel = memo(({
                             style={{ width: `${bidRatio}%` }} 
                         />
                         <div 
-                            className="bg-[#0070FF] h-full transition-all duration-500" 
+                            className="bg-[#00B074] h-full transition-all duration-500" 
                             style={{ width: `${100 - bidRatio}%` }} 
                         />
                     </div>
