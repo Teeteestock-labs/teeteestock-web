@@ -165,16 +165,16 @@ async function main() {
 
   console.log(`👥 受影響玩家總數: ${userPayouts.length} 人，重複股利記錄共 ${duplicateDividendLogs.length} 筆`);
   if (userPayouts.length > 0) {
-    console.log('玩家扣回試算 (前 15 名):');
+    console.log('玩家獲得多發股利明細（依指示全數保留，不扣回用戶餘額）:');
     console.table(
       userPayouts.slice(0, 15).map(u => ({
         用戶ID: u.userId,
-        應扣回金額: u.excessPayout,
+        保留之多發金額: u.excessPayout,
         重複筆數: u.logIds.length
       }))
     );
     const totalExcess = userPayouts.reduce((sum, u) => sum + u.excessPayout, 0);
-    console.log(`💰 全市場重複發放總金額: ${totalExcess.toFixed(2)} TEE\n`);
+    console.log(`💰 全市場多發放之福利總額: ${totalExcess.toFixed(2)} TEE (不追回)\n`);
   }
 
   // 4. 若為 DRY-RUN 模式，僅提示說明
@@ -188,20 +188,11 @@ async function main() {
   }
 
   console.log('⏳ 正在啟動資料庫事務進行修復...');
+  console.log('🎁 依指示：不扣回玩家重複發放的股利（全數作為玩家福利保留，不扣除餘額）。');
 
   await prisma.$transaction(async (tx) => {
-    // 1. 扣回用戶帳戶資金
-    for (const u of userPayouts) {
-      const account = await tx.userAccount.findUnique({ where: { userId: u.userId } });
-      if (account) {
-        const newBalance = Math.max(0, parseFloat((account.balance - u.excessPayout).toFixed(2)));
-        await tx.userAccount.update({
-          where: { userId: u.userId },
-          data: { balance: newBalance }
-        });
-      }
-    }
-    console.log(`✅ 已完成 ${userPayouts.length} 位用戶的多餘股利餘額扣回。`);
+    // 1. 不扣回用戶資金（保留給玩家福利）
+    console.log(`ℹ️ 跳過用戶餘額扣回，${userPayouts.length} 位用戶的雙重股利已全數保留。`);
 
     // 2. 刪除重複的 UserDividendLog
     const allDupDivLogIds = userPayouts.flatMap(u => u.logIds);
