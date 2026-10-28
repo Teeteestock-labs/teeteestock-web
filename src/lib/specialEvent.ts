@@ -35,7 +35,7 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
   }
 
   const isJumpKing = eventId === JUMP_KING_EVENT_ID;
-  const defaultTitle = isJumpKing ? 'JUMP KING HOLORACE 第一名通關時間預測' : 'ホロライブ甲子園2026 冠軍預測';
+  const defaultTitle = isJumpKing ? 'JUMP KING HOLORACE 優勝者到達地點預測' : 'ホロライブ甲子園2026 冠軍預測';
   const defaultPrize = isJumpKing ? 5000.0 : 500.0;
   const defaultLocked = isJumpKing ? false : true;
   const defaultArchived = isJumpKing ? false : true;
@@ -82,6 +82,21 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
         ...specialEvent,
         isArchived: true,
         isLocked: true,
+      };
+    }
+  } else if (isJumpKing && specialEvent && specialEvent.title !== defaultTitle && !specialEvent.isSettled) {
+    // 3. 若為 JUMP KING 且尚未結算，自動同步新標題
+    try {
+      specialEvent = await prisma.specialEvent.update({
+        where: { id: eventId },
+        data: {
+          title: defaultTitle,
+        },
+      });
+    } catch {
+      specialEvent = {
+        ...specialEvent,
+        title: defaultTitle,
       };
     }
   }

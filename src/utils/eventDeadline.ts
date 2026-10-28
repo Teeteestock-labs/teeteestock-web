@@ -12,12 +12,12 @@ export const VALID_SCHOOL_CHOICES = [
 ] as const;
 
 export const JUMP_KING_CHOICES = [
-  '～30:00',
-  '30:01～1:00:00',
-  '1:00:01～2:00:00',
-  '2:00:01～4:00:00',
-  '4:00:01～',
-  '在比賽中無人完賽',
+  'Redcrown Woods紅冠林',
+  'Colossal Drain巨型排水管',
+  "False King's Keep偽王的城堡",
+  '(Bargainburg巴根堡/Great Frontier廣闊的邊境/Stormwall Pass風暴牆的關隘)',
+  '(Chapel Perilous危險教堂/Blue Ruin深藍廢墟/The Tower塔樓)',
+  '成功通關',
 ] as const;
 
 export type SchoolChoice = typeof VALID_SCHOOL_CHOICES[number];

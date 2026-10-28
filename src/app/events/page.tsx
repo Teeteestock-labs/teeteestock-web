@@ -36,12 +36,12 @@ interface JumpKingOption {
 }
 
 const JUMP_KING_OPTIONS: JumpKingOption[] = [
-  { id: "opt_1", name: "～30:00" },
-  { id: "opt_2", name: "30:01～1:00:00" },
-  { id: "opt_3", name: "1:00:01～2:00:00" },
-  { id: "opt_4", name: "2:00:01～4:00:00" },
-  { id: "opt_5", name: "4:00:01～" },
-  { id: "opt_6", name: "在比賽中無人完賽" },
+  { id: "opt_1", name: "Redcrown Woods紅冠林" },
+  { id: "opt_2", name: "Colossal Drain巨型排水管" },
+  { id: "opt_3", name: "False King's Keep偽王的城堡" },
+  { id: "opt_4", name: "(Bargainburg巴根堡/Great Frontier廣闊的邊境/Stormwall Pass風暴牆的關隘)" },
+  { id: "opt_5", name: "(Chapel Perilous危險教堂/Blue Ruin深藍廢墟/The Tower塔樓)" },
+  { id: "opt_6", name: "成功通關" },
 ];
 
 interface PastSchoolItem {
@@ -204,7 +204,7 @@ export default function EventsPage() {
     }
 
     if (!selectedChoice) {
-      addNotification("failed", "請選擇一個時間區間選項");
+      addNotification("failed", "請選擇一個到達地點選項");
       return;
     }
 
@@ -313,7 +313,7 @@ export default function EventsPage() {
           <div className="text-center mb-5 w-full">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-black mb-2">
               <Timer className="w-3.5 h-3.5 text-amber-400" />
-              <span>賽事時間預測活動</span>
+              <span>賽事到達地點預測活動</span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide mb-2 bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
@@ -321,7 +321,7 @@ export default function EventsPage() {
             </h2>
 
             <p className="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-md mx-auto mb-4 font-semibold">
-              猜測第一名到達者（優勝者）所花費的通關時間（單選）。
+              猜測一小時比賽結束時，優勝者最高所能到達的地點（單選）。
             </p>
 
             {/* YouTube 現場直播按鈕 (外部連結導流) */}
@@ -367,7 +367,7 @@ export default function EventsPage() {
             {/* 結算結果大橫幅 */}
             {isSettled && winningChoice && (
               <div className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 text-amber-200 text-sm sm:text-base font-black flex items-center justify-center gap-2 shadow-xl shadow-amber-950/30 text-center">
-                <span>🏆 JUMP KING HOLORACE 優勝通關時間：【{winningChoice}】</span>
+                <span>🏆 JUMP KING HOLORACE 優勝最高到達地點：【{winningChoice}】</span>
               </div>
             )}
           </div>
@@ -404,8 +404,8 @@ export default function EventsPage() {
                       : "bg-[#10141d] border-[#222a3a] text-gray-300 hover:border-gray-600 hover:bg-[#141a26] active:scale-[0.98] cursor-pointer"
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate text-left">
-                    <span className="text-sm sm:text-base font-black tracking-wide truncate">
+                  <div className="flex items-center gap-2 text-left min-w-0 flex-1">
+                    <span className="text-xs sm:text-sm font-black tracking-wide leading-snug break-words">
                       {opt.name}
                     </span>
                     {isWinner && (

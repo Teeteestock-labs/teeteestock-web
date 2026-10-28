@@ -102,7 +102,7 @@ export async function settleChampionAction(eventId: string = JUMP_KING_EVENT_ID,
       }
 
       const defaultTitle = eventId === JUMP_KING_EVENT_ID
-        ? 'JUMP KING HOLORACE 第一名通關時間預測'
+        ? 'JUMP KING HOLORACE 優勝者到達地點預測'
         : 'ホロライブ甲子園2026 冠軍預測';
 
       // 更新 SpecialEvent 狀態
@@ -173,7 +173,7 @@ export async function toggleEventLockAction(eventId: string = JUMP_KING_EVENT_ID
     }
 
     const defaultTitle = eventId === JUMP_KING_EVENT_ID
-      ? 'JUMP KING HOLORACE 第一名通關時間預測'
+      ? 'JUMP KING HOLORACE 優勝者到達地點預測'
       : 'ホロライブ甲子園2026 冠軍預測';
 
     const updated = await prisma.specialEvent.upsert({
@@ -225,7 +225,7 @@ export async function toggleEventArchiveAction(eventId: string = JUMP_KING_EVENT
     });
 
     const defaultTitle = eventId === JUMP_KING_EVENT_ID
-      ? 'JUMP KING HOLORACE 第一名通關時間預測'
+      ? 'JUMP KING HOLORACE 優勝者到達地點預測'
       : 'ホロライブ甲子園2026 冠軍預測';
 
     const updated = await prisma.specialEvent.upsert({
