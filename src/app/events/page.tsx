@@ -375,7 +375,7 @@ export default function EventsPage() {
           {/* 六個選項卡片：左右排列各 3 個 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-6">
             {JUMP_KING_OPTIONS.map((opt) => {
-              const isSelected = selectedChoice === opt.name || confirmedChoice === opt.name;
+              const isSelected = (selectedChoice ?? confirmedChoice) === opt.name;
               const isWinner = isSettled && winningChoice === opt.name;
 
               return (
@@ -473,7 +473,15 @@ export default function EventsPage() {
 
                 {confirmedChoice && (
                   <p className="text-[11px] text-gray-400 font-mono text-center">
-                    你目前的選擇：<span className="text-[#00FFA3] font-bold">【{confirmedChoice}】</span>（可重新選擇並點確定更新）
+                    {selectedChoice && selectedChoice !== confirmedChoice ? (
+                      <>
+                        原已儲存：<span className="text-gray-300 font-bold">【{confirmedChoice}】</span> ➔ 新選取：<span className="text-[#00FFA3] font-bold">【{selectedChoice}】</span>（請點擊上方按鈕確認更新）
+                      </>
+                    ) : (
+                      <>
+                        你目前的選擇：<span className="text-[#00FFA3] font-bold">【{confirmedChoice}】</span>（可重新選擇並點確定更新）
+                      </>
+                    )}
                   </p>
                 )}
               </>
