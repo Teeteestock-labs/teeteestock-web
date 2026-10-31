@@ -397,12 +397,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
                 )}
 
                 <div className="max-w-[1600px] w-full mx-auto space-y-4">
-                    <div className="sticky top-0 z-30 bg-[#181A20]/95 backdrop-blur-sm border border-[#2B2F36] p-5 rounded flex flex-row items-center justify-between gap-4 shadow-xl">
-                        <div className="flex items-center gap-4 min-w-0">
+                    <div className="sticky top-0 z-30 bg-[#181A20]/95 backdrop-blur-sm border border-[#2B2F36] p-3.5 sm:p-5 rounded flex flex-row items-center justify-between gap-3 sm:gap-4 shadow-xl">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                             <div className="min-w-0">
-                                <div className="flex items-center gap-2 whitespace-nowrap">
-                                    <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tighter truncate">{pair.name}</h1>
-                                    <span className="bg-[#2B2F36] text-[#848E9C] text-[10px] px-2 py-0.5 rounded flex-shrink-0">{pair.id.toUpperCase()}</span>
+                                <div className="flex flex-col items-start min-w-0">
+                                    <h1 className="text-xl sm:text-3xl font-black text-white tracking-tighter truncate leading-tight">{pair.name}</h1>
+                                    <span className="bg-[#2B2F36] text-[#848E9C] text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded mt-0.5 flex-shrink-0 font-mono font-bold tracking-wider">{pair.id.toUpperCase()}</span>
                                 </div>
                             </div>
                         </div>
@@ -411,26 +411,26 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             const isLimitDown = pair.price <= floor;
                             const isLimitState = isLimitUp || isLimitDown;
 
-                            let volumeContainerClass = "text-right whitespace-nowrap flex flex-col items-end justify-center font-mono text-[#FFD700] text-xs sm:text-sm font-bold py-2.5";
+                            let volumeContainerClass = "text-right whitespace-nowrap flex flex-col items-end justify-center font-mono text-[#FFD700] text-xs sm:text-sm font-bold py-2 sm:py-2.5";
 
-                            let containerClass = "text-right whitespace-nowrap flex-shrink-0 flex flex-col items-end justify-center py-2.5 transition-all";
+                            let containerClass = "text-right whitespace-nowrap flex-shrink-0 flex flex-col items-end justify-center py-2 sm:py-2.5 transition-all";
                             if (isLimitState) {
                                 const bgColor = isLimitUp ? "bg-red-600" : "bg-green-600";
-                                containerClass += ` ${bgColor} text-white px-4 rounded-lg shadow-lg`;
+                                containerClass += ` ${bgColor} text-white px-3 sm:px-4 rounded-lg shadow-lg`;
                             }
 
-                            let priceClass = "font-mono font-black leading-none text-3xl sm:text-4xl";
+                            let priceClass = "font-mono font-black leading-none text-2xl sm:text-4xl";
                             if (!isLimitState) {
                                 priceClass += isUp ? " text-[#FF3B3B]" : isDown ? " text-[#00FFA3]" : " text-white";
                             }
 
-                            let changeClass = "font-mono font-bold flex items-center justify-end gap-1.5 leading-none mt-1 text-xs sm:text-sm";
+                            let changeClass = "font-mono font-bold flex items-center justify-end gap-1 sm:gap-1.5 leading-none mt-1 text-[11px] sm:text-sm";
                             if (!isLimitState) {
                                 changeClass += isUp ? " text-[#FF3B3B]" : isDown ? " text-[#00FFA3]" : " text-gray-400";
                             }
 
                             return (
-                                <div className="flex items-center gap-5 flex-shrink-0 select-none">
+                                <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0 select-none">
                                     <div className={volumeContainerClass}>
                                         <span className="leading-none">成交量</span>
                                         <span className="leading-none mt-1">{pair.todayVolume.toLocaleString()}</span>
