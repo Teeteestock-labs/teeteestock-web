@@ -131,36 +131,36 @@ const OrderPanel = memo(({
 
             <div className="p-4 space-y-4">
                 {/* 委託價格輸入列 */}
-                <div className="grid grid-cols-12 gap-3 items-center">
-                    <div className="col-span-7 flex items-center bg-[#0B0E11] border border-[#2B2F36] rounded h-[40px] overflow-hidden focus-within:border-[#FF69B4] transition-colors">
+                <div className="grid grid-cols-12 gap-2 sm:gap-3 items-center">
+                    <div className="col-span-6 sm:col-span-7 flex items-center bg-[#0B0E11] border border-[#2B2F36] rounded h-[40px] overflow-hidden focus-within:border-[#FF69B4] transition-colors">
                         <button 
                             type="button" 
                             onClick={handleDecrement} 
-                            className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-r border-[#2B2F36] text-lg font-bold select-none"
+                            className="w-8 sm:w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-r border-[#2B2F36] text-base sm:text-lg font-bold select-none"
                         >
                             -
                         </button>
-                        <div className="flex-1 relative flex items-center justify-center">
+                        <div className="flex-1 relative flex items-center justify-center min-w-0">
                             <input 
-                                type="number"
+                                type="number" 
                                 value={orderPrice || ""}
                                 step={getTickSize(orderPrice || pair.price)}
                                 onChange={(e) => setOrderPrice(Number(e.target.value))}
                                 placeholder="委託價格" 
-                                className="bg-transparent text-center font-mono text-sm font-bold text-white outline-none w-full px-2 placeholder-[#848E9C]" 
+                                className="bg-transparent text-center font-mono text-xs sm:text-sm font-bold text-white outline-none w-full px-1 sm:px-2 placeholder-[#848E9C]" 
                             />
                         </div>
                         <button 
                             type="button" 
                             onClick={handleIncrement} 
-                            className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-l border-[#2B2F36] text-lg font-bold select-none"
+                            className="w-8 sm:w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-l border-[#2B2F36] text-base sm:text-lg font-bold select-none"
                         >
                             +
                         </button>
                     </div>
 
                     {/* 右側帳戶餘額/庫存資訊 */}
-                    <div className="col-span-5 text-[10px] font-bold text-right flex flex-col justify-center h-[40px] pl-2 border-l border-[#2B2F36]/50 leading-tight">
+                    <div className="col-span-6 sm:col-span-5 text-[10px] font-bold text-right flex flex-col justify-center min-h-[40px] pl-1.5 sm:pl-2 border-l border-[#2B2F36]/50 leading-tight">
                         <div className="text-white font-mono truncate">可用: {availableBalance.toLocaleString()}</div>
                         <div className="text-[#848E9C] font-mono truncate">
                             庫存: <span className="text-white">{myHolding.toLocaleString()}</span> 股
@@ -170,12 +170,14 @@ const OrderPanel = memo(({
                             const isProfitDown = profitLoss < 0;
                             const profitColor = isProfitUp ? 'text-[#FF3B3B]' : isProfitDown ? 'text-[#00FFA3]' : 'text-gray-400';
                             return (
-                                <div className="text-[9px] font-mono truncate flex items-center justify-end gap-1">
-                                    <span className="text-gray-400">均價: {avgCost.toFixed(1)}</span>
-                                    <span className="text-gray-600">|</span>
-                                    <span className={profitColor}>
-                                        {isProfitUp ? '▲ ' : isProfitDown ? '▼ ' : ''}{Math.abs(Math.round(profitLoss))} ({isProfitUp ? '+' : ''}{profitPercentage.toFixed(1)}%)
-                                    </span>
+                                <div className="text-[9px] font-mono flex items-center overflow-hidden">
+                                    <div className="ml-auto flex items-center gap-1 shrink-0 whitespace-nowrap">
+                                        <span className="text-gray-400">均價: {avgCost.toFixed(1)}</span>
+                                        <span className="text-gray-600">|</span>
+                                        <span className={profitColor}>
+                                            {isProfitUp ? '▲' : isProfitDown ? '▼' : ''}{Math.abs(Math.round(profitLoss))} ({isProfitUp ? '+' : ''}{profitPercentage.toFixed(1)}%)
+                                        </span>
+                                    </div>
                                 </div>
                             );
                         })()}
@@ -183,35 +185,35 @@ const OrderPanel = memo(({
                 </div>
 
                 {/* 委託數量輸入列 */}
-                <div className="grid grid-cols-12 gap-3 items-center">
-                    <div className="col-span-7 flex items-center bg-[#0B0E11] border border-[#2B2F36] rounded h-[40px] overflow-hidden focus-within:border-[#FF69B4] transition-colors">
+                <div className="grid grid-cols-12 gap-2 sm:gap-3 items-center">
+                    <div className="col-span-6 sm:col-span-7 flex items-center bg-[#0B0E11] border border-[#2B2F36] rounded h-[40px] overflow-hidden focus-within:border-[#FF69B4] transition-colors">
                         <button 
                             type="button" 
                             onClick={handleAmountDecrement} 
-                            className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-r border-[#2B2F36] text-lg font-bold select-none"
+                            className="w-8 sm:w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-r border-[#2B2F36] text-base sm:text-lg font-bold select-none"
                         >
                             -
                         </button>
-                        <div className="flex-1 relative flex items-center justify-center">
+                        <div className="flex-1 relative flex items-center justify-center min-w-0">
                             <input 
                                 type="number" 
                                 value={amount || ""}
                                 onChange={(e) => setAmount(Number(e.target.value))}
                                 placeholder="1" 
-                                className="bg-transparent text-center font-mono text-sm font-bold text-white outline-none w-full px-2 placeholder-[#848E9C]" 
+                                className="bg-transparent text-center font-mono text-xs sm:text-sm font-bold text-white outline-none w-full px-1 sm:px-2 placeholder-[#848E9C]" 
                             />
                         </div>
                         <button 
                             type="button" 
                             onClick={handleAmountIncrement} 
-                            className="w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-l border-[#2B2F36] text-lg font-bold select-none"
+                            className="w-8 sm:w-10 h-full flex items-center justify-center text-[#848e9c] hover:bg-[#2b2f36] bg-[#181a20] transition-colors border-l border-[#2B2F36] text-base sm:text-lg font-bold select-none"
                         >
                             +
                         </button>
                     </div>
 
                     {/* 右側單位與預估價金 */}
-                    <div className="col-span-5 text-[10px] font-bold text-right flex flex-col justify-center h-[40px] pl-2 border-l border-[#2B2F36]/50">
+                    <div className="col-span-6 sm:col-span-5 text-[10px] font-bold text-right flex flex-col justify-center min-h-[40px] pl-1.5 sm:pl-2 border-l border-[#2B2F36]/50 leading-tight">
                         <div className="text-white mb-0.5">1單位：1股</div>
                         <div className="text-[#FFD700] truncate">預估價金：</div>
                         <div className="text-[#FFD700] font-mono truncate">{estimatedTotal.toLocaleString()} $TEE</div>
