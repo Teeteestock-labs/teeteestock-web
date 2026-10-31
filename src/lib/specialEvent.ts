@@ -37,8 +37,8 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
   const isJumpKing = eventId === JUMP_KING_EVENT_ID;
   const defaultTitle = isJumpKing ? 'JUMP KING HOLORACE 優勝者到達地點預測' : 'ホロライブ甲子園2026 冠軍預測';
   const defaultPrize = isJumpKing ? 5000.0 : 500.0;
-  const defaultLocked = isJumpKing ? false : true;
-  const defaultArchived = isJumpKing ? false : true;
+  const defaultLocked = true;
+  const defaultArchived = true;
 
   // 1. 若資料庫尚無此企劃紀錄，自動初始化
   if (!specialEvent) {
@@ -67,14 +67,15 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
         isArchived: defaultArchived,
       };
     }
-  } else if (!specialEvent.isArchived && specialEvent.id === HOLO_KOUSHIEN_EVENT_ID) {
-    // 2. 若線上既有資料庫甲子園尚未標記為結束，自動同步為已結束(折疊)與鎖定
+  } else if (!specialEvent.isArchived && (specialEvent.id === HOLO_KOUSHIEN_EVENT_ID || specialEvent.id === JUMP_KING_EVENT_ID)) {
+    // 2. 若線上既有資料庫活動尚未標記為結束，自動同步為已結束(折疊)與鎖定
     try {
       specialEvent = await prisma.specialEvent.update({
         where: { id: eventId },
         data: {
           isArchived: true,
           isLocked: true,
+          ...(specialEvent.title !== defaultTitle && !specialEvent.isSettled ? { title: defaultTitle } : {})
         },
       });
     } catch {
@@ -82,6 +83,7 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
         ...specialEvent,
         isArchived: true,
         isLocked: true,
+        title: defaultTitle,
       };
     }
   } else if (isJumpKing && specialEvent && specialEvent.title !== defaultTitle && !specialEvent.isSettled) {
