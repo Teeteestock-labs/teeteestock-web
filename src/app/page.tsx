@@ -11,7 +11,9 @@ import GlobalStats from "@/components/GlobalStats";
 import AssetHistoryChart from "@/components/AssetHistoryChart";
 import DividendNotificationModal from "@/components/DividendNotificationModal";
 import LoginRewardModal from "@/components/LoginRewardModal";
+import UserProfileModal from "@/components/UserProfileModal";
 import Footer from "@/components/Footer";
+import { User } from "lucide-react";
 import { alignToTick } from "@/utils/validatePrice";
 import { teeteePair, UserHolding } from "@/app/types";
 
@@ -799,6 +801,7 @@ function HomeContent() {
   const mode: Mode = queryMode === 'asset' ? 'asset' : 'list';
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   const [isAdjustedCost, setIsAdjustedCost] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -957,7 +960,35 @@ function HomeContent() {
 
         {mode === 'asset' && (
           <div className="p-4 space-y-4">
-            {!user && (
+            {user ? (
+              <div 
+                onClick={() => setIsProfileModalOpen(true)}
+                className="bg-[#181a20]/60 hover:bg-[#181a20]/90 border border-[#2b2f36] hover:border-pink-500/40 p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all group select-none shadow-lg"
+                title="點擊查看或編輯個人資料"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative w-10 h-10 rounded-full border border-slate-700 group-hover:border-pink-500/60 overflow-hidden bg-slate-900 flex items-center justify-center shrink-0 transition-colors">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <User className="w-5 h-5 text-emerald-400 group-hover:text-pink-400 transition-colors" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span className="truncate">{user.name || user.email.split('@')[0]}</span>
+                      <span className="text-[10px] text-pink-400 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">✎ 修改暱稱</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 font-mono truncate">{user.email}</p>
+                  </div>
+                </div>
+                <div className="shrink-0 pl-2">
+                  <span className="text-[10px] bg-slate-800 group-hover:bg-pink-950/40 border border-slate-700 group-hover:border-pink-500/40 text-slate-300 group-hover:text-pink-300 px-2 py-0.5 rounded-full transition-all">
+                    個人帳戶
+                  </span>
+                </div>
+              </div>
+            ) : (
               <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-3 flex items-center justify-between gap-2 text-xs text-slate-300 shadow-lg">
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-400 font-bold">💡 訪客試玩模式</span>
@@ -1282,6 +1313,10 @@ function HomeContent() {
       <Footer />
       <DividendNotificationModal />
       <LoginRewardModal />
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
       <BottomNav />
     </main>
   );
