@@ -463,11 +463,13 @@ interface DonutSlice {
 function AssetDonutChart({ 
   holdings, 
   marketData, 
-  totalROI 
+  totalROI,
+  isAdjustedCost = false,
 }: { 
   holdings: UserHolding[]; 
   marketData: teeteePair[]; 
   totalROI: number; 
+  isAdjustedCost?: boolean;
 }) {
   const [hoveredSlice, setHoveredSlice] = useState<DonutSlice | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -559,7 +561,9 @@ function AssetDonutChart({
 
         {/* 圓餅圖中間：總報酬率 (換行後實際報酬率) */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none p-1">
-          <span className="text-[9px] text-gray-400 font-bold leading-tight">總報酬率：</span>
+          <span className={`text-[9px] font-bold leading-tight ${isAdjustedCost ? 'text-[#FF69B4]' : 'text-gray-400'}`}>
+            {isAdjustedCost ? '還原報酬率：' : '總報酬率：'}
+          </span>
           <span className={`text-[11px] font-black leading-tight mt-0.5 ${roiColor}`}>
             {totalROI > 0 ? '+' : ''}{totalROI.toFixed(2)}%
           </span>
@@ -830,14 +834,28 @@ function HomeContent() {
     localStorage.setItem('teeteestock-lobby-view-mode', newViewMode);
   };
 
+  // 計算特定持股在是否啟動還原成本下的有效均價
+  const getHoldingEffectiveAvgCost = (h: UserHolding, adjusted: boolean) => {
+    if (!adjusted) return h.avgCost;
+    const pairLogs = (settlementLogs || []).filter((l: any) => {
+      if (l.pairId.toLowerCase() !== h.pairId.toLowerCase()) return false;
+      return typeof l.userSharesAtSettle === 'number' && l.userSharesAtSettle > 0;
+    });
+    const cumulativeDividendPerShare = pairLogs.reduce((sum: number, l: any) => sum + (l.dividendPerShare || 0), 0);
+    return Math.max(0, h.avgCost - cumulativeDividendPerShare);
+  };
+
   const totalStockValue = holdings.reduce((sum, h) => {
     const pair = marketData.find(p => p.id.toLowerCase() === h.pairId.toLowerCase());
     return sum + (h.shares * (pair?.price || 0));
   }, 0);
 
-  const totalCost = holdings.reduce((sum, h) => sum + (h.shares * h.avgCost), 0);
+  const totalCost = holdings.reduce((sum, h) => {
+    const effectiveAvgCost = getHoldingEffectiveAvgCost(h, isAdjustedCost);
+    return sum + (h.shares * effectiveAvgCost);
+  }, 0);
   const totalProfit = totalStockValue - totalCost;
-  const totalROI = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+  const totalROI = totalCost > 0 ? (totalProfit / totalCost) * 100 : (totalCost === 0 && totalStockValue > 0 ? 100 : 0);
 
   const netWorth = balance + totalStockValue;
 
@@ -969,7 +987,7 @@ function HomeContent() {
               </div>
 
               {/* 右側：中空甜甜圈圖 (總報酬率在中間，Hover 顯示股數與百分比) */}
-              <AssetDonutChart holdings={holdings} marketData={marketData} totalROI={totalROI} />
+              <AssetDonutChart holdings={holdings} marketData={marketData} totalROI={totalROI} isAdjustedCost={isAdjustedCost} />
             </div>
 
             <div className="bg-[#181a20]/40 rounded-xl border border-[#2b2f36] overflow-hidden">
@@ -1043,18 +1061,8 @@ function HomeContent() {
                           .reduce((sum, o) => sum + o.amount, 0);
                         const availableShares = Math.max(0, h.shares - pendingSellVolume);
 
-                        // 計算該商品玩家「實際有領取配息」的累計每股配息 (僅計入有 UserDividendLog 記錄的結算期)
-                        const pairLogs = (settlementLogs || []).filter((l: any) => {
-                          if (l.pairId.toLowerCase() !== h.pairId.toLowerCase()) return false;
-                          // 只有 userSharesAtSettle > 0 才代表該期有實際領到配息
-                          return typeof l.userSharesAtSettle === 'number' && l.userSharesAtSettle > 0;
-                        });
-                        const cumulativeDividendPerShare = pairLogs.reduce((sum: number, l: any) => sum + (l.dividendPerShare || 0), 0);
-
                         // 計算有效均價（若啟動還原成本，僅扣除玩家實際有參與的配息）
-                        const effectiveAvgCost = isAdjustedCost 
-                          ? Math.max(0, h.avgCost - cumulativeDividendPerShare)
-                          : h.avgCost;
+                        const effectiveAvgCost = getHoldingEffectiveAvgCost(h, isAdjustedCost);
 
                         const value = h.shares * pair.price;
                         const cost = h.shares * effectiveAvgCost;
