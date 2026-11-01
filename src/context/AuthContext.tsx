@@ -21,7 +21,7 @@ interface AuthContextType {
   resetPassword: (token: string, password: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
-  updateProfile: (data: { name: string }) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (data: { name?: string; avatar?: string | null }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -151,8 +151,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 修改個人資料（暱稱）
-  const updateProfile = async (data: { name: string }) => {
+  // 修改個人資料（暱稱、頭像）
+  const updateProfile = async (data: { name?: string; avatar?: string | null }) => {
     try {
       const res = await fetch('/api/auth/profile', {
         method: 'PATCH',
@@ -162,11 +162,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const resData = await res.json().catch(() => ({}));
       if (!res.ok || !resData.success) {
-        return { success: false, error: resData.error || '更新暱稱失敗' };
+        return { success: false, error: resData.error || '更新個人資料失敗' };
       }
 
       if (resData.user) {
-        setUser(prev => prev ? { ...prev, name: resData.user.name } : resData.user);
+        setUser(prev => prev ? { 
+          ...prev, 
+          name: resData.user.name,
+          avatar: resData.user.avatar,
+        } : resData.user);
       }
       return { success: true };
     } catch (err: any) {

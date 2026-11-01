@@ -977,7 +977,7 @@ function HomeContent() {
                   <div className="min-w-0">
                     <div className="text-sm font-bold text-white flex items-center gap-1.5">
                       <span className="truncate">{user.name || user.email.split('@')[0]}</span>
-                      <span className="text-[10px] text-pink-400 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">✎ 修改暱稱</span>
+                      <span className="text-[10px] text-pink-400 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">✎ 編輯資料</span>
                     </div>
                     <p className="text-[11px] text-gray-500 font-mono truncate">{user.email}</p>
                   </div>
