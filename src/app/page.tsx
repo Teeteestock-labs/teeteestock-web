@@ -840,8 +840,16 @@ function HomeContent() {
   // 計算特定持股在是否啟動還原成本下的有效均價
   const getHoldingEffectiveAvgCost = (h: UserHolding, adjusted: boolean) => {
     if (!adjusted) return h.avgCost;
+    // 優先採用後端依持倉週期精確計算之加權還原成本
+    if (typeof h.adjustedAvgCost === 'number') {
+      return h.adjustedAvgCost;
+    }
+    // 向後相容降級計算 (僅限當前持股週期開始後的除息)
+    const cycleStartTime = h.firstBoughtAt ? new Date(h.firstBoughtAt).getTime() : 0;
     const pairLogs = (settlementLogs || []).filter((l: any) => {
       if (l.pairId.toLowerCase() !== h.pairId.toLowerCase()) return false;
+      const settleTime = new Date(l.createdAt).getTime();
+      if (cycleStartTime > 0 && settleTime < cycleStartTime) return false;
       return typeof l.userSharesAtSettle === 'number' && l.userSharesAtSettle > 0;
     });
     const cumulativeDividendPerShare = pairLogs.reduce((sum: number, l: any) => sum + (l.dividendPerShare || 0), 0);

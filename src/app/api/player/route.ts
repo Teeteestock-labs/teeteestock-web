@@ -4,6 +4,7 @@ import { UserChoice } from '@/types/enums';
 import { cookies } from 'next/headers';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { calculateHoldingAdjustedCost } from '@/lib/portfolio';
 
 const DEFAULT_PLAYER_ID = 'default_player';
 const GUEST_BALANCE = 0;
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
           { sellerId: targetUserId }
         ]
       },
-      select: { pairId: true, buyerId: true, sellerId: true, volume: true, createdAt: true },
+      select: { pairId: true, buyerId: true, sellerId: true, volume: true, price: true, createdAt: true },
       orderBy: { createdAt: 'asc' }
     });
 
@@ -147,11 +148,21 @@ export async function GET(request: Request) {
         balance: account.balance,
         holdings: portfolios.map((h) => {
           const p = h.pairId.toLowerCase();
+          const shares = Number(h.shares_owned);
+          const calculated = calculateHoldingAdjustedCost(
+            targetUserId,
+            { pairId: h.pairId, shares, avgCost: h.average_cost },
+            userAllTrades,
+            userDividendLogs
+          );
+
           return {
             pairId: h.pairId,
-            shares: Number(h.shares_owned), // 安全轉為 Number 以免 JSON 序列化錯誤
+            shares, // 安全轉為 Number 以免 JSON 序列化錯誤
             avgCost: h.average_cost,
-            firstBoughtAt: firstBoughtMap[p] || null,
+            adjustedAvgCost: calculated.adjustedAvgCost,
+            effectiveDividendPerShare: calculated.effectiveDividendPerShare,
+            firstBoughtAt: calculated.cycleStart ? calculated.cycleStart.toISOString() : (firstBoughtMap[p] || null),
           };
         }),
       },

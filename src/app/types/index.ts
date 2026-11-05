@@ -52,11 +52,13 @@ export interface ChartDataPoint {
 }
 
 // 用戶持股紀錄
-export interface UserHolding{
+export interface UserHolding {
     pairId: string;
-    shares: number;         // 當前持有股數
-    avgCost: number;        // 平均買入成本
-    firstBoughtAt?: string; // 首次買進時間戳
+    shares: number;                     // 當前持有股數
+    avgCost: number;                    // 平均買入成本
+    adjustedAvgCost?: number;           // 還原成本（扣除持有期間加權配息）
+    effectiveDividendPerShare?: number; // 當前持股週期累積每股折抵金額
+    firstBoughtAt?: string;             // 當前持股週期首次買進時間戳
 }
 
 // 稱號與結算相關
