@@ -232,7 +232,6 @@ export async function GET(request: Request) {
         todayOpenPrice,
         yesterdayPrice: p.last_close_price,
         change24h: p.openingPrice !== 0 ? ((p.currentPrice - p.openingPrice) / p.openingPrice) * 100 : 0,
-        netValue: p.netValue,
         status: p.status,
         warningWeeks: p.warningWeeks,
         todayVolume,

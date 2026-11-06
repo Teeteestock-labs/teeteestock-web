@@ -19,7 +19,7 @@ import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 export const dynamic = 'force-dynamic';
 
 const WARNING_LINE = 10;
-const DELISTING_LINE = 5;
+const NO_DIVIDEND_NV_LINE = 8.0;
 const MIN_VALUE = 0.1;
 
 const MEMBER_JP_MAP: Record<string, string> = {
@@ -179,18 +179,18 @@ export default async function AdminReviewPage() {
 
     const settledNV = currentNV * (1 + collabBonusSum);
     const collabBonus = currentNV * collabBonusSum;
-    const decay = parseFloat((settledNV * 0.08).toFixed(2));
-    
-    let nextWeekNV = settledNV * 0.92;
-    nextWeekNV = Math.max(MIN_VALUE, parseFloat(nextWeekNV.toFixed(2)));
-
+    let decay = 0;
+    let nextWeekNV = settledNV;
     let wasDelisted = false;
     let statusAfter = statusBefore;
 
-    if (nextWeekNV < DELISTING_LINE) {
-      statusAfter = 'DELISTED';
-      wasDelisted = true;
+    if (settledNV < NO_DIVIDEND_NV_LINE) {
+      decay = 0;
+      nextWeekNV = Math.max(MIN_VALUE, parseFloat(settledNV.toFixed(2)));
+      statusAfter = 'WARNING';
     } else {
+      decay = parseFloat((settledNV * 0.08).toFixed(2));
+      nextWeekNV = Math.max(MIN_VALUE, parseFloat((settledNV * 0.92).toFixed(2)));
       statusAfter = nextWeekNV <= WARNING_LINE ? 'WARNING' : 'NORMAL';
     }
 

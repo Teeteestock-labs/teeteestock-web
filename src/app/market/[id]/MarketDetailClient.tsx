@@ -159,6 +159,17 @@ export default function MarketDetailClient({ id }: { id: string }) {
         setNotifications(prev => prev.filter(n => n.id !== notifId));
     };
 
+    const hasTriggeredWarningRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!pair) return;
+        const isWarning = pair.status === 'WARNING' || (pair.warningWeeks ?? 0) > 0;
+        if (isWarning && hasTriggeredWarningRef.current !== pair.id) {
+            hasTriggeredWarningRef.current = pair.id;
+            addNotification('warning_notice', 0, 0, '此為公布注意交易資訊之股票');
+        }
+    }, [pair?.id, pair?.status, pair?.warningWeeks]);
+
     useEffect(() => {
         if (!pair) return;
         if (!orders) {

@@ -283,16 +283,12 @@ export function TeeProvider({ children } : { children: React.ReactNode}) {
 
             // ── 7. 組裝結算報告 ──
             const warningPairs = data.results.filter((r: any) => r.statusAfter === 'WARNING');
-            const delistedPairs = data.results.filter((r: any) => r.wasDelisted);
 
             let reportMsg = `除息結算完成！\n`;
             reportMsg += `已撤銷所有委託單。\n`;
             reportMsg += `帳戶餘額已與後端安全同步。\n`;
             if (warningPairs.length > 0) {
                 reportMsg += `\n⚠️ 警戒中組合：${warningPairs.map((r: any) => r.pairId).join(', ')}\n`;
-            }
-            if (delistedPairs.length > 0) {
-                reportMsg += `\n🚫 本週下市：${delistedPairs.map((r: any) => r.pairId).join(', ')}\n`;
             }
 
             setTimeout(() => {

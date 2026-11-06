@@ -4,7 +4,7 @@ import { alignToTick, getTickSize, generateMMFiveBidsAndAsks, generateMMLevelOrd
 import { getTaipeiTime } from '../utils/marketHours';
 
 const WARNING_LINE = 10;          // 警戒線
-const DELISTING_LINE = 5;         // 下市線
+const NO_DIVIDEND_NV_LINE = 8.0;  // 淨值未達 8.0 則當週不參與除息
 const MIN_VALUE = 0.1;            // 淨值/價格最低值
 
 /**
@@ -431,28 +431,29 @@ export async function runDailyRolloverOrSettlement(options?: {
         // 2. Calculate weekly new Net Value
         const settledNV = currentNV * (1 + collabBonusSum);
 
-        // 3. Calculate 8% dividend payout per share
-        const dividendPerShare = parseFloat((settledNV * 0.08).toFixed(2));
-
-        // 4. Next week start Net Value (silent deduction of 8%)
-        let nextWeekNV = settledNV * 0.92;
-        nextWeekNV = Math.max(MIN_VALUE, parseFloat(nextWeekNV.toFixed(2)));
-
-        // 5. Ex-dividend price deduction and Taiwanese tick size alignment
-        const rawOpeningPrice = lastPrice - dividendPerShare;
-        const newPrice = alignToTick(Math.max(MIN_VALUE, rawOpeningPrice));
-
-        // 6. Delisting check
-        let wasDelisted = false;
+        // 3. Option A: Check if settledNV < 8.0 (No dividend payout or price deduction)
+        let dividendPerShare = 0;
+        let nextWeekNV = settledNV;
+        let newPrice = alignToTick(Math.max(MIN_VALUE, lastPrice));
         let statusAfter = statusBefore as MarketStatus;
 
-        if (nextWeekNV < DELISTING_LINE) {
-          statusAfter = MarketStatus.DELISTED;
-          wasDelisted = true;
-          delistedPairIds.push(latestPair.id);
+        if (settledNV < NO_DIVIDEND_NV_LINE) {
+          // 淨值低於 8.0 時，當週不參與除息（不發放股利、不扣減開盤價、淨值不進行 8% 扣減折損）
+          dividendPerShare = 0;
+          nextWeekNV = Math.max(MIN_VALUE, parseFloat(settledNV.toFixed(2)));
+          newPrice = alignToTick(Math.max(MIN_VALUE, lastPrice));
+          statusAfter = MarketStatus.WARNING;
         } else {
+          // 淨值 >= 8.0 時，正常參與除息發放
+          dividendPerShare = parseFloat((settledNV * 0.08).toFixed(2));
+          nextWeekNV = Math.max(MIN_VALUE, parseFloat((settledNV * 0.92).toFixed(2)));
+          const rawOpeningPrice = lastPrice - dividendPerShare;
+          newPrice = alignToTick(Math.max(MIN_VALUE, rawOpeningPrice));
           statusAfter = nextWeekNV <= WARNING_LINE ? MarketStatus.WARNING : MarketStatus.NORMAL;
         }
+
+        // 取消下市機制：不再進入 DELISTED 狀態，wasDelisted 恆為 false
+        const wasDelisted = false;
 
         const warningWeeks = statusAfter === MarketStatus.WARNING
           ? (latestPair.warningWeeks + 1)
@@ -619,6 +620,7 @@ export async function runDailyRolloverOrSettlement(options?: {
         settlementLogs.push({
           pairId: latestPair.id,
           newPrice,
+          dividendPerShare,
           statusAfter,
           wasDelisted
         });
@@ -1008,7 +1010,7 @@ export async function stageManualDividendSettlement() {
       }, 0);
 
       const settledNV = currentNV * (1 + collabBonusSum);
-      const dividendPerShare = parseFloat((settledNV * 0.08).toFixed(2));
+      const dividendPerShare = settledNV >= NO_DIVIDEND_NV_LINE ? parseFloat((settledNV * 0.08).toFixed(2)) : 0;
       const rawRefPrice = lastPrice - dividendPerShare;
       const exDividendRefPrice = alignToTick(Math.max(MIN_VALUE, rawRefPrice));
 

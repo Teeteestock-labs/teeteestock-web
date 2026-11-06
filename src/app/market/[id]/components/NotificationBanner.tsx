@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 
-export type NotificationType = 'buy_submit' | 'sell_submit' | 'match_deal' | 'failed';
+export type NotificationType = 'buy_submit' | 'sell_submit' | 'match_deal' | 'failed' | 'warning_notice';
 export interface BannerNotification {
     id: string;
     type: NotificationType;
@@ -63,6 +63,13 @@ const NotificationBanner = memo(({
                     textClass = "text-[#FFEAEA]";
                     label = "操作失敗";
                     detailText = notif.message || "";
+                } else if (notif.type === 'warning_notice') {
+                    // 警示注意：半透明琥珀色底配注意標籤與訊息
+                    bgClass = "bg-amber-500/15 border border-amber-500/40 backdrop-blur-md shadow-lg shadow-amber-950/20";
+                    labelClass = "text-amber-400";
+                    textClass = "text-amber-200";
+                    label = "[注意]";
+                    detailText = notif.message || "此為公布注意交易資訊之股票";
                 }
 
                 return (

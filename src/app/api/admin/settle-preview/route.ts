@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 
 const WARNING_LINE = 10;          // 警戒線
-const DELISTING_LINE = 5;         // 下市線
+const NO_DIVIDEND_NV_LINE = 8.0;  // 淨值未達 8.0 則當週不參與除息
 const MIN_VALUE = 0.1;            // 淨值/價格最低值
 
 export async function GET() {
@@ -54,18 +54,18 @@ export async function GET() {
       // ── Step 2: 計算 New_NV ──
       const settledNV = currentNV * (1 + collabBonusSum);
       const collabBonus = currentNV * collabBonusSum;
-      const decay = parseFloat((settledNV * 0.08).toFixed(2));
-      
-      let nextWeekNV = settledNV * 0.92;
-      nextWeekNV = Math.max(MIN_VALUE, parseFloat(nextWeekNV.toFixed(2)));
-
+      let decay = 0;
+      let nextWeekNV = settledNV;
       let wasDelisted = false;
-      let statusAfter = statusBefore as MarketStatus;
+      let statusAfter = MarketStatus.NORMAL;
 
-      if (nextWeekNV < DELISTING_LINE) {
-        statusAfter = MarketStatus.DELISTED;
-        wasDelisted = true;
+      if (settledNV < NO_DIVIDEND_NV_LINE) {
+        decay = 0;
+        nextWeekNV = Math.max(MIN_VALUE, parseFloat(settledNV.toFixed(2)));
+        statusAfter = MarketStatus.WARNING;
       } else {
+        decay = parseFloat((settledNV * 0.08).toFixed(2));
+        nextWeekNV = Math.max(MIN_VALUE, parseFloat((settledNV * 0.92).toFixed(2)));
         statusAfter = nextWeekNV <= WARNING_LINE ? MarketStatus.WARNING : MarketStatus.NORMAL;
       }
 
