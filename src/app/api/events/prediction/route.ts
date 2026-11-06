@@ -4,9 +4,11 @@ import { getAuthenticatedUser } from '@/lib/auth';
 import {
   HOLO_KOUSHIEN_EVENT_ID,
   JUMP_KING_EVENT_ID,
+  YUBI_SUMO_EVENT_ID,
   JUMP_KING_LIVE_URL,
+  YUBI_SUMO_LIVE_URL,
   getValidChoicesForEvent,
-  calculateJumpKingPool,
+  calculateDynamicEventPool,
   isEventPredictionLocked,
 } from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
@@ -17,7 +19,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const allowTestUnlock = searchParams.get('test_unlock') === 'true';
-    const targetEventId = searchParams.get('eventId') || JUMP_KING_EVENT_ID;
+    const targetEventId = searchParams.get('eventId') || YUBI_SUMO_EVENT_ID;
 
     // 取得使用者身分 (未登入者為 null，避免回傳 default_player 資料)
     const authUser = await getAuthenticatedUser(request);
@@ -51,9 +53,9 @@ export async function GET(request: Request) {
       where: { eventId: targetEventId },
     });
 
-    const isJumpKing = targetEventId === JUMP_KING_EVENT_ID;
-    const totalPool = isJumpKing
-      ? calculateJumpKingPool(totalPredictions)
+    const isDynamicPool = targetEventId === YUBI_SUMO_EVENT_ID || targetEventId === JUMP_KING_EVENT_ID;
+    const totalPool = isDynamicPool
+      ? calculateDynamicEventPool(totalPredictions)
       : specialEvent?.totalPayout || specialEvent?.prize || 500.0;
 
     return NextResponse.json({
@@ -72,7 +74,11 @@ export async function GET(request: Request) {
       totalPool,
       totalPredictions,
       choices: getValidChoicesForEvent(targetEventId),
-      liveStreamUrl: isJumpKing ? JUMP_KING_LIVE_URL : null,
+      liveStreamUrl: targetEventId === JUMP_KING_EVENT_ID
+        ? JUMP_KING_LIVE_URL
+        : targetEventId === YUBI_SUMO_EVENT_ID
+        ? YUBI_SUMO_LIVE_URL
+        : null,
       settledAt: specialEvent?.settledAt || null,
       userId: targetUserId,
       updatedAt: prediction?.updatedAt || null,
@@ -93,7 +99,7 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const { choice, eventId } = body;
-    const targetEventId = eventId || JUMP_KING_EVENT_ID;
+    const targetEventId = eventId || YUBI_SUMO_EVENT_ID;
 
     // ── 後端安全防禦：先檢查是否已結算或後台手動截止 ──
     const specialEvent = await getOrSyncSpecialEvent(targetEventId);
@@ -116,6 +122,12 @@ export async function POST(request: Request) {
 
     // 檢查選項合法性
     const validChoices = getValidChoicesForEvent(targetEventId);
+    if (validChoices.length === 0) {
+      return NextResponse.json(
+        { error: '大會參賽名單籌備中，尚未開放預測選項，敬請期待名單公布！' },
+        { status: 400 }
+      );
+    }
     if (!choice || !validChoices.includes(choice)) {
       return NextResponse.json(
         { error: '請選擇有效的預測選項。' },

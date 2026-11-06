@@ -7,10 +7,13 @@ import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/rou
 import {
   HOLO_KOUSHIEN_EVENT_ID,
   JUMP_KING_EVENT_ID,
+  YUBI_SUMO_EVENT_ID,
   JUMP_KING_LIVE_URL,
+  YUBI_SUMO_LIVE_URL,
   JUMP_KING_CHOICES,
+  YUBI_SUMO_CHOICES,
   VALID_SCHOOL_CHOICES,
-  calculateJumpKingPool,
+  calculateDynamicEventPool,
 } from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 import AdminEventsClient, { type EventData } from './AdminEventsClient';
@@ -57,7 +60,7 @@ async function loadEventData(
   }));
 
   const totalPool = isDynamic
-    ? calculateJumpKingPool(totalPredictions)
+    ? calculateDynamicEventPool(totalPredictions)
     : specialEvent.totalPayout || specialEvent.prize || 500.0;
 
   return {
@@ -90,7 +93,15 @@ export default async function AdminEventsPage() {
     return <AdminLoginForm />;
   }
 
-  // 1. 取得 JUMP KING HOLORACE（進行中企劃）
+  // 1. 取得 ゆび相撲大会 冠軍預測（當前進行中特別企劃）
+  const yubiSumoData = await loadEventData(
+    YUBI_SUMO_EVENT_ID,
+    YUBI_SUMO_CHOICES,
+    true,
+    YUBI_SUMO_LIVE_URL
+  );
+
+  // 2. 取得 JUMP KING HOLORACE（歷屆企劃）
   const jumpKingData = await loadEventData(
     JUMP_KING_EVENT_ID,
     JUMP_KING_CHOICES,
@@ -98,7 +109,7 @@ export default async function AdminEventsPage() {
     JUMP_KING_LIVE_URL
   );
 
-  // 2. 取得甲子園 2026（歷屆已結束企劃）
+  // 3. 取得甲子園 2026（歷屆已結束企劃）
   const holoKoushienData = await loadEventData(
     HOLO_KOUSHIEN_EVENT_ID,
     VALID_SCHOOL_CHOICES,
@@ -142,13 +153,13 @@ export default async function AdminEventsPage() {
               特別企劃管理中樞
             </h1>
             <p className="text-xs text-gray-400 mt-1 font-mono">
-              社群重大賽事預測 · JUMP KING HOLORACE &amp; 歷屆企劃派彩管理
+              社群重大賽事預測 · ゆび相撲大会 &amp; 歷屆企劃派彩管理
             </p>
           </div>
         </header>
 
         {/* Client Interface */}
-        <AdminEventsClient events={[jumpKingData, holoKoushienData]} />
+        <AdminEventsClient events={[yubiSumoData, jumpKingData, holoKoushienData]} />
       </div>
     </div>
   );

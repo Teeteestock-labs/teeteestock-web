@@ -1,6 +1,9 @@
 export const HOLO_KOUSHIEN_EVENT_ID = 'holo_koushien_2026';
 export const JUMP_KING_EVENT_ID = 'jump_king_holorace';
+export const YUBI_SUMO_EVENT_ID = 'yubi_sumo_tournament';
+
 export const JUMP_KING_LIVE_URL = 'https://www.youtube.com/watch?v=b6mcVgI0JjY';
+export const YUBI_SUMO_LIVE_URL: string | null = null; // 官方直播連結公布後更新
 
 export const VALID_SCHOOL_CHOICES = [
   'WAOOON高校',
@@ -20,13 +23,22 @@ export const JUMP_KING_CHOICES = [
   '成功通關',
 ] as const;
 
+// ゆび相撲大会 冠軍預測選項（先更新活動整體，選項後續公布更新）
+export const YUBI_SUMO_CHOICES: readonly string[] = [
+  // 後續公布參賽選手/組別名單後填入
+];
+
 export type SchoolChoice = typeof VALID_SCHOOL_CHOICES[number];
 export type JumpKingChoice = typeof JUMP_KING_CHOICES[number];
+export type YubiSumoChoice = string;
 
 /**
  * 取得指定特別企劃的合法選項清單
  */
-export function getValidChoicesForEvent(eventId: string = JUMP_KING_EVENT_ID): readonly string[] {
+export function getValidChoicesForEvent(eventId: string = YUBI_SUMO_EVENT_ID): readonly string[] {
+  if (eventId === YUBI_SUMO_EVENT_ID) {
+    return YUBI_SUMO_CHOICES;
+  }
   if (eventId === HOLO_KOUSHIEN_EVENT_ID) {
     return VALID_SCHOOL_CHOICES;
   }
@@ -34,16 +46,19 @@ export function getValidChoicesForEvent(eventId: string = JUMP_KING_EVENT_ID): r
 }
 
 /**
- * 計算 JUMP KING HOLORACE 當前動態獎金池
+ * 計算特別企劃（JUMP KING / ゆび相撲大会）動態獎金池
  * 基礎獎金 5000，每超過 10 人增加 5000
  * (1~10人: 5000 / 11~20人: 10000 / 21~30人: 15000 ...)
  */
-export function calculateJumpKingPool(participantCount: number): number {
+export function calculateDynamicEventPool(participantCount: number): number {
   if (participantCount <= 10) {
     return 5000;
   }
   return 5000 + Math.floor((participantCount - 1) / 10) * 5000;
 }
+
+// 保持向下相容
+export const calculateJumpKingPool = calculateDynamicEventPool;
 
 /**
  * 計算單一獲獎者均分獎金（取至十位數，無條件捨去）

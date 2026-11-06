@@ -13,7 +13,7 @@ import AdminLoginForm from '../AdminLoginForm';
 import AdminLogoutButton from '../AdminLogoutButton';
 import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/route';
 import { Trophy } from 'lucide-react';
-import { HOLO_KOUSHIEN_EVENT_ID, JUMP_KING_EVENT_ID } from '@/utils/eventDeadline';
+import { HOLO_KOUSHIEN_EVENT_ID, JUMP_KING_EVENT_ID, YUBI_SUMO_EVENT_ID } from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 
 export const dynamic = 'force-dynamic';
@@ -108,7 +108,7 @@ export default async function AdminReviewPage() {
   });
 
   // 查詢當前特別企劃是否尚未鎖定
-  const specialEvent = await getOrSyncSpecialEvent(JUMP_KING_EVENT_ID);
+  const specialEvent = await getOrSyncSpecialEvent(YUBI_SUMO_EVENT_ID);
   const isSpecialEventUnlocked = !specialEvent?.isLocked && !specialEvent?.isSettled && !specialEvent?.isArchived;
 
   // 查詢除息冷卻與手動確認狀態

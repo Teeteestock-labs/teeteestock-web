@@ -6,7 +6,9 @@ import { AUTH_COOKIE_NAME, getExpectedAuthToken } from '@/app/api/admin-auth/rou
 import {
   HOLO_KOUSHIEN_EVENT_ID,
   JUMP_KING_EVENT_ID,
+  YUBI_SUMO_EVENT_ID,
   getValidChoicesForEvent,
+  calculateDynamicEventPool,
   calculateJumpKingPool,
   calculatePrizePerWinner,
 } from '@/utils/eventDeadline';
@@ -16,7 +18,7 @@ import { patchSpecialEventSchemaIfNeeded } from '@/lib/specialEvent';
 /**
  * 管理員確認冠軍並發放獎金
  */
-export async function settleChampionAction(eventId: string = JUMP_KING_EVENT_ID, champion: string) {
+export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID, champion: string) {
   // 1. 驗證管理員身份
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -54,9 +56,9 @@ export async function settleChampionAction(eventId: string = JUMP_KING_EVENT_ID,
       let prizePerUser = 0;
       let totalPayout = 0;
 
-      if (eventId === JUMP_KING_EVENT_ID) {
+      if (eventId === YUBI_SUMO_EVENT_ID || eventId === JUMP_KING_EVENT_ID) {
         const totalPredictions = await tx.eventPrediction.count({ where: { eventId } });
-        const totalPool = calculateJumpKingPool(totalPredictions);
+        const totalPool = calculateDynamicEventPool(totalPredictions);
         prizePerUser = calculatePrizePerWinner(totalPool, winnerCount);
         totalPayout = winnerCount * prizePerUser;
       } else {
@@ -101,7 +103,9 @@ export async function settleChampionAction(eventId: string = JUMP_KING_EVENT_ID,
         }
       }
 
-      const defaultTitle = eventId === JUMP_KING_EVENT_ID
+      const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
+        ? 'ゆび相撲大会 冠軍預測'
+        : eventId === JUMP_KING_EVENT_ID
         ? 'JUMP KING HOLORACE 優勝者到達地點預測'
         : 'ホロライブ甲子園2026 冠軍預測';
 
@@ -155,7 +159,7 @@ export async function settleChampionAction(eventId: string = JUMP_KING_EVENT_ID,
 /**
  * 管理員手動開關企劃截止鎖定
  */
-export async function toggleEventLockAction(eventId: string = JUMP_KING_EVENT_ID, lock: boolean) {
+export async function toggleEventLockAction(eventId: string = YUBI_SUMO_EVENT_ID, lock: boolean) {
   // 1. 驗證管理員身份
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -172,7 +176,9 @@ export async function toggleEventLockAction(eventId: string = JUMP_KING_EVENT_ID
       return { success: false, error: '該企劃已結算，無法再變更鎖定狀態。' };
     }
 
-    const defaultTitle = eventId === JUMP_KING_EVENT_ID
+    const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
+      ? 'ゆび相撲大会 冠軍預測'
+      : eventId === JUMP_KING_EVENT_ID
       ? 'JUMP KING HOLORACE 優勝者到達地點預測'
       : 'ホロライブ甲子園2026 冠軍預測';
 
@@ -210,7 +216,7 @@ export async function toggleEventLockAction(eventId: string = JUMP_KING_EVENT_ID
 /**
  * 管理員切換特別企劃歸檔狀態
  */
-export async function toggleEventArchiveAction(eventId: string = JUMP_KING_EVENT_ID, archive: boolean) {
+export async function toggleEventArchiveAction(eventId: string = YUBI_SUMO_EVENT_ID, archive: boolean) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (sessionToken !== getExpectedAuthToken()) {
@@ -224,7 +230,9 @@ export async function toggleEventArchiveAction(eventId: string = JUMP_KING_EVENT
       where: { id: eventId },
     });
 
-    const defaultTitle = eventId === JUMP_KING_EVENT_ID
+    const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
+      ? 'ゆび相撲大会 冠軍預測'
+      : eventId === JUMP_KING_EVENT_ID
       ? 'JUMP KING HOLORACE 優勝者到達地點預測'
       : 'ホロライブ甲子園2026 冠軍預測';
 

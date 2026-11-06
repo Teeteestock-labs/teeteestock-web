@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { HOLO_KOUSHIEN_EVENT_ID, JUMP_KING_EVENT_ID } from '@/utils/eventDeadline';
+import { HOLO_KOUSHIEN_EVENT_ID, JUMP_KING_EVENT_ID, YUBI_SUMO_EVENT_ID } from '@/utils/eventDeadline';
 
 let isSchemaPatched = false;
 
@@ -20,9 +20,9 @@ export async function patchSpecialEventSchemaIfNeeded() {
 }
 
 /**
- * 取得特別企劃資料，並針對甲子園 2026 自動同步結束折疊，針對 JUMP KING HOLORACE 初始化開放中狀態
+ * 取得特別企劃資料，並針對甲子園 2026 與 JUMP KING 自動同步結束折疊，針對 ゆび相撲大会 初始化開放中狀態
  */
-export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID) {
+export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID) {
   await patchSpecialEventSchemaIfNeeded();
 
   let specialEvent: any = null;
@@ -34,11 +34,22 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
     console.warn('[SpecialEvent] findUnique failed:', err);
   }
 
+  const isYubiSumo = eventId === YUBI_SUMO_EVENT_ID;
   const isJumpKing = eventId === JUMP_KING_EVENT_ID;
-  const defaultTitle = isJumpKing ? 'JUMP KING HOLORACE 優勝者到達地點預測' : 'ホロライブ甲子園2026 冠軍預測';
-  const defaultPrize = isJumpKing ? 5000.0 : 500.0;
-  const defaultLocked = true;
-  const defaultArchived = true;
+
+  let defaultTitle = '特別企劃';
+  if (isYubiSumo) {
+    defaultTitle = 'ゆび相撲大会 冠軍預測';
+  } else if (isJumpKing) {
+    defaultTitle = 'JUMP KING HOLORACE 優勝者到達地點預測';
+  } else {
+    defaultTitle = 'ホロライブ甲子園2026 冠軍預測';
+  }
+
+  const defaultPrize = (isYubiSumo || isJumpKing) ? 5000.0 : 500.0;
+  // ゆび相撲大会為進行中企劃（開放預測），歷屆企劃則預設已結束折疊與鎖定
+  const defaultLocked = isYubiSumo ? false : true;
+  const defaultArchived = isYubiSumo ? false : true;
 
   // 1. 若資料庫尚無此企劃紀錄，自動初始化
   if (!specialEvent) {
@@ -68,7 +79,7 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
       };
     }
   } else if (!specialEvent.isArchived && (specialEvent.id === HOLO_KOUSHIEN_EVENT_ID || specialEvent.id === JUMP_KING_EVENT_ID)) {
-    // 2. 若線上既有資料庫活動尚未標記為結束，自動同步為已結束(折疊)與鎖定
+    // 2. 若線上既有資料庫歷史活動尚未標記為結束，自動同步為已結束(折疊)與鎖定
     try {
       specialEvent = await prisma.specialEvent.update({
         where: { id: eventId },
@@ -86,8 +97,8 @@ export async function getOrSyncSpecialEvent(eventId: string = JUMP_KING_EVENT_ID
         title: defaultTitle,
       };
     }
-  } else if (isJumpKing && specialEvent && specialEvent.title !== defaultTitle && !specialEvent.isSettled) {
-    // 3. 若為 JUMP KING 且尚未結算，自動同步新標題
+  } else if ((isYubiSumo || isJumpKing) && specialEvent && specialEvent.title !== defaultTitle && !specialEvent.isSettled) {
+    // 3. 若標題需要更新且尚未結算，自動同步新標題
     try {
       specialEvent = await prisma.specialEvent.update({
         where: { id: eventId },
