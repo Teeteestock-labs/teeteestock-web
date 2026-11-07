@@ -344,13 +344,9 @@ export default function EventsPage() {
               <span>特別企劃 · 冠軍預測活動</span>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide mb-2 bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
               ゆび相撲大会 冠軍預測
             </h2>
-
-            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-md mx-auto mb-4 font-semibold">
-              猜測ゆび相撲大会中榮獲最終冠軍之選手（單選）。猜中者將均分累積總獎金池！
-            </p>
 
             {/* YouTube 現場直播按鈕 (公布時即時啟用) */}
             {liveStreamUrl && (
@@ -377,10 +373,10 @@ export default function EventsPage() {
                   </div>
                   <div>
                     <span className="text-xs text-amber-200 font-bold block">
-                      活動動態總獎金池
+                      累積總獎金池
                     </span>
                     <span className="text-[10px] text-gray-400 font-mono">
-                      基礎 5,000 $TEE · 每滿 10 人加碼 5,000 $TEE · 猜中者均分
+                      根據預測人數增加，猜中者均分。
                     </span>
                   </div>
                 </div>
