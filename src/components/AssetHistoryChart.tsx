@@ -136,7 +136,7 @@ export default function AssetHistoryChart({
   const svgWidth = 600;
   const svgHeight = 160;
   const paddingX = 0;
-  const paddingY = 15;
+  const paddingY = 20;
 
   const values = useMemo(() => dataPoints.map(p => p.value), [dataPoints]);
   const { minVal, maxVal, rangeVal } = useMemo(() => {
@@ -183,6 +183,27 @@ export default function AssetHistoryChart({
     if (!containerRef.current || pointsWithCoords.length === 0) return;
     const rect = containerRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
+    const relativeX = (mouseX / rect.width) * svgWidth;
+
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    pointsWithCoords.forEach((pt, idx) => {
+      const diff = Math.abs(pt.x - relativeX);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = idx;
+      }
+    });
+
+    setHoverIdx(closestIdx);
+  };
+
+  // 觸控移動處理 (手機端平滑滑動體驗)
+  const handleTouch = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!containerRef.current || pointsWithCoords.length === 0 || e.touches.length === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const touch = e.touches[0];
+    const mouseX = touch.clientX - rect.left;
     const relativeX = (mouseX / rect.width) * svgWidth;
 
     let closestIdx = 0;
@@ -254,29 +275,81 @@ export default function AssetHistoryChart({
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative w-full h-44 cursor-crosshair overflow-hidden"
+        onTouchStart={handleTouch}
+        onTouchMove={handleTouch}
+        onTouchEnd={handleMouseLeave}
+        className="relative w-full h-44 cursor-crosshair overflow-hidden touch-pan-y"
       >
-        {/* 圖上浮動標籤 (直接顯示在圖上的標籤形式) */}
-        {displayPoint && (
-          <div
-            className="absolute top-2 z-20 pointer-events-none transition-all duration-75 ease-out"
-            style={{
-              left: `${(displayPoint.x / svgWidth) * 100}%`,
-              transform: (displayPoint.x / svgWidth) > 0.65 ? 'translateX(-100%)' : 'translateX(0%)',
-              marginLeft: (displayPoint.x / svgWidth) > 0.65 ? '-12px' : '12px'
-            }}
-          >
-            <div className="bg-[#0f172a]/95 border border-[#38BDF8]/60 shadow-[0_0_12px_rgba(56,189,248,0.35)] rounded-lg px-2.5 py-1 flex items-center gap-2 backdrop-blur-md">
-              <span className="text-[10px] text-gray-300 font-mono tracking-tight font-semibold">
-                {displayPoint.dateStr}
-              </span>
-              <span className="w-px h-3 bg-[#2b2f36]" />
-              <span className="text-xs font-bold text-white font-mono tracking-tight flex items-center gap-1">
-                {displayPoint.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[9px] text-[#38BDF8] font-mono">$TEE</span>
-              </span>
+        {/* 圖上浮動標籤 (自適應高低點上下切換，避開折線，永不遮蔽線圖) */}
+        {displayPoint && (() => {
+          const xRatio = displayPoint.x / svgWidth;
+          const yRatio = displayPoint.y / svgHeight;
+          const isUpperHalf = yRatio < 0.55;
+
+          // 水平對齊自適應：靠右時向左展開、靠左時向右展開、中間置中
+          let transformStyle = 'translateX(-50%)';
+          let marginStyle = '0px';
+          let leftPercent = xRatio * 100;
+
+          if (xRatio > 0.65) {
+            transformStyle = 'translateX(-100%)';
+            marginStyle = '-8px';
+            leftPercent = Math.min(100, xRatio * 100);
+          } else if (xRatio < 0.35) {
+            transformStyle = 'translateX(0%)';
+            marginStyle = '8px';
+            leftPercent = Math.max(0, xRatio * 100);
+          }
+
+          return (
+            <div
+              className={`absolute z-20 pointer-events-none transition-[left] duration-75 ease-out ${
+                isUpperHalf ? 'bottom-2.5' : 'top-2.5'
+              }`}
+              style={{
+                left: `${leftPercent}%`,
+                transform: transformStyle,
+                marginLeft: marginStyle,
+              }}
+            >
+              <div className="bg-[#0f172a]/95 border border-[#38BDF8]/60 shadow-[0_0_12px_rgba(56,189,248,0.35)] rounded-lg px-2.5 py-1 flex items-center gap-2 backdrop-blur-md">
+                <span className="text-[10px] text-gray-300 font-mono tracking-tight font-semibold">
+                  {displayPoint.dateStr}
+                </span>
+                <span className="w-px h-3 bg-[#2b2f36]" />
+                <span className="text-xs font-bold text-white font-mono tracking-tight flex items-center gap-1">
+                  {displayPoint.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                  <span className="text-[9px] text-[#38BDF8] font-mono">$TEE</span>
+                </span>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
+
+        {/* 當前時間點位 / Hover 點位之精緻圓點 (縮小至正圓，且不被外層 overflow 裁切) */}
+        {displayPoint && (() => {
+          const xRatio = displayPoint.x / svgWidth;
+          const yRatio = displayPoint.y / svgHeight;
+          // 確保左右邊界的點位不被 container overflow-hidden 裁切半邊
+          const leftPos = xRatio >= 0.98 
+            ? 'calc(100% - 4.5px)' 
+            : xRatio <= 0.02 
+              ? '4.5px' 
+              : `${xRatio * 100}%`;
+
+          return (
+            <div
+              className="absolute pointer-events-none transition-all duration-75 ease-out z-10"
+              style={{
+                left: leftPos,
+                top: `${yRatio * 100}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              <span className="block w-1.5 h-1.5 rounded-full bg-[#38BDF8] ring-[1.5px] ring-white shadow-[0_0_6px_rgba(56,189,248,0.9)]" />
+            </div>
+          );
+        })()}
 
         <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none" className="w-full h-full block">
           <defs>
@@ -316,27 +389,18 @@ export default function AssetHistoryChart({
             strokeLinejoin="round"
           />
 
-          {/* Hover 準心軸與亮點 */}
+          {/* Hover 準心軸 (僅在主動游標/觸控時呈現) */}
           {activePoint && (
-            <g>
-              <line
-                x1={activePoint.x}
-                y1={0}
-                x2={activePoint.x}
-                y2={svgHeight}
-                stroke="#7DD3FC"
-                strokeWidth="1.5"
-                strokeDasharray="3 3"
-              />
-              <circle
-                cx={activePoint.x}
-                cy={activePoint.y}
-                r="4.5"
-                fill={strokeColor}
-                stroke="#ffffff"
-                strokeWidth="1.5"
-              />
-            </g>
+            <line
+              x1={activePoint.x}
+              y1={0}
+              x2={activePoint.x}
+              y2={svgHeight}
+              stroke="#7DD3FC"
+              strokeWidth="1.5"
+              strokeDasharray="3 3"
+              opacity="0.75"
+            />
           )}
         </svg>
       </div>
