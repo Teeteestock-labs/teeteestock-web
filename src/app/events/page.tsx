@@ -375,8 +375,11 @@ export default function EventsPage() {
                     <span className="text-xs text-amber-200 font-bold block">
                       累積總獎金池
                     </span>
-                    <span className="text-[10px] text-gray-400 font-mono">
+                    <span className="text-[10px] text-gray-400 font-mono block">
                       根據預測人數增加，猜中者均分。
+                    </span>
+                    <span className="text-[10px] text-amber-300/90 font-mono block mt-0.5 font-bold">
+                      當開出優先選項時預測者全員獲得獎金1,000＄TEE
                     </span>
                   </div>
                 </div>
@@ -433,20 +436,23 @@ export default function EventsPage() {
               {choices.map((choiceName, idx) => {
                 const isSelected = (selectedChoice ?? confirmedChoice) === choiceName;
                 const isWinner = isSettled && winningChoice === choiceName;
+                const isSpecialPriority = choiceName === 'PekoViVi決賽對決（優先選項）';
 
                 return (
                   <button
                     key={choiceName}
                     type="button"
-                    disabled={isLocked || isSettled}
+                    disabled={isLocked || isSettled || isSpecialPriority}
                     onClick={() => {
-                      if (!isLocked && !isSettled) {
+                      if (!isLocked && !isSettled && !isSpecialPriority) {
                         setSelectedChoice(choiceName);
                       }
                     }}
                     className={`w-full p-4 rounded-xl border text-left transition-all duration-200 flex items-center justify-between gap-3 select-none ${
                       isWinner
                         ? "bg-amber-950/40 border-amber-400 shadow-[0_0_24px_rgba(245,158,11,0.35)] ring-1 ring-amber-400/80 text-white cursor-default"
+                        : isSpecialPriority
+                        ? "bg-[#0b0e14]/70 border-dashed border-gray-700/60 text-gray-500 cursor-not-allowed opacity-60"
                         : isSettled
                         ? isSelected
                           ? "bg-[#142320]/80 border-[#00FFA3]/60 text-white cursor-default opacity-95 shadow-[0_0_12px_rgba(0,255,163,0.15)]"
@@ -461,12 +467,25 @@ export default function EventsPage() {
                     }`}
                   >
                     <div className="flex items-center gap-2.5 text-left min-w-0 flex-1">
-                      <span className="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">
+                      <span className={`w-5 h-5 rounded-md font-mono text-[11px] font-bold flex items-center justify-center shrink-0 ${
+                        isSpecialPriority
+                          ? "bg-gray-800/60 border border-gray-700 text-gray-500"
+                          : "bg-amber-500/10 border border-amber-500/30 text-amber-300"
+                      }`}>
                         {idx + 1}
                       </span>
-                      <span className="text-xs sm:text-sm font-black tracking-wide leading-snug break-words">
-                        {choiceName}
-                      </span>
+                      <div className="flex flex-col min-w-0">
+                        <span className={`text-xs sm:text-sm font-black tracking-wide leading-snug break-words ${
+                          isSpecialPriority ? "text-gray-400" : ""
+                        }`}>
+                          {choiceName}
+                        </span>
+                        {isSpecialPriority && (
+                          <span className="text-[10px] text-amber-300/80 font-mono mt-0.5 font-bold">
+                            ★ 全員特殊加碼項目 · 不開放單選
+                          </span>
+                        )}
+                      </div>
                       {isWinner && (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 shrink-0">
                           🏆 優勝
@@ -477,6 +496,8 @@ export default function EventsPage() {
                     <div className="shrink-0">
                       {isWinner ? (
                         <Trophy className="w-5 h-5 text-amber-400" />
+                      ) : isSpecialPriority ? (
+                        <Lock className="w-4 h-4 text-gray-600" />
                       ) : isSelected ? (
                         <CheckCircle2 className="w-5 h-5 text-[#00FFA3]" />
                       ) : (
@@ -501,14 +522,20 @@ export default function EventsPage() {
                 <span>預測選項準備中 · 敬請期待名單發布</span>
               </button>
             ) : isSettled ? (
-              hasWon ? (
+              hasWon || (winningChoice === 'PekoViVi決賽對決（優先選項）' && confirmedChoice) ? (
                 <div className="w-full p-4 rounded-xl bg-gradient-to-b from-[#142320] to-[#0d1715] border border-[#00FFA3]/70 text-center space-y-1">
                   <div className="text-sm font-black text-[#00FFA3] flex items-center justify-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>🎉 恭喜預測正確！已瓜分發放獎金！</span>
+                    <span>
+                      {winningChoice === 'PekoViVi決賽對決（優先選項）'
+                        ? '🎉 恭喜！開出優先選項【PekoViVi決賽對決】全員獲獎！'
+                        : '🎉 恭喜預測正確！已瓜分發放獎金！'}
+                    </span>
                   </div>
                   <p className="text-xs text-emerald-200/90 font-mono">
-                    你預測的【{confirmedChoice}】榮獲本屆大賽冠軍！
+                    {winningChoice === 'PekoViVi決賽對決（優先選項）'
+                      ? '大會開出優先選項，所有參與預測者全員獲得 1,000 $TEE 獎金！已發放至您的帳戶！'
+                      : `你預測的【${confirmedChoice}】榮獲本屆大賽冠軍！`}
                   </p>
                 </div>
               ) : confirmedChoice ? (

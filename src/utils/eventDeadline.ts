@@ -23,14 +23,16 @@ export const JUMP_KING_CHOICES = [
   '成功通關',
 ] as const;
 
-// ゆび相撲大会 賽事預測選項
+export const YUBI_SUMO_PRIORITY_CHOICE = 'PekoViVi決賽對決（優先選項）';
+
+// ゆび相撲大会 賽事預測選項（選項 5、6 對調，第 6 項為特殊優先選項）
 export const YUBI_SUMO_CHOICES: readonly string[] = [
   '兎田ぺこら1勝',
   '兎田ぺこら2勝',
   '兎田ぺこら3勝',
   '兎田ぺこら冠軍',
-  'PekoViVi決賽對決（優先選項）',
   '兎田ぺこら初戰敗退',
+  'PekoViVi決賽對決（優先選項）',
 ];
 
 export type SchoolChoice = typeof VALID_SCHOOL_CHOICES[number];

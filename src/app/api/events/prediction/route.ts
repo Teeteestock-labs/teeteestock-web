@@ -46,7 +46,8 @@ export async function GET(request: Request) {
     const lockStatus = isEventPredictionLocked(isManualLocked, allowTestUnlock);
     const isSettled = specialEvent?.isSettled || false;
     const winningChoice = specialEvent?.winningChoice || null;
-    const hasWon = isSettled && prediction ? prediction.choice === winningChoice : null;
+    const isSpecialPriorityWinner = isSettled && targetEventId === YUBI_SUMO_EVENT_ID && winningChoice === 'PekoViVi決賽對決（優先選項）' && Boolean(prediction);
+    const hasWon = isSettled && prediction ? (isSpecialPriorityWinner || prediction.choice === winningChoice) : null;
     const isArchived = specialEvent ? Boolean(specialEvent.isArchived) : false;
 
     // 計算總參與人數與動態獎金池
@@ -133,6 +134,12 @@ export async function POST(request: Request) {
     if (!normalizedChoice || !validChoices.includes(normalizedChoice)) {
       return NextResponse.json(
         { error: '請選擇有效的預測選項。' },
+        { status: 400 }
+      );
+    }
+    if (targetEventId === YUBI_SUMO_EVENT_ID && normalizedChoice === 'PekoViVi決賽對決（優先選項）') {
+      return NextResponse.json(
+        { error: '【PekoViVi決賽對決（優先選項）】為全員特殊加碼條件，無法單獨選取預測。' },
         { status: 400 }
       );
     }

@@ -163,16 +163,19 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
     }
   };
 
+  const isSpecialPriority = data.id === 'yubi_sumo_tournament' && selectedChampion === 'PekoViVi決賽對決（優先選項）';
   const selectedStat = data.options.find((o) => o.name === selectedChampion);
-  const estimatedWinners = selectedStat ? selectedStat.count : 0;
+  const estimatedWinners = isSpecialPriority
+    ? data.totalPredictions
+    : (selectedStat ? selectedStat.count : 0);
   const isDynamic = Boolean(data.isDynamicPool);
   const currentTotalPool = isDynamic ? (data.totalPool || 5000) : (data.prize * data.totalPredictions);
-  const estimatedPrizePerWinner = isDynamic
+  const estimatedPrizePerWinner = isSpecialPriority
+    ? 1000
+    : isDynamic
     ? (estimatedWinners > 0 ? Math.floor((currentTotalPool / estimatedWinners) / 10) * 10 : 0)
     : data.prize;
-  const estimatedPayout = isDynamic
-    ? (estimatedWinners * estimatedPrizePerWinner)
-    : (estimatedWinners * data.prize);
+  const estimatedPayout = estimatedWinners * estimatedPrizePerWinner;
 
   return (
     <div className="space-y-6 font-mono">
@@ -513,7 +516,10 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                 {data.options.map((option, idx) => {
                   const isWinner = isSettled && data.winningChoice === option.name;
                   const isSelected = selectedChampion === option.name;
-                  const optPrizePerUser = isDynamic
+                  const isSpecialOption = data.id === 'yubi_sumo_tournament' && option.name === 'PekoViVi決賽對決（優先選項）';
+                  const optPrizePerUser = isSpecialOption
+                    ? 1000
+                    : isDynamic
                     ? (option.count > 0 ? Math.floor((currentTotalPool / option.count) / 10) * 10 : currentTotalPool)
                     : data.prize;
 
@@ -543,6 +549,11 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                           <span className="font-black text-sm sm:text-base text-white">
                             {option.name}
                           </span>
+                          {isSpecialOption && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                              ★ 優先選項（全員1,000 $TEE）
+                            </span>
+                          )}
                           {isWinner && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-slate-950 flex items-center gap-1">
                               🏆 優勝結果
@@ -584,9 +595,11 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
 
                       {/* 發放獎金試算 */}
                       <div className="mt-3 pt-3 border-t border-gray-800/60 flex items-center justify-between text-[11px] text-gray-400 font-mono">
-                        <span>{isDynamic ? "若中每人均分：" : "若獲勝總發放："}</span>
+                        <span>{isSpecialOption ? "若開出全員每人獲得：" : isDynamic ? "若中每人均分：" : "若獲勝總發放："}</span>
                         <span className="text-amber-300 font-bold">
-                          {isDynamic
+                          {isSpecialOption
+                            ? "1,000 $TEE"
+                            : isDynamic
                             ? `${optPrizePerUser.toLocaleString()} $TEE`
                             : `${(option.count * data.prize).toLocaleString()} $TEE`}
                         </span>
@@ -708,8 +721,8 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                 <span className="text-sm font-black text-amber-400">【{selectedChampion}】</span>
               </div>
               <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
-                <span className="text-gray-400">猜中獲獎人數：</span>
-                <span className="text-sm font-black text-white">{estimatedWinners} 人</span>
+                <span className="text-gray-400">{isSpecialPriority ? "獲獎人數（全員）：" : "猜中獲獎人數："}</span>
+                <span className="text-sm font-black text-white">{estimatedWinners} 人 {isSpecialPriority && "（全體參加者）"}</span>
               </div>
               {isDynamic && (
                 <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
@@ -732,7 +745,9 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
             <div className="p-3 rounded-lg bg-red-950/30 border border-red-500/30 text-[11px] text-red-300 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <span>
-                注意：點擊「確定公佈並發放」後，系統將立即在前台公佈優勝結果，並自動為猜中者餘額加值，且不可重複執行或取消。
+                {isSpecialPriority
+                  ? `注意：您選取了【優先選項】，系統將直接為全體預測參與者（共 ${estimatedWinners} 人）每人發放 1,000 $TEE（總支出 ${estimatedPayout.toLocaleString()} $TEE），且不可重複執行或取消。`
+                  : "注意：點擊「確定公佈並發放」後，系統將立即在前台公佈優勝結果，並自動為猜中者餘額加值，且不可重複執行或取消。"}
               </span>
             </div>
 

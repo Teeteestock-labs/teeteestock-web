@@ -46,22 +46,34 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
         throw new Error(`該企劃已於 ${existing.settledAt?.toLocaleString('zh-TW')} 結算公佈，無法重複結算。`);
       }
 
-      // 找出所有預測正確者（相容校正前之選字）
-      const winningPredictions = await tx.eventPrediction.findMany({
-        where: {
-          eventId,
-          OR: [
-            { choice: normalizedChampion },
-            ...(normalizedChampion === '兎田ぺこら初戰敗退' ? [{ choice: '兎田ぺこら初戰敗隊' }] : []),
-          ],
-        },
-      });
+      const isSpecialPriorityChoice =
+        eventId === YUBI_SUMO_EVENT_ID &&
+        normalizedChampion === 'PekoViVi決賽對決（優先選項）';
+
+      // 找出所有獲獎者：若開出優先選項，則為所有參與預測者；否則為猜中該選項者（相容校正前之選字）
+      const winningPredictions = isSpecialPriorityChoice
+        ? await tx.eventPrediction.findMany({
+            where: { eventId },
+          })
+        : await tx.eventPrediction.findMany({
+            where: {
+              eventId,
+              OR: [
+                { choice: normalizedChampion },
+                ...(normalizedChampion === '兎田ぺこら初戰敗退' ? [{ choice: '兎田ぺこら初戰敗隊' }] : []),
+              ],
+            },
+          });
 
       const winnerCount = winningPredictions.length;
       let prizePerUser = 0;
       let totalPayout = 0;
 
-      if (eventId === YUBI_SUMO_EVENT_ID || eventId === JUMP_KING_EVENT_ID) {
+      if (isSpecialPriorityChoice) {
+        // 開出優先選項時參加者全員給予 1,000 $TEE
+        prizePerUser = 1000.0;
+        totalPayout = winnerCount * 1000.0;
+      } else if (eventId === YUBI_SUMO_EVENT_ID || eventId === JUMP_KING_EVENT_ID) {
         const totalPredictions = await tx.eventPrediction.count({ where: { eventId } });
         const totalPool = calculateDynamicEventPool(totalPredictions);
         prizePerUser = calculatePrizePerWinner(totalPool, winnerCount);
