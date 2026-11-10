@@ -510,7 +510,7 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
 
               {/* 選項卡片 Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {data.options.map((option) => {
+                {data.options.map((option, idx) => {
                   const isWinner = isSettled && data.winningChoice === option.name;
                   const isSelected = selectedChampion === option.name;
                   const optPrizePerUser = isDynamic
@@ -537,6 +537,9 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
                           <span className="font-black text-sm sm:text-base text-white">
                             {option.name}
                           </span>

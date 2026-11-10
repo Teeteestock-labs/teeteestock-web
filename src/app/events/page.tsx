@@ -430,7 +430,7 @@ export default function EventsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-6">
-              {choices.map((choiceName) => {
+              {choices.map((choiceName, idx) => {
                 const isSelected = (selectedChoice ?? confirmedChoice) === choiceName;
                 const isWinner = isSettled && winningChoice === choiceName;
 
@@ -460,7 +460,10 @@ export default function EventsPage() {
                         : "bg-[#10141d] border-[#222a3a] text-gray-300 hover:border-gray-600 hover:bg-[#141a26] active:scale-[0.98] cursor-pointer"
                     }`}
                   >
-                    <div className="flex items-center gap-2 text-left min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 text-left min-w-0 flex-1">
+                      <span className="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
                       <span className="text-xs sm:text-sm font-black tracking-wide leading-snug break-words">
                         {choiceName}
                       </span>
@@ -583,11 +586,11 @@ export default function EventsPage() {
             <div className="w-full max-w-sm rounded-2xl bg-gray-900 border border-gray-800 p-6 shadow-2xl space-y-4">
               <div className="flex items-center gap-2 text-amber-400">
                 <Trophy className="w-5 h-5" />
-                <h3 className="text-base font-black text-white">確認你的冠軍預測</h3>
+                <h3 className="text-base font-black text-white">確認你的企劃預測</h3>
               </div>
 
               <div className="p-4 rounded-xl bg-gray-950/80 border border-gray-800 text-center space-y-1">
-                <span className="text-xs text-gray-400">你選擇的冠軍選手/組別</span>
+                <span className="text-xs text-gray-400">你選擇的預測項目</span>
                 <p className="text-lg font-black text-[#00FFA3]">【{selectedChoice}】</p>
               </div>
 

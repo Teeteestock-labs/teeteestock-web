@@ -23,14 +23,36 @@ export const JUMP_KING_CHOICES = [
   '成功通關',
 ] as const;
 
-// ゆび相撲大会 冠軍預測選項（先更新活動整體，選項後續公布更新）
+// ゆび相撲大会 賽事預測選項
 export const YUBI_SUMO_CHOICES: readonly string[] = [
-  // 後續公布參賽選手/組別名單後填入
+  '兎田ぺこら1勝',
+  '兎田ぺこら2勝',
+  '兎田ぺこら3勝',
+  '兎田ぺこら冠軍',
+  'PekoViVi決賽對決（優先選項）',
+  '兎田ぺこら初戰敗退',
 ];
 
 export type SchoolChoice = typeof VALID_SCHOOL_CHOICES[number];
 export type JumpKingChoice = typeof JUMP_KING_CHOICES[number];
 export type YubiSumoChoice = string;
+
+/**
+ * 標準化特別企劃選項名稱（相容輸入法選字、同音字或前綴編號）
+ */
+export function normalizeEventChoice(choice: string | null | undefined): string {
+  if (!choice) return '';
+  const trimmed = choice.trim();
+  if (trimmed === '兎田ぺこら初戰敗隊') {
+    return '兎田ぺこら初戰敗退';
+  }
+  // 移除如 "1. " 或 "1." 的前綴編號
+  const stripped = trimmed.replace(/^[0-9]+[.\s、\s]*/, '');
+  if (YUBI_SUMO_CHOICES.includes(stripped)) {
+    return stripped;
+  }
+  return trimmed;
+}
 
 /**
  * 取得指定特別企劃的合法選項清單

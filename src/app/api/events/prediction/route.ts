@@ -10,6 +10,7 @@ import {
   getValidChoicesForEvent,
   calculateDynamicEventPool,
   isEventPredictionLocked,
+  normalizeEventChoice,
 } from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 檢查選項合法性
+    // 檢查選項合法性（支援標準化與相容性）
     const validChoices = getValidChoicesForEvent(targetEventId);
     if (validChoices.length === 0) {
       return NextResponse.json(
@@ -128,7 +129,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!choice || !validChoices.includes(choice)) {
+    const normalizedChoice = normalizeEventChoice(choice);
+    if (!normalizedChoice || !validChoices.includes(normalizedChoice)) {
       return NextResponse.json(
         { error: '請選擇有效的預測選項。' },
         { status: 400 }
@@ -164,10 +166,10 @@ export async function POST(request: Request) {
       create: {
         userId: targetUserId,
         eventId: targetEventId,
-        choice,
+        choice: normalizedChoice,
       },
       update: {
-        choice,
+        choice: normalizedChoice,
       },
     });
 

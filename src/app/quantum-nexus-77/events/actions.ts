@@ -11,6 +11,7 @@ import {
   calculateDynamicEventPool,
   calculateJumpKingPool,
   calculatePrizePerWinner,
+  normalizeEventChoice,
 } from '@/utils/eventDeadline';
 import { revalidatePath } from 'next/cache';
 import { patchSpecialEventSchemaIfNeeded } from '@/lib/specialEvent';
@@ -26,9 +27,10 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
     return { success: false, error: '未授權的管理員操作。' };
   }
 
-  // 2. 驗證選項
+  // 2. 驗證選項（相容前綴或別名）
+  const normalizedChampion = normalizeEventChoice(champion);
   const validChoices = getValidChoicesForEvent(eventId);
-  if (!validChoices.includes(champion)) {
+  if (!validChoices.includes(normalizedChampion)) {
     return { success: false, error: `無效的優勝選項：${champion}` };
   }
 
@@ -44,11 +46,14 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
         throw new Error(`該企劃已於 ${existing.settledAt?.toLocaleString('zh-TW')} 結算公佈，無法重複結算。`);
       }
 
-      // 找出所有預測正確者
+      // 找出所有預測正確者（相容校正前之選字）
       const winningPredictions = await tx.eventPrediction.findMany({
         where: {
           eventId,
-          choice: champion,
+          OR: [
+            { choice: normalizedChampion },
+            ...(normalizedChampion === '兎田ぺこら初戰敗退' ? [{ choice: '兎田ぺこら初戰敗隊' }] : []),
+          ],
         },
       });
 
@@ -93,11 +98,11 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
               eventId,
               userId: pred.userId,
               amount: prizePerUser,
-              choice: champion,
+              choice: normalizedChampion,
             },
             update: {
               amount: prizePerUser,
-              choice: champion,
+              choice: normalizedChampion,
             },
           });
         }
@@ -116,14 +121,14 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
           id: eventId,
           title: existing?.title || defaultTitle,
           prize: prizePerUser,
-          winningChoice: champion,
+          winningChoice: normalizedChampion,
           isSettled: true,
           settledAt: new Date(),
           winnerCount,
           totalPayout,
         },
         update: {
-          winningChoice: champion,
+          winningChoice: normalizedChampion,
           prize: prizePerUser,
           isSettled: true,
           settledAt: new Date(),
