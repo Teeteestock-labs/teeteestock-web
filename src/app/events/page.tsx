@@ -79,7 +79,6 @@ export default function EventsPage() {
   const [choices, setChoices] = useState<string[]>([]);
   const [liveStreamUrl, setLiveStreamUrl] = useState<string | null>(YUBI_SUMO_LIVE_URL);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
 
   // ── 歷屆企劃 1：JUMP KING HOLORACE ──
   const [isJumpKingBookmarkExpanded, setIsJumpKingBookmarkExpanded] = useState<boolean>(false);
@@ -276,8 +275,7 @@ export default function EventsPage() {
       }
 
       setConfirmedChoice(selectedChoice);
-      setShowConfirmModal(false);
-      addNotification("success", `你在《ゆび相撲大会 冠軍預測》選擇了【${selectedChoice}】`);
+      addNotification("success", `你在《ゆび相撲大会 冠軍預測》已成功鎖定選擇【${selectedChoice}】`);
 
       // 重新整理參與人數與獎金池試算
       fetch(url)
@@ -391,13 +389,6 @@ export default function EventsPage() {
                   <span className="text-xs text-amber-300/80 font-bold">$TEE</span>
                 </div>
               </div>
-
-              {totalPredictions > 0 && (
-                <div className="mt-2.5 pt-2 border-t border-amber-500/20 flex items-center justify-between text-[11px] text-amber-200/80 font-mono">
-                  <span>目前預測參與熱度</span>
-                  <span className="font-bold text-[#00FFA3]">{totalPredictions} 人已參與</span>
-                </div>
-              )}
             </div>
 
             {/* 結算結果大橫幅 */}
@@ -577,7 +568,7 @@ export default function EventsPage() {
                 <button
                   type="button"
                   disabled={!selectedChoice || isSubmitting}
-                  onClick={() => setShowConfirmModal(true)}
+                  onClick={handleConfirmSubmit}
                   className={`w-full py-3.5 px-6 rounded-xl font-black text-sm tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 shadow-lg select-none ${
                     selectedChoice && !isSubmitting
                       ? "bg-gradient-to-r from-[#00FFA3] to-[#00d688] text-slate-950 hover:brightness-110 shadow-[#00FFA3]/20 active:scale-[0.99] cursor-pointer"
@@ -585,67 +576,29 @@ export default function EventsPage() {
                   }`}
                 >
                   {isSubmitting ? (
-                    <span>儲存中...</span>
+                    <span>鎖定中...</span>
                   ) : confirmedChoice ? (
                     selectedChoice === confirmedChoice ? (
-                      <span>預測已保存（可重新選擇更新）</span>
+                      <span>預測已鎖定（可重新選擇更換）</span>
                     ) : (
-                      <span>更新預測選擇</span>
+                      <span>更新鎖定選擇</span>
                     )
+                  ) : selectedChoice ? (
+                    <span>確認鎖定預測</span>
                   ) : (
-                    <span>確認送出預測</span>
+                    <span>請選擇預測項目</span>
                   )}
                 </button>
 
                 {confirmedChoice && (
                   <p className="text-[11px] text-gray-400 font-mono text-center">
-                    目前已保存預測：<span className="text-[#00FFA3] font-bold">【{confirmedChoice}】</span>（截止前皆可自由變更）
+                    目前已鎖定預測：<span className="text-[#00FFA3] font-bold">【{confirmedChoice}】</span>（截止前皆可自由變更）
                   </p>
                 )}
               </>
             )}
           </div>
         </div>
-
-        {/* ── 確認送出彈窗 ── */}
-        {showConfirmModal && selectedChoice && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-sm rounded-2xl bg-gray-900 border border-gray-800 p-6 shadow-2xl space-y-4">
-              <div className="flex items-center gap-2 text-amber-400">
-                <Trophy className="w-5 h-5" />
-                <h3 className="text-base font-black text-white">確認你的企劃預測</h3>
-              </div>
-
-              <div className="p-4 rounded-xl bg-gray-950/80 border border-gray-800 text-center space-y-1">
-                <span className="text-xs text-gray-400">你選擇的預測項目</span>
-                <p className="text-lg font-black text-[#00FFA3]">【{selectedChoice}】</p>
-              </div>
-
-              <p className="text-xs text-gray-400 leading-relaxed text-center">
-                在管理員手動截止前，你隨時可以回來變更你的選擇。猜中者將均分累積總獎金池！
-              </p>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmModal(false)}
-                  disabled={isSubmitting}
-                  className="px-4 py-2.5 rounded-xl border border-gray-700 text-gray-300 text-xs font-bold hover:bg-gray-800 transition-colors cursor-pointer"
-                >
-                  返回重選
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmSubmit}
-                  disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#00FFA3] to-[#00d688] text-slate-950 text-xs font-black hover:brightness-110 transition-all shadow-lg shadow-[#00FFA3]/20 cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? "送出中..." : "確認送出"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── 歷屆企劃回顧區：以書籤折疊方式保存 ── */}
         <section className="w-full space-y-4">
