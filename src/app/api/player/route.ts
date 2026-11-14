@@ -135,7 +135,7 @@ export async function GET(request: Request) {
     const mappedRewardLogs = userRewardLogs.map(r => ({
       id: r.id,
       eventId: r.eventId,
-      title: eventTitleMap.get(r.eventId) || (r.eventId === 'holo_koushien_2026' ? 'ホロライブ甲子園2026 冠軍預測' : r.eventId),
+      title: eventTitleMap.get(r.eventId) || (r.eventId === 'holo_koushien_2026' ? 'ホロライブ甲子園2026 冠軍預測' : r.eventId === 'yubi_sumo_tournament' ? 'ゆび相撲大会 預測' : r.eventId),
       amount: r.amount,
       choice: r.choice,
       createdAt: r.createdAt.toISOString(),

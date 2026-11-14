@@ -121,7 +121,7 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
       }
 
       const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
-        ? 'ゆび相撲大会 冠軍預測'
+        ? 'ゆび相撲大会 預測'
         : eventId === JUMP_KING_EVENT_ID
         ? 'JUMP KING HOLORACE 優勝者到達地點預測'
         : 'ホロライブ甲子園2026 冠軍預測';
@@ -194,7 +194,7 @@ export async function toggleEventLockAction(eventId: string = YUBI_SUMO_EVENT_ID
     }
 
     const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
-      ? 'ゆび相撲大会 冠軍預測'
+      ? 'ゆび相撲大会 預測'
       : eventId === JUMP_KING_EVENT_ID
       ? 'JUMP KING HOLORACE 優勝者到達地點預測'
       : 'ホロライブ甲子園2026 冠軍預測';
@@ -248,7 +248,7 @@ export async function toggleEventArchiveAction(eventId: string = YUBI_SUMO_EVENT
     });
 
     const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
-      ? 'ゆび相撲大会 冠軍預測'
+      ? 'ゆび相撲大会 預測'
       : eventId === JUMP_KING_EVENT_ID
       ? 'JUMP KING HOLORACE 優勝者到達地點預測'
       : 'ホロライブ甲子園2026 冠軍預測';

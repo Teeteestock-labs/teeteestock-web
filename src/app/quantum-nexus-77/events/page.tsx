@@ -93,7 +93,7 @@ export default async function AdminEventsPage() {
     return <AdminLoginForm />;
   }
 
-  // 1. 取得 ゆび相撲大会 冠軍預測（當前進行中特別企劃）
+  // 1. 取得 ゆび相撲大会 預測（歷屆企劃）
   const yubiSumoData = await loadEventData(
     YUBI_SUMO_EVENT_ID,
     YUBI_SUMO_CHOICES,

@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       choice: prediction?.choice || null,
       isLocked: isSettled ? true : lockStatus.isLocked,
       message: isSettled
-        ? `🏆 本企劃已結算，優勝為【${winningChoice}】`
+        ? `🏆 本企劃已結算，最終結果為【${winningChoice}】`
         : lockStatus.message,
       isSettled,
       isArchived,

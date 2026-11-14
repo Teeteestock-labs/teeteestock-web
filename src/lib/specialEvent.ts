@@ -20,7 +20,7 @@ export async function patchSpecialEventSchemaIfNeeded() {
 }
 
 /**
- * 取得特別企劃資料，並針對甲子園 2026 與 JUMP KING 自動同步結束折疊，針對 ゆび相撲大会 初始化開放中狀態
+ * 取得特別企劃資料，並針對甲子園 2026、JUMP KING 與 ゆび相撲大会 自動同步結束折疊與新名稱
  */
 export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID) {
   await patchSpecialEventSchemaIfNeeded();
@@ -39,7 +39,7 @@ export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID
 
   let defaultTitle = '特別企劃';
   if (isYubiSumo) {
-    defaultTitle = 'ゆび相撲大会 冠軍預測';
+    defaultTitle = 'ゆび相撲大会 預測';
   } else if (isJumpKing) {
     defaultTitle = 'JUMP KING HOLORACE 優勝者到達地點預測';
   } else {
@@ -47,9 +47,9 @@ export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID
   }
 
   const defaultPrize = (isYubiSumo || isJumpKing) ? 5000.0 : 500.0;
-  // ゆび相撲大会為進行中企劃（開放預測），歷屆企劃則預設已結束折疊與鎖定
-  const defaultLocked = isYubiSumo ? false : true;
-  const defaultArchived = isYubiSumo ? false : true;
+  // ゆび相撲大会與歷屆企劃皆已結束歸檔並鎖定
+  const defaultLocked = true;
+  const defaultArchived = true;
 
   // 1. 若資料庫尚無此企劃紀錄，自動初始化
   if (!specialEvent) {
@@ -78,15 +78,23 @@ export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID
         isArchived: defaultArchived,
       };
     }
-  } else if (!specialEvent.isArchived && (specialEvent.id === HOLO_KOUSHIEN_EVENT_ID || specialEvent.id === JUMP_KING_EVENT_ID)) {
-    // 2. 若線上既有資料庫歷史活動尚未標記為結束，自動同步為已結束(折疊)與鎖定
+  } else if (
+    (!specialEvent.isArchived &&
+      (specialEvent.id === HOLO_KOUSHIEN_EVENT_ID ||
+        specialEvent.id === JUMP_KING_EVENT_ID ||
+        specialEvent.id === YUBI_SUMO_EVENT_ID)) ||
+    (isYubiSumo && specialEvent.title !== defaultTitle)
+  ) {
+    // 2. 若線上既有資料庫活動尚未標記為結束，或 ゆび相撲大会 名稱尚未更新，自動同步為已結束(折疊)、鎖定與新名稱
     try {
       specialEvent = await prisma.specialEvent.update({
         where: { id: eventId },
         data: {
           isArchived: true,
           isLocked: true,
-          ...(specialEvent.title !== defaultTitle && !specialEvent.isSettled ? { title: defaultTitle } : {})
+          ...(isYubiSumo || (specialEvent.title !== defaultTitle && !specialEvent.isSettled)
+            ? { title: defaultTitle }
+            : {}),
         },
       });
     } catch {
@@ -97,7 +105,7 @@ export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID
         title: defaultTitle,
       };
     }
-  } else if ((isYubiSumo || isJumpKing) && specialEvent && specialEvent.title !== defaultTitle && !specialEvent.isSettled) {
+  } else if (isJumpKing && specialEvent && specialEvent.title !== defaultTitle && !specialEvent.isSettled) {
     // 3. 若標題需要更新且尚未結算，自動同步新標題
     try {
       specialEvent = await prisma.specialEvent.update({
