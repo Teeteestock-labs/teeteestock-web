@@ -48,23 +48,19 @@ const PODIUM_SLOTS = [
     idx: 0 as const,
     rank: "1st",
     medal: "🥇",
-    label: "第一名（金牌）",
     boxClass:
       "border-amber-400/80 bg-gradient-to-b from-amber-500/20 via-amber-950/35 to-[#120d04] shadow-[0_0_24px_rgba(251,191,36,0.16)]",
     activeClass: "ring-2 ring-amber-300 shadow-[0_0_28px_rgba(251,191,36,0.35)]",
-    badgeClass: "bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950",
-    textClass: "text-amber-200",
+    textClass: "text-amber-300",
     emptyBorder: "border-amber-400/45",
   },
   {
     idx: 1 as const,
     rank: "2nd",
     medal: "🥈",
-    label: "第二名（銀牌）",
     boxClass:
       "border-slate-300/75 bg-gradient-to-b from-slate-300/18 via-slate-800/35 to-[#0b0e14] shadow-[0_0_20px_rgba(203,213,225,0.12)]",
     activeClass: "ring-2 ring-slate-200 shadow-[0_0_26px_rgba(226,232,240,0.3)]",
-    badgeClass: "bg-gradient-to-r from-slate-200 to-gray-300 text-slate-950",
     textClass: "text-slate-200",
     emptyBorder: "border-slate-400/45",
   },
@@ -72,12 +68,10 @@ const PODIUM_SLOTS = [
     idx: 2 as const,
     rank: "3rd",
     medal: "🥉",
-    label: "第三名（銅牌）",
     boxClass:
       "border-orange-500/75 bg-gradient-to-b from-orange-600/20 via-orange-950/35 to-[#130a05] shadow-[0_0_20px_rgba(234,88,12,0.14)]",
     activeClass: "ring-2 ring-orange-400 shadow-[0_0_26px_rgba(249,115,22,0.32)]",
-    badgeClass: "bg-gradient-to-r from-orange-400 to-amber-600 text-slate-950",
-    textClass: "text-orange-200",
+    textClass: "text-orange-300",
     emptyBorder: "border-orange-500/45",
   },
 ] as const;
@@ -688,13 +682,13 @@ export default function EventsPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black ${slotMeta.badgeClass}`}
+                        className={`inline-flex items-center gap-1 text-xs font-black ${slotMeta.textClass}`}
                       >
                         <span>{slotMeta.medal}</span>
                         <span>{slotMeta.rank}</span>
                       </span>
 
-                      {contestant && !isDisabled ? (
+                      {contestant && !isDisabled && (
                         <button
                           type="button"
                           aria-label={`移除 ${slotMeta.rank}`}
@@ -706,10 +700,6 @@ export default function EventsPage() {
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
-                      ) : (
-                        <span className={`text-[10px] font-bold ${slotMeta.textClass} opacity-75`}>
-                          {slotMeta.label}
-                        </span>
                       )}
                     </div>
 
@@ -807,12 +797,12 @@ export default function EventsPage() {
 
                     <div className="shrink-0 flex flex-col items-end gap-1">
                       {isActualWinner ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400 text-slate-950">
+                        <span className={`text-[10px] font-black ${PODIUM_SLOTS[winningRankIdx].textClass}`}>
                           {PODIUM_SLOTS[winningRankIdx].medal} {PODIUM_SLOTS[winningRankIdx].rank}
                         </span>
                       ) : assignedMeta ? (
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-black ${assignedMeta.badgeClass}`}
+                          className={`text-[10px] font-black ${assignedMeta.textClass}`}
                         >
                           {assignedMeta.rank}
                         </span>
