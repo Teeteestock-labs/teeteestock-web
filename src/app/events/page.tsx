@@ -852,7 +852,7 @@ export default function EventsPage() {
                   className="w-full py-3.5 px-4 rounded-xl font-black text-xs sm:text-sm tracking-wide shadow-none bg-[#161a22] border border-gray-700/60 text-gray-400 cursor-not-allowed select-none flex items-center justify-center gap-2"
                 >
                   <Lock className="w-4 h-4 text-gray-400" />
-                  <span>🔒 本企劃預測已截止（截止時間 11/23 台灣時間 18:00）</span>
+                  <span>🔒 本企劃預測已截止（截止時間 11/23 18:00 UTC+8）</span>
                 </button>
 
                 {confirmedChoice ? (
@@ -880,15 +880,15 @@ export default function EventsPage() {
                   {isSubmitting ? (
                     <span>鎖定中...</span>
                   ) : !isAllSlotsFilled ? (
-                    <span>請選滿前三位（{filledCount}/3）· 截止時間 11/23 台灣時間 18:00</span>
+                    <span>請選滿前三位（{filledCount}/3）· 截止時間 11/23 18:00 UTC+8</span>
                   ) : confirmedChoice ? (
                     currentFormattedChoice === confirmedChoice ? (
-                      <span>預測已鎖定（可更換 · 截止時間 11/23 台灣時間 18:00）</span>
+                      <span>預測已鎖定（可更換 · 截止時間 11/23 18:00 UTC+8）</span>
                     ) : (
-                      <span>更新鎖定選擇（截止時間 11/23 台灣時間 18:00）</span>
+                      <span>更新鎖定選擇（截止時間 11/23 18:00 UTC+8）</span>
                     )
                   ) : (
-                    <span>確認鎖定預測（截止時間 11/23 台灣時間 18:00）</span>
+                    <span>確認鎖定預測（截止時間 11/23 18:00 UTC+8）</span>
                   )}
                 </button>
 
