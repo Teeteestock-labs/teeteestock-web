@@ -49,30 +49,36 @@ const PODIUM_SLOTS = [
     rank: "1st",
     medal: "🥇",
     boxClass:
-      "border-amber-400/80 bg-gradient-to-b from-amber-500/20 via-amber-950/35 to-[#120d04] shadow-[0_0_24px_rgba(251,191,36,0.16)]",
+      "border-amber-400/85 bg-gradient-to-b from-amber-500/20 via-amber-950/35 to-[#120d04] shadow-[0_0_24px_rgba(251,191,36,0.18)]",
     activeClass: "ring-2 ring-amber-300 shadow-[0_0_28px_rgba(251,191,36,0.35)]",
     textClass: "text-amber-300",
-    emptyBorder: "border-amber-400/45",
+    watermarkClass: "text-amber-400/20",
+    strokeColor: "2.5px rgba(251, 191, 36, 0.85)",
+    cardBorderClass: "border-amber-400/60",
   },
   {
     idx: 1 as const,
     rank: "2nd",
     medal: "🥈",
     boxClass:
-      "border-slate-300/75 bg-gradient-to-b from-slate-300/18 via-slate-800/35 to-[#0b0e14] shadow-[0_0_20px_rgba(203,213,225,0.12)]",
+      "border-slate-300/80 bg-gradient-to-b from-slate-300/18 via-slate-800/35 to-[#0b0e14] shadow-[0_0_20px_rgba(203,213,225,0.14)]",
     activeClass: "ring-2 ring-slate-200 shadow-[0_0_26px_rgba(226,232,240,0.3)]",
     textClass: "text-slate-200",
-    emptyBorder: "border-slate-400/45",
+    watermarkClass: "text-slate-200/20",
+    strokeColor: "2.5px rgba(226, 232, 240, 0.8)",
+    cardBorderClass: "border-slate-300/55",
   },
   {
     idx: 2 as const,
     rank: "3rd",
     medal: "🥉",
     boxClass:
-      "border-orange-500/75 bg-gradient-to-b from-orange-600/20 via-orange-950/35 to-[#130a05] shadow-[0_0_20px_rgba(234,88,12,0.14)]",
+      "border-orange-500/80 bg-gradient-to-b from-orange-600/20 via-orange-950/35 to-[#130a05] shadow-[0_0_20px_rgba(234,88,12,0.16)]",
     activeClass: "ring-2 ring-orange-400 shadow-[0_0_26px_rgba(249,115,22,0.32)]",
     textClass: "text-orange-300",
-    emptyBorder: "border-orange-500/45",
+    watermarkClass: "text-orange-400/20",
+    strokeColor: "2.5px rgba(249, 115, 22, 0.85)",
+    cardBorderClass: "border-orange-400/60",
   },
 ] as const;
 
@@ -674,66 +680,59 @@ export default function EventsPage() {
                       if (dragOverSlot === slotMeta.idx) setDragOverSlot(null);
                     }}
                     onDrop={(e) => handleSlotDrop(e, slotMeta.idx)}
-                    className={`relative rounded-2xl border p-3.5 min-h-[104px] flex flex-col justify-between transition-all duration-200 ${
+                    className={`relative overflow-hidden rounded-2xl border p-2.5 h-[104px] flex items-center justify-center transition-all duration-200 ${
                       slotMeta.boxClass
                     } ${isTargetActive || isDragTarget ? slotMeta.activeClass : ""} ${
                       !isDisabled ? "cursor-pointer" : "cursor-default opacity-90"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    {/* 背景粗框名次字樣（佔滿背景，選手卡放上後會直接蓋過） */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none select-none"
+                    >
                       <span
-                        className={`inline-flex items-center gap-1 text-xs font-black ${slotMeta.textClass}`}
+                        className={`text-6xl sm:text-7xl font-black italic tracking-tighter leading-none ${slotMeta.watermarkClass}`}
+                        style={{ WebkitTextStroke: slotMeta.strokeColor }}
                       >
-                        <span>{slotMeta.medal}</span>
-                        <span>{slotMeta.rank}</span>
+                        {slotMeta.rank}
                       </span>
-
-                      {contestant && !isDisabled && (
-                        <button
-                          type="button"
-                          aria-label={`移除 ${slotMeta.rank}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            clearSlot(slotMeta.idx);
-                          }}
-                          className="w-6 h-6 rounded-full bg-black/40 hover:bg-black/70 border border-white/15 flex items-center justify-center text-gray-300 hover:text-white transition-colors cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
                     </div>
 
-                    {contestant ? (
+                    {contestant && (
                       <div
                         draggable={!isDisabled}
                         onDragStart={(e) => handleCardDragStart(e, contestant.jp, slotMeta.idx)}
-                        className={`mt-2.5 p-2.5 rounded-xl bg-black/45 border border-white/15 flex items-center justify-between gap-2 ${
-                          !isDisabled ? "cursor-grab active:cursor-grabbing hover:border-white/30" : ""
+                        className={`relative z-10 w-full h-full px-3 py-2.5 rounded-xl bg-[#121722] border ${
+                          slotMeta.cardBorderClass
+                        } shadow-lg flex items-center justify-between gap-2 ${
+                          !isDisabled ? "cursor-grab active:cursor-grabbing hover:bg-[#171e2c]" : ""
                         }`}
                       >
                         <div className="min-w-0 flex-1 text-left">
                           <div className="text-sm font-black text-white truncate">
                             {contestant.jp}
                           </div>
-                          <div className="text-[10px] text-gray-300/80 truncate">
+                          <div className="text-[10px] text-gray-300/85 truncate mt-0.5">
                             {contestant.en}
                           </div>
                         </div>
                         {!isDisabled && (
-                          <GripVertical className="w-4 h-4 text-gray-400/70 shrink-0" />
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <GripVertical className="w-4 h-4 text-gray-400/70" />
+                            <button
+                              type="button"
+                              aria-label={`移除 ${slotMeta.rank}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                clearSlot(slotMeta.idx);
+                              }}
+                              className="w-6 h-6 rounded-full bg-black/50 hover:bg-black/80 border border-white/15 flex items-center justify-center text-gray-300 hover:text-white transition-colors cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
-                      </div>
-                    ) : (
-                      <div
-                        className={`mt-2.5 py-3 px-2 rounded-xl border border-dashed ${slotMeta.emptyBorder} bg-black/20 text-center`}
-                      >
-                        <span className="text-[11px] text-gray-400 font-bold block">
-                          {isDisabled
-                            ? "未填入選手"
-                            : isTargetActive
-                            ? "點擊下方卡片或拖曳至此"
-                            : "拖入或點選指定此位"}
-                        </span>
                       </div>
                     )}
                   </div>
