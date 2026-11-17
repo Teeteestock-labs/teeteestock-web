@@ -5,12 +5,18 @@ import {
   HOLO_KOUSHIEN_EVENT_ID,
   JUMP_KING_EVENT_ID,
   YUBI_SUMO_EVENT_ID,
+  HOLO_TRIATHLON_EVENT_ID,
   JUMP_KING_LIVE_URL,
   YUBI_SUMO_LIVE_URL,
+  HOLO_TRIATHLON_LIVE_URL,
+  TRIATHLON_CONTESTANTS,
   getValidChoicesForEvent,
   calculateDynamicEventPool,
   isEventPredictionLocked,
   normalizeEventChoice,
+  parseTriathlonTrifecta,
+  formatTriathlonTrifecta,
+  evaluateTriathlonPayout,
 } from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 
@@ -20,7 +26,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const allowTestUnlock = searchParams.get('test_unlock') === 'true';
-    const targetEventId = searchParams.get('eventId') || YUBI_SUMO_EVENT_ID;
+    const targetEventId = searchParams.get('eventId') || HOLO_TRIATHLON_EVENT_ID;
 
     // 取得使用者身分 (未登入者為 null，避免回傳 default_player 資料)
     const authUser = await getAuthenticatedUser(request);
@@ -46,17 +52,33 @@ export async function GET(request: Request) {
     const lockStatus = isEventPredictionLocked(isManualLocked, allowTestUnlock);
     const isSettled = specialEvent?.isSettled || false;
     const winningChoice = specialEvent?.winningChoice || null;
-    const isSpecialPriorityWinner = isSettled && targetEventId === YUBI_SUMO_EVENT_ID && winningChoice === 'PekoViVi決賽對決（優先選項）' && Boolean(prediction);
-    const hasWon = isSettled && prediction ? (isSpecialPriorityWinner || prediction.choice === winningChoice) : null;
+    const isTriathlon = targetEventId === HOLO_TRIATHLON_EVENT_ID;
+    const triathlonPayout =
+      isTriathlon && isSettled && prediction && winningChoice
+        ? evaluateTriathlonPayout(prediction.choice, winningChoice)
+        : null;
+    const isSpecialPriorityWinner =
+      isSettled &&
+      targetEventId === YUBI_SUMO_EVENT_ID &&
+      winningChoice === 'PekoViVi決賽對決（優先選項）' &&
+      Boolean(prediction);
+    const hasWon =
+      isSettled && prediction
+        ? isTriathlon
+          ? Boolean(triathlonPayout && triathlonPayout.amount > 0)
+          : isSpecialPriorityWinner || prediction.choice === winningChoice
+        : null;
     const isArchived = specialEvent ? Boolean(specialEvent.isArchived) : false;
 
-    // 計算總參與人數與動態獎金池
+    // 計算總參與人數與獎金池
     const totalPredictions = await prisma.eventPrediction.count({
       where: { eventId: targetEventId },
     });
 
     const isDynamicPool = targetEventId === YUBI_SUMO_EVENT_ID || targetEventId === JUMP_KING_EVENT_ID;
-    const totalPool = isDynamicPool
+    const totalPool = isTriathlon
+      ? 15000
+      : isDynamicPool
       ? calculateDynamicEventPool(totalPredictions)
       : specialEvent?.totalPayout || specialEvent?.prize || 500.0;
 
@@ -72,14 +94,20 @@ export async function GET(request: Request) {
       isArchived,
       winningChoice,
       hasWon,
-      prize: specialEvent?.prize || 5000.0,
+      payoutTier: triathlonPayout?.tier || null,
+      payoutAmount: triathlonPayout?.amount ?? null,
+      payoutLabel: triathlonPayout?.label || null,
+      prize: specialEvent?.prize || (isTriathlon ? 15000.0 : 5000.0),
       totalPool,
       totalPredictions,
       choices: getValidChoicesForEvent(targetEventId),
+      ...(isTriathlon ? { contestants: TRIATHLON_CONTESTANTS } : {}),
       liveStreamUrl: targetEventId === JUMP_KING_EVENT_ID
         ? JUMP_KING_LIVE_URL
         : targetEventId === YUBI_SUMO_EVENT_ID
         ? YUBI_SUMO_LIVE_URL
+        : targetEventId === HOLO_TRIATHLON_EVENT_ID
+        ? HOLO_TRIATHLON_LIVE_URL
         : null,
       settledAt: specialEvent?.settledAt || null,
       userId: targetUserId,
@@ -100,8 +128,8 @@ export async function POST(request: Request) {
     const allowTestUnlock = searchParams.get('test_unlock') === 'true';
 
     const body = await request.json().catch(() => ({}));
-    const { choice, eventId } = body;
-    const targetEventId = eventId || YUBI_SUMO_EVENT_ID;
+    const { choice, choices: bodyChoices, eventId } = body;
+    const targetEventId = eventId || HOLO_TRIATHLON_EVENT_ID;
 
     // ── 後端安全防禦：先檢查是否已結算或後台手動截止 ──
     const specialEvent = await getOrSyncSpecialEvent(targetEventId);
@@ -122,26 +150,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // 檢查選項合法性（支援標準化與相容性）
-    const validChoices = getValidChoicesForEvent(targetEventId);
-    if (validChoices.length === 0) {
-      return NextResponse.json(
-        { error: '大會參賽名單籌備中，尚未開放預測選項，敬請期待名單公布！' },
-        { status: 400 }
-      );
-    }
-    const normalizedChoice = normalizeEventChoice(choice);
-    if (!normalizedChoice || !validChoices.includes(normalizedChoice)) {
-      return NextResponse.json(
-        { error: '請選擇有效的預測選項。' },
-        { status: 400 }
-      );
-    }
-    if (targetEventId === YUBI_SUMO_EVENT_ID && normalizedChoice === 'PekoViVi決賽對決（優先選項）') {
-      return NextResponse.json(
-        { error: '【PekoViVi決賽對決（優先選項）】為全員特殊加碼條件，無法單獨選取預測。' },
-        { status: 400 }
-      );
+    // 檢查選項合法性（支援三連單與一般單選企劃）
+    let normalizedChoice = '';
+    if (targetEventId === HOLO_TRIATHLON_EVENT_ID) {
+      const parsedTrifecta = parseTriathlonTrifecta(bodyChoices ?? choice);
+      if (!parsedTrifecta) {
+        return NextResponse.json(
+          { error: '請將 3 位不同的參賽者卡片分別放入 1st、2nd、3rd 框中。' },
+          { status: 400 }
+        );
+      }
+      normalizedChoice = formatTriathlonTrifecta(parsedTrifecta);
+    } else {
+      const validChoices = getValidChoicesForEvent(targetEventId);
+      if (validChoices.length === 0) {
+        return NextResponse.json(
+          { error: '大會參賽名單籌備中，尚未開放預測選項，敬請期待名單公布！' },
+          { status: 400 }
+        );
+      }
+      normalizedChoice = normalizeEventChoice(choice);
+      if (!normalizedChoice || !validChoices.includes(normalizedChoice)) {
+        return NextResponse.json(
+          { error: '請選擇有效的預測選項。' },
+          { status: 400 }
+        );
+      }
+      if (targetEventId === YUBI_SUMO_EVENT_ID && normalizedChoice === 'PekoViVi決賽對決（優先選項）') {
+        return NextResponse.json(
+          { error: '【PekoViVi決賽對決（優先選項）】為全員特殊加碼條件，無法單獨選取預測。' },
+          { status: 400 }
+        );
+      }
     }
 
     // 取得使用者身分：未登入者禁止提交預測，避免覆蓋 default_player

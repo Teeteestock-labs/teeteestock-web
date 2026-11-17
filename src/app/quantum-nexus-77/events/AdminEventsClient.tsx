@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { Trophy, Coins, Users, CheckCircle2, Circle, AlertTriangle, ShieldCheck, Lock, Unlock, FolderArchive, ChevronDown, ExternalLink } from "lucide-react";
 import { settleChampionAction, toggleEventLockAction, toggleEventArchiveAction } from "./actions";
+import {
+  HOLO_TRIATHLON_EVENT_ID,
+  TRIATHLON_CONTESTANTS,
+  parseTriathlonTrifecta,
+  formatTriathlonTrifecta,
+  evaluateTriathlonPayout,
+} from "@/utils/eventDeadline";
 
 export interface OptionStat {
   name: string;
@@ -27,6 +34,7 @@ export interface EventData {
   totalPayout: number;
   totalPredictions: number;
   options: OptionStat[];
+  allPredictionChoices?: string[];
   recentPredictions: {
     userId: string;
     choice: string;
@@ -40,6 +48,10 @@ interface AdminEventCardProps {
 
 export function AdminEventCard({ initialData }: AdminEventCardProps) {
   const [data, setData] = useState<EventData>(initialData);
+  const isTriathlon = data.id === HOLO_TRIATHLON_EVENT_ID;
+  const [triathlonPicks, setTriathlonPicks] = useState<[string, string, string]>(
+    () => parseTriathlonTrifecta(data.winningChoice) || ['', '', '']
+  );
   const [selectedChampion, setSelectedChampion] = useState<string | null>(data.winningChoice);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -48,6 +60,34 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
   const isSettled = data.isSettled;
   const isEnded = data.isSettled || data.isArchived;
   const [isExpanded, setIsExpanded] = useState<boolean>(!isEnded);
+
+  const updateTriathlonSlot = (slotIdx: 0 | 1 | 2, value: string) => {
+    if (isSettled) return;
+    const next: [string, string, string] = [...triathlonPicks] as [string, string, string];
+    if (value) {
+      for (let i = 0; i < 3; i++) {
+        if (i !== slotIdx && next[i] === value) {
+          next[i] = '';
+        }
+      }
+    }
+    next[slotIdx] = value;
+    setTriathlonPicks(next);
+    setSelectedChampion(next[0] && next[1] && next[2] ? formatTriathlonTrifecta(next) : null);
+  };
+
+  const handleTriathlonCardClick = (jpName: string) => {
+    if (isSettled) return;
+    const existingIdx = triathlonPicks.indexOf(jpName);
+    if (existingIdx !== -1) {
+      updateTriathlonSlot(existingIdx as 0 | 1 | 2, '');
+      return;
+    }
+    const emptyIdx = triathlonPicks.findIndex((p) => !p);
+    if (emptyIdx !== -1) {
+      updateTriathlonSlot(emptyIdx as 0 | 1 | 2, jpName);
+    }
+  };
 
   // 切換手動截止鎖定
   const handleToggleLock = async (targetLock: boolean) => {
@@ -147,13 +187,15 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
         settledAt: result.settledAt ? new Date(result.settledAt).toISOString() : new Date().toISOString(),
         winnerCount: result.winnerCount,
         totalPayout: result.totalPayout,
-        prize: payoutPerWinner,
+        prize: isTriathlon ? 15000 : payoutPerWinner,
       }));
 
       setShowConfirmModal(false);
       setNotification({
         type: 'success',
-        message: `🏆 結算成功！本屆優勝【${result.winningChoice}】已公佈，已為 ${result.winnerCount} 位猜中者每人發放 ${payoutPerWinner.toLocaleString()} $TEE（總發放額 ${result.totalPayout.toLocaleString()} $TEE）！`,
+        message: isTriathlon
+          ? `🏆 結算成功！最終結果【${result.winningChoice}】已公佈，共 ${result.winnerCount} 位玩家中獎（總發放額 ${result.totalPayout.toLocaleString()} $TEE）！`
+          : `🏆 結算成功！本屆優勝【${result.winningChoice}】已公佈，已為 ${result.winnerCount} 位猜中者每人發放 ${payoutPerWinner.toLocaleString()} $TEE（總發放額 ${result.totalPayout.toLocaleString()} $TEE）！`,
       });
     } catch (err: any) {
       setNotification({ type: 'error', message: err.message || '網路異常，結算失敗。' });
@@ -165,7 +207,34 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
 
   const isSpecialPriority = data.id === 'yubi_sumo_tournament' && selectedChampion === 'PekoViVi決賽對決（優先選項）';
   const selectedStat = data.options.find((o) => o.name === selectedChampion);
-  const estimatedWinners = isSpecialPriority
+  const triathlonBreakdown = (() => {
+    if (!isTriathlon || !selectedChampion) {
+      return { exactCount: 0, anyOrderCount: 0, firstOnlyCount: 0, winnerCount: 0, totalPayout: 0 };
+    }
+    const list = data.allPredictionChoices || data.recentPredictions.map((p) => p.choice);
+    let exactCount = 0;
+    let anyOrderCount = 0;
+    let firstOnlyCount = 0;
+    let totalPayout = 0;
+    for (const c of list) {
+      const res = evaluateTriathlonPayout(c, selectedChampion);
+      if (res.tier === 'EXACT_ALL') exactCount += 1;
+      else if (res.tier === 'ANY_ORDER_ALL') anyOrderCount += 1;
+      else if (res.tier === 'FIRST_ONLY') firstOnlyCount += 1;
+      totalPayout += res.amount;
+    }
+    return {
+      exactCount,
+      anyOrderCount,
+      firstOnlyCount,
+      winnerCount: exactCount + anyOrderCount + firstOnlyCount,
+      totalPayout,
+    };
+  })();
+
+  const estimatedWinners = isTriathlon
+    ? triathlonBreakdown.winnerCount
+    : isSpecialPriority
     ? data.totalPredictions
     : (selectedStat ? selectedStat.count : 0);
   const isDynamic = Boolean(data.isDynamicPool);
@@ -175,7 +244,9 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
     : isDynamic
     ? (estimatedWinners > 0 ? Math.floor((currentTotalPool / estimatedWinners) / 10) * 10 : 0)
     : data.prize;
-  const estimatedPayout = estimatedWinners * estimatedPrizePerWinner;
+  const estimatedPayout = isTriathlon
+    ? triathlonBreakdown.totalPayout
+    : estimatedWinners * estimatedPrizePerWinner;
 
   return (
     <div className="space-y-6 font-mono">
@@ -258,7 +329,9 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
               <div className="flex items-center gap-2.5 text-xs text-gray-400 font-mono flex-wrap">
                 <span className="text-gray-500">ID: {data.id}</span>
                 <span className="text-gray-700">•</span>
-                {isDynamic ? (
+                {isTriathlon ? (
+                  <span className="text-amber-200">最高獎勵 15,000 $TEE（階級固定發放）</span>
+                ) : isDynamic ? (
                   <span className="text-amber-200">總獎金池 {currentTotalPool.toLocaleString()} $TEE</span>
                 ) : (
                   <span className="text-amber-200">單人獎金 {data.prize.toLocaleString()} $TEE</span>
@@ -268,7 +341,7 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                 {isSettled && data.winningChoice && (
                   <>
                     <span className="text-gray-700">•</span>
-                    <span className="text-yellow-400 font-bold">優勝：【{data.winningChoice}】</span>
+                    <span className="text-yellow-400 font-bold">結果：【{data.winningChoice}】</span>
                     <span className="text-gray-700">•</span>
                     <span className="text-emerald-400">總發放 {data.totalPayout.toLocaleString()} $TEE ({data.winnerCount}人)</span>
                   </>
@@ -416,17 +489,25 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
               {/* 卡片 2: 獎金池資訊 */}
               <div className="bg-gray-900/50 border border-gray-800 p-5 rounded-2xl flex flex-col justify-between">
                 <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">
-                  {isDynamic ? "當前總獎金池" : "單人獲獎獎金"}
+                  {isTriathlon ? "階級固定獎金" : isDynamic ? "當前總獎金池" : "單人獲獎獎金"}
                 </span>
                 <div className="flex items-center gap-2 mt-2">
                   <Coins className="w-5 h-5 text-amber-400" />
                   <span className="text-2xl font-black text-[#FFD700]">
-                    {isDynamic ? currentTotalPool.toLocaleString() : data.prize.toLocaleString()}
+                    {isTriathlon
+                      ? "15,000"
+                      : isDynamic
+                      ? currentTotalPool.toLocaleString()
+                      : data.prize.toLocaleString()}
                   </span>
                   <span className="text-xs text-gray-400 font-bold">$TEE</span>
                 </div>
                 <span className="text-[11px] text-gray-500 mt-2">
-                  {isDynamic ? "基礎5000，每超10人+5000（均分取至十位數）" : "由所有猜中者全額領取"}
+                  {isTriathlon
+                    ? "順序全中15,000 / 全中錯序7,500 / 第一名2,500"
+                    : isDynamic
+                    ? "基礎5000，每超10人+5000（均分取至十位數）"
+                    : "由所有猜中者全額領取"}
                 </span>
               </div>
 
@@ -458,17 +539,21 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                     </div>
                   ) : selectedChampion ? (
                     <div className="flex flex-col">
-                      <span className="text-base font-black text-[#00FFA3] truncate">
+                      <span className="text-sm font-black text-[#00FFA3] truncate">
                         {selectedChampion}
                       </span>
                       <span className="text-xs text-gray-400 mt-1">
-                        {isDynamic
+                        {isTriathlon
+                          ? `預估 ${estimatedPayout.toLocaleString()} $TEE (共 ${estimatedWinners} 人中獎)`
+                          : isDynamic
                           ? `每人約 ${estimatedPrizePerWinner.toLocaleString()} $TEE (共 ${estimatedWinners} 人 · 總 ${estimatedPayout.toLocaleString()} $TEE)`
                           : `預估 ${estimatedPayout.toLocaleString()} $TEE (${estimatedWinners} 人)`}
                       </span>
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-500">請選取下方選項試算</span>
+                    <span className="text-xs text-gray-500">
+                      {isTriathlon ? "請指定 1st / 2nd / 3rd 試算" : "請選取下方選項試算"}
+                    </span>
                   )}
                 </div>
                 <span className="text-[11px] text-gray-500 mt-2">
@@ -511,11 +596,63 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                 )}
               </div>
 
+              {/* 三連單前三名結果指定面板（僅 ホロドリトライアスロン 三連單 顯示） */}
+              {isTriathlon && (
+                <div className="p-4 rounded-xl bg-gray-950/60 border border-amber-500/30 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-black text-amber-300">
+                      指定最終前三名結果（可於下拉選單選擇，或直接依序點選下方選手卡片）
+                    </span>
+                    {!isSettled && triathlonPicks.some(Boolean) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTriathlonPicks(['', '', '']);
+                          setSelectedChampion(null);
+                        }}
+                        className="text-[11px] text-gray-400 hover:text-white underline cursor-pointer"
+                      >
+                        清空重選
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {([
+                      { idx: 0 as const, label: '🥇 1st（金牌）', border: 'border-amber-400/70 text-amber-300' },
+                      { idx: 1 as const, label: '🥈 2nd（銀牌）', border: 'border-slate-300/60 text-slate-200' },
+                      { idx: 2 as const, label: '🥉 3rd（銅牌）', border: 'border-orange-500/70 text-orange-300' },
+                    ]).map((slot) => (
+                      <div key={slot.idx} className={`p-3 rounded-xl bg-gray-900/80 border ${slot.border} space-y-1.5`}>
+                        <label className="text-[11px] font-black block">{slot.label}</label>
+                        <select
+                          disabled={isSettled}
+                          value={triathlonPicks[slot.idx]}
+                          onChange={(e) => updateTriathlonSlot(slot.idx, e.target.value)}
+                          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-400 disabled:opacity-60"
+                        >
+                          <option value="">-- 請選擇第 {slot.idx + 1} 名 --</option>
+                          {TRIATHLON_CONTESTANTS.map((c) => (
+                            <option key={c.id} value={c.jp}>
+                              {c.jp} ({c.en})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* 選項卡片 Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {data.options.map((option, idx) => {
-                  const isWinner = isSettled && data.winningChoice === option.name;
-                  const isSelected = selectedChampion === option.name;
+                  const triathlonRankIdx = isTriathlon ? triathlonPicks.indexOf(option.name) : -1;
+                  const isWinner = isTriathlon
+                    ? isSettled && (parseTriathlonTrifecta(data.winningChoice)?.includes(option.name) ?? false)
+                    : isSettled && data.winningChoice === option.name;
+                  const isSelected = isTriathlon
+                    ? triathlonRankIdx !== -1
+                    : selectedChampion === option.name;
                   const isSpecialOption = data.id === 'yubi_sumo_tournament' && option.name === 'PekoViVi決賽對決（優先選項）';
                   const optPrizePerUser = isSpecialOption
                     ? 1000
@@ -528,7 +665,11 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                       key={option.name}
                       onClick={() => {
                         if (!isSettled) {
-                          setSelectedChampion(option.name);
+                          if (isTriathlon) {
+                            handleTriathlonCardClick(option.name);
+                          } else {
+                            setSelectedChampion(option.name);
+                          }
                         }
                       }}
                       className={`p-4 rounded-xl border transition-all select-none ${
@@ -549,12 +690,17 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                           <span className="font-black text-sm sm:text-base text-white">
                             {option.name}
                           </span>
+                          {isTriathlon && triathlonRankIdx !== -1 && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                              {triathlonRankIdx === 0 ? '🥇 1st' : triathlonRankIdx === 1 ? '🥈 2nd' : '🥉 3rd'}
+                            </span>
+                          )}
                           {isSpecialOption && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
                               ★ 優先選項（全員1,000 $TEE）
                             </span>
                           )}
-                          {isWinner && (
+                          {isWinner && !isTriathlon && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-slate-950 flex items-center gap-1">
                               🏆 優勝結果
                             </span>
@@ -575,7 +721,9 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                       {/* 票數與佔比 */}
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-xs font-mono">
-                          <span className="text-gray-400">{option.count} 票</span>
+                          <span className="text-gray-400">
+                            {isTriathlon ? `入選前三 ${option.count} 次` : `${option.count} 票`}
+                          </span>
                           <span className="text-gray-300 font-bold">{option.percentage}%</span>
                         </div>
                         {/* 進度條 */}
@@ -594,16 +742,18 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                       </div>
 
                       {/* 發放獎金試算 */}
-                      <div className="mt-3 pt-3 border-t border-gray-800/60 flex items-center justify-between text-[11px] text-gray-400 font-mono">
-                        <span>{isSpecialOption ? "若開出全員每人獲得：" : isDynamic ? "若中每人均分：" : "若獲勝總發放："}</span>
-                        <span className="text-amber-300 font-bold">
-                          {isSpecialOption
-                            ? "1,000 $TEE"
-                            : isDynamic
-                            ? `${optPrizePerUser.toLocaleString()} $TEE`
-                            : `${(option.count * data.prize).toLocaleString()} $TEE`}
-                        </span>
-                      </div>
+                      {!isTriathlon && (
+                        <div className="mt-3 pt-3 border-t border-gray-800/60 flex items-center justify-between text-[11px] text-gray-400 font-mono">
+                          <span>{isSpecialOption ? "若開出全員每人獲得：" : isDynamic ? "若中每人均分：" : "若獲勝總發放："}</span>
+                          <span className="text-amber-300 font-bold">
+                            {isSpecialOption
+                              ? "1,000 $TEE"
+                              : isDynamic
+                              ? `${optPrizePerUser.toLocaleString()} $TEE`
+                              : `${(option.count * data.prize).toLocaleString()} $TEE`}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -619,7 +769,9 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                         本企劃已於 {data.settledAt ? new Date(data.settledAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : ''} 圓滿結算！
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        本屆結果為【{data.winningChoice}】，共 {data.winnerCount} 名預測正確者每人獲得 {data.prize.toLocaleString()} $TEE（總額 {data.totalPayout.toLocaleString()} $TEE）。
+                        {isTriathlon
+                          ? `本屆結果為【${data.winningChoice}】，共 ${data.winnerCount} 名玩家中獎，總發放額 ${data.totalPayout.toLocaleString()} $TEE。`
+                          : `本屆結果為【${data.winningChoice}】，共 ${data.winnerCount} 名預測正確者每人獲得 ${data.prize.toLocaleString()} $TEE（總額 ${data.totalPayout.toLocaleString()} $TEE）。`}
                       </p>
                     </div>
                   </div>
@@ -655,7 +807,13 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                     </thead>
                     <tbody className="divide-y divide-gray-800/60">
                       {data.recentPredictions.map((pred, i) => {
-                        const isWinner = isSettled && pred.choice === data.winningChoice;
+                        const triathlonRes =
+                          isTriathlon && isSettled && data.winningChoice
+                            ? evaluateTriathlonPayout(pred.choice, data.winningChoice)
+                            : null;
+                        const isWinner = isTriathlon
+                          ? Boolean(triathlonRes && triathlonRes.amount > 0)
+                          : isSettled && pred.choice === data.winningChoice;
 
                         return (
                           <tr key={i} className="hover:bg-gray-800/30">
@@ -669,7 +827,9 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
                               {isSettled ? (
                                 isWinner ? (
                                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                                    猜中（獲 {data.prize.toLocaleString()} $TEE）
+                                    {isTriathlon && triathlonRes
+                                      ? `${triathlonRes.label}（獲 ${triathlonRes.amount.toLocaleString()} $TEE）`
+                                      : `猜中（獲 ${data.prize.toLocaleString()} $TEE）`}
                                   </span>
                                 ) : (
                                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-800 text-gray-500">
@@ -716,24 +876,47 @@ export function AdminEventCard({ initialData }: AdminEventCardProps) {
             </div>
 
             <div className="space-y-3 bg-gray-950/70 p-4 rounded-xl border border-gray-800 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
-                <span className="text-gray-400">優勝結果選項：</span>
-                <span className="text-sm font-black text-amber-400">【{selectedChampion}】</span>
+              <div className="flex justify-between items-center py-1 border-b border-gray-800/80 gap-2">
+                <span className="text-gray-400 shrink-0">{isTriathlon ? "前三名結果：" : "優勝結果選項："}</span>
+                <span className="text-sm font-black text-amber-400 text-right">【{selectedChampion}】</span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
-                <span className="text-gray-400">{isSpecialPriority ? "獲獎人數（全員）：" : "猜中獲獎人數："}</span>
-                <span className="text-sm font-black text-white">{estimatedWinners} 人 {isSpecialPriority && "（全體參加者）"}</span>
-              </div>
-              {isDynamic && (
-                <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
-                  <span className="text-gray-400">當前累積總獎金池：</span>
-                  <span className="font-bold text-[#FFD700]">{currentTotalPool.toLocaleString()} $TEE</span>
-                </div>
+              {isTriathlon ? (
+                <>
+                  <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
+                    <span className="text-gray-400">三名順序全中 (15,000 $TEE)：</span>
+                    <span className="font-bold text-amber-300">{triathlonBreakdown.exactCount} 人</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
+                    <span className="text-gray-400">三名全中順序錯 (7,500 $TEE)：</span>
+                    <span className="font-bold text-slate-200">{triathlonBreakdown.anyOrderCount} 人</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
+                    <span className="text-gray-400">猜中第一名 (2,500 $TEE)：</span>
+                    <span className="font-bold text-orange-300">{triathlonBreakdown.firstOnlyCount} 人</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
+                    <span className="text-gray-400">總中獎人數：</span>
+                    <span className="text-sm font-black text-white">{estimatedWinners} 人</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
+                    <span className="text-gray-400">{isSpecialPriority ? "獲獎人數（全員）：" : "猜中獲獎人數："}</span>
+                    <span className="text-sm font-black text-white">{estimatedWinners} 人 {isSpecialPriority && "（全體參加者）"}</span>
+                  </div>
+                  {isDynamic && (
+                    <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
+                      <span className="text-gray-400">當前累積總獎金池：</span>
+                      <span className="font-bold text-[#FFD700]">{currentTotalPool.toLocaleString()} $TEE</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
+                    <span className="text-gray-400">每人實得獎金：</span>
+                    <span className="font-bold text-[#FFD700]">{estimatedPrizePerWinner.toLocaleString()} $TEE</span>
+                  </div>
+                </>
               )}
-              <div className="flex justify-between items-center py-1 border-b border-gray-800/80">
-                <span className="text-gray-400">每人實得獎金：</span>
-                <span className="font-bold text-[#FFD700]">{estimatedPrizePerWinner.toLocaleString()} $TEE</span>
-              </div>
               <div className="flex justify-between items-center py-1">
                 <span className="text-gray-400">總發放獎金額度：</span>
                 <span className="text-base font-black text-[#00FFA3]">

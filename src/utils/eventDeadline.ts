@@ -1,9 +1,41 @@
 export const HOLO_KOUSHIEN_EVENT_ID = 'holo_koushien_2026';
 export const JUMP_KING_EVENT_ID = 'jump_king_holorace';
 export const YUBI_SUMO_EVENT_ID = 'yubi_sumo_tournament';
+export const HOLO_TRIATHLON_EVENT_ID = 'holo_triathlon_2026';
+
+export const HOLO_TRIATHLON_TITLE = 'ホロドリトライアスロン 三連單';
 
 export const JUMP_KING_LIVE_URL = 'https://www.youtube.com/watch?v=b6mcVgI0JjY';
 export const YUBI_SUMO_LIVE_URL: string | null = null; // 官方直播連結公布後更新
+export const HOLO_TRIATHLON_LIVE_URL: string | null = null;
+
+export interface TriathlonContestant {
+  id: string;
+  jp: string;
+  en: string;
+}
+
+export const TRIATHLON_CONTESTANTS: readonly TriathlonContestant[] = [
+  { id: 'roboco', jp: 'ロボ子さん', en: 'Roboco-san' },
+  { id: 'fubuki', jp: '白上フブキ', en: 'Shirakami Fubuki' },
+  { id: 'noel', jp: '白銀ノエル', en: 'Shirogane Noel' },
+  { id: 'laplus', jp: 'ラプラス・ダークネス', en: 'La+ Darknesss' },
+  { id: 'ollie', jp: 'クレイジー・オリー', en: 'Kureiji Ollie' },
+  { id: 'anya', jp: 'アーニャ・メルフィッサ', en: 'Anya Melfissa' },
+  { id: 'kaela', jp: 'カエラ・コヴァルスキア', en: 'Kaela Kovalskia' },
+  { id: 'kobo', jp: 'こぼ・かなえる', en: 'Kobo Kanaeru' },
+  { id: 'calliope', jp: '森カリオペ', en: 'Mori Calliope' },
+  { id: 'baelz', jp: 'ハコス・ベールズ', en: 'Hakos Baelz' },
+  { id: 'fuwawa', jp: 'フワワ・アビスガード', en: 'Fuwawa Abyssgard' },
+  { id: 'chihaya', jp: '輪堂千速', en: 'Rindo Chihaya' },
+  { id: 'tsuzuri', jp: '鈴鳴つづり', en: 'Suzuna Tsuzuri' },
+] as const;
+
+export const TRIATHLON_PRIZE_TIERS = {
+  EXACT_ALL: 15000,
+  ANY_ORDER_ALL: 7500,
+  FIRST_ONLY: 2500,
+} as const;
 
 export const VALID_SCHOOL_CHOICES = [
   'WAOOON高校',
@@ -56,10 +88,124 @@ export function normalizeEventChoice(choice: string | null | undefined): string 
   return trimmed;
 }
 
+export const TRIATHLON_CONTESTANT_NAMES: readonly string[] = TRIATHLON_CONTESTANTS.map((c) => c.jp);
+
+function resolveTriathlonContestantName(raw: string): string | null {
+  const trimmed = raw.trim();
+  const match = TRIATHLON_CONTESTANTS.find(
+    (c) => c.jp === trimmed || c.en.toLowerCase() === trimmed.toLowerCase() || c.id === trimmed.toLowerCase()
+  );
+  return match ? match.jp : null;
+}
+
+/**
+ * 解析三連單選擇（必須為 3 位不重複的合法參賽者，順序為 [1st, 2nd, 3rd]）
+ */
+export function parseTriathlonTrifecta(
+  input: string | readonly string[] | null | undefined
+): [string, string, string] | null {
+  if (!input) return null;
+
+  let rawParts: string[] = [];
+  if (Array.isArray(input)) {
+    rawParts = input.map((v) => String(v));
+  } else if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          rawParts = parsed.map((v) => String(v));
+        }
+      } catch {
+        return null;
+      }
+    } else {
+      rawParts = trimmed.split(/\s*(?:\/|\||｜|>|→|,)\s*/);
+    }
+  }
+
+  if (rawParts.length !== 3) return null;
+
+  const resolved: string[] = [];
+  for (const part of rawParts) {
+    const jp = resolveTriathlonContestantName(part);
+    if (!jp || resolved.includes(jp)) {
+      return null;
+    }
+    resolved.push(jp);
+  }
+
+  return [resolved[0], resolved[1], resolved[2]];
+}
+
+/**
+ * 格式化三連單選擇為資料庫儲存格式 ("1st / 2nd / 3rd")
+ */
+export function formatTriathlonTrifecta(picks: readonly [string, string, string]): string {
+  return `${picks[0]} / ${picks[1]} / ${picks[2]}`;
+}
+
+export type TriathlonPayoutTier = 'EXACT_ALL' | 'ANY_ORDER_ALL' | 'FIRST_ONLY' | 'NONE';
+
+export interface TriathlonPayoutResult {
+  tier: TriathlonPayoutTier;
+  amount: number;
+  label: string;
+}
+
+/**
+ * 依三連單階級規則計算單一玩家應領獎金（採最高符合階級單一發放、不重複疊加）
+ * - 三名順序全中：15,000 $TEE
+ * - 三名全中但順序錯誤：7,500 $TEE
+ * - 第一名猜中且未達三名全中（含 ABX、AXB、AXY 等）：2,500 $TEE
+ */
+export function evaluateTriathlonPayout(
+  predictionChoice: string | null | undefined,
+  winningChoice: string | null | undefined
+): TriathlonPayoutResult {
+  const pred = parseTriathlonTrifecta(predictionChoice);
+  const win = parseTriathlonTrifecta(winningChoice);
+  if (!pred || !win) {
+    return { tier: 'NONE', amount: 0, label: '未中獎' };
+  }
+
+  if (pred[0] === win[0] && pred[1] === win[1] && pred[2] === win[2]) {
+    return {
+      tier: 'EXACT_ALL',
+      amount: TRIATHLON_PRIZE_TIERS.EXACT_ALL,
+      label: '三名順序全中',
+    };
+  }
+
+  const winSet = new Set<string>(win);
+  if (winSet.has(pred[0]) && winSet.has(pred[1]) && winSet.has(pred[2])) {
+    return {
+      tier: 'ANY_ORDER_ALL',
+      amount: TRIATHLON_PRIZE_TIERS.ANY_ORDER_ALL,
+      label: '三名全中（順序不同）',
+    };
+  }
+
+  if (pred[0] === win[0]) {
+    return {
+      tier: 'FIRST_ONLY',
+      amount: TRIATHLON_PRIZE_TIERS.FIRST_ONLY,
+      label: '猜中第一名',
+    };
+  }
+
+  return { tier: 'NONE', amount: 0, label: '未中獎' };
+}
+
 /**
  * 取得指定特別企劃的合法選項清單
  */
-export function getValidChoicesForEvent(eventId: string = YUBI_SUMO_EVENT_ID): readonly string[] {
+export function getValidChoicesForEvent(eventId: string = HOLO_TRIATHLON_EVENT_ID): readonly string[] {
+  if (eventId === HOLO_TRIATHLON_EVENT_ID) {
+    return TRIATHLON_CONTESTANT_NAMES;
+  }
   if (eventId === YUBI_SUMO_EVENT_ID) {
     return YUBI_SUMO_CHOICES;
   }

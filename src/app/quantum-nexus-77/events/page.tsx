@@ -8,12 +8,16 @@ import {
   HOLO_KOUSHIEN_EVENT_ID,
   JUMP_KING_EVENT_ID,
   YUBI_SUMO_EVENT_ID,
+  HOLO_TRIATHLON_EVENT_ID,
   JUMP_KING_LIVE_URL,
   YUBI_SUMO_LIVE_URL,
+  HOLO_TRIATHLON_LIVE_URL,
   JUMP_KING_CHOICES,
   YUBI_SUMO_CHOICES,
+  TRIATHLON_CONTESTANT_NAMES,
   VALID_SCHOOL_CHOICES,
   calculateDynamicEventPool,
+  parseTriathlonTrifecta,
 } from '@/utils/eventDeadline';
 import { getOrSyncSpecialEvent } from '@/lib/specialEvent';
 import AdminEventsClient, { type EventData } from './AdminEventsClient';
@@ -39,8 +43,18 @@ async function loadEventData(
   for (const choice of choices) {
     countsMap.set(choice, 0);
   }
+  const isTriathlon = eventId === HOLO_TRIATHLON_EVENT_ID;
   for (const p of allPredictions) {
-    countsMap.set(p.choice, (countsMap.get(p.choice) || 0) + 1);
+    if (isTriathlon) {
+      const parsed = parseTriathlonTrifecta(p.choice);
+      if (parsed) {
+        for (const name of parsed) {
+          countsMap.set(name, (countsMap.get(name) || 0) + 1);
+        }
+      }
+    } else {
+      countsMap.set(p.choice, (countsMap.get(p.choice) || 0) + 1);
+    }
   }
 
   const options = choices.map((choiceName) => {
@@ -59,7 +73,9 @@ async function loadEventData(
     createdAt: p.createdAt.toISOString(),
   }));
 
-  const totalPool = isDynamic
+  const totalPool = isTriathlon
+    ? 15000
+    : isDynamic
     ? calculateDynamicEventPool(totalPredictions)
     : specialEvent.totalPayout || specialEvent.prize || 500.0;
 
@@ -81,6 +97,7 @@ async function loadEventData(
     totalPredictions,
     options,
     recentPredictions,
+    ...(isTriathlon ? { allPredictionChoices: allPredictions.map((p) => p.choice) } : {}),
   };
 }
 
@@ -93,7 +110,15 @@ export default async function AdminEventsPage() {
     return <AdminLoginForm />;
   }
 
-  // 1. 取得 ゆび相撲大会 預測（歷屆企劃）
+  // 1. 取得 ホロドリトライアスロン 三連單（當前進行中特別企劃）
+  const triathlonData = await loadEventData(
+    HOLO_TRIATHLON_EVENT_ID,
+    TRIATHLON_CONTESTANT_NAMES,
+    false,
+    HOLO_TRIATHLON_LIVE_URL
+  );
+
+  // 2. 取得 ゆび相撲大会 預測（歷屆企劃）
   const yubiSumoData = await loadEventData(
     YUBI_SUMO_EVENT_ID,
     YUBI_SUMO_CHOICES,
@@ -101,7 +126,7 @@ export default async function AdminEventsPage() {
     YUBI_SUMO_LIVE_URL
   );
 
-  // 2. 取得 JUMP KING HOLORACE（歷屆企劃）
+  // 3. 取得 JUMP KING HOLORACE（歷屆企劃）
   const jumpKingData = await loadEventData(
     JUMP_KING_EVENT_ID,
     JUMP_KING_CHOICES,
@@ -109,7 +134,7 @@ export default async function AdminEventsPage() {
     JUMP_KING_LIVE_URL
   );
 
-  // 3. 取得甲子園 2026（歷屆已結束企劃）
+  // 4. 取得甲子園 2026（歷屆已結束企劃）
   const holoKoushienData = await loadEventData(
     HOLO_KOUSHIEN_EVENT_ID,
     VALID_SCHOOL_CHOICES,
@@ -153,13 +178,13 @@ export default async function AdminEventsPage() {
               特別企劃管理中樞
             </h1>
             <p className="text-xs text-gray-400 mt-1 font-mono">
-              社群重大賽事預測 · ゆび相撲大会 &amp; 歷屆企劃派彩管理
+              社群重大賽事預測 · ホロドリトライアスロン 三連單 &amp; 歷屆企劃派彩管理
             </p>
           </div>
         </header>
 
         {/* Client Interface */}
-        <AdminEventsClient events={[yubiSumoData, jumpKingData, holoKoushienData]} />
+        <AdminEventsClient events={[triathlonData, yubiSumoData, jumpKingData, holoKoushienData]} />
       </div>
     </div>
   );

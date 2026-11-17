@@ -1,5 +1,11 @@
 import { prisma } from '@/lib/prisma';
-import { HOLO_KOUSHIEN_EVENT_ID, JUMP_KING_EVENT_ID, YUBI_SUMO_EVENT_ID } from '@/utils/eventDeadline';
+import {
+  HOLO_KOUSHIEN_EVENT_ID,
+  JUMP_KING_EVENT_ID,
+  YUBI_SUMO_EVENT_ID,
+  HOLO_TRIATHLON_EVENT_ID,
+  HOLO_TRIATHLON_TITLE,
+} from '@/utils/eventDeadline';
 
 let isSchemaPatched = false;
 
@@ -20,9 +26,9 @@ export async function patchSpecialEventSchemaIfNeeded() {
 }
 
 /**
- * 取得特別企劃資料，並針對甲子園 2026、JUMP KING 與 ゆび相撲大会 自動同步結束折疊與新名稱
+ * 取得特別企劃資料，並針對歷屆企劃自動同步結束折疊，針對 ホロドリトライアスロン 三連單 初始化開放中狀態
  */
-export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID) {
+export async function getOrSyncSpecialEvent(eventId: string = HOLO_TRIATHLON_EVENT_ID) {
   await patchSpecialEventSchemaIfNeeded();
 
   let specialEvent: any = null;
@@ -34,11 +40,14 @@ export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID
     console.warn('[SpecialEvent] findUnique failed:', err);
   }
 
+  const isTriathlon = eventId === HOLO_TRIATHLON_EVENT_ID;
   const isYubiSumo = eventId === YUBI_SUMO_EVENT_ID;
   const isJumpKing = eventId === JUMP_KING_EVENT_ID;
 
   let defaultTitle = '特別企劃';
-  if (isYubiSumo) {
+  if (isTriathlon) {
+    defaultTitle = HOLO_TRIATHLON_TITLE;
+  } else if (isYubiSumo) {
     defaultTitle = 'ゆび相撲大会 預測';
   } else if (isJumpKing) {
     defaultTitle = 'JUMP KING HOLORACE 優勝者到達地點預測';
@@ -46,10 +55,10 @@ export async function getOrSyncSpecialEvent(eventId: string = YUBI_SUMO_EVENT_ID
     defaultTitle = 'ホロライブ甲子園2026 冠軍預測';
   }
 
-  const defaultPrize = (isYubiSumo || isJumpKing) ? 5000.0 : 500.0;
-  // ゆび相撲大会與歷屆企劃皆已結束歸檔並鎖定
-  const defaultLocked = true;
-  const defaultArchived = true;
+  const defaultPrize = isTriathlon ? 15000.0 : (isYubiSumo || isJumpKing) ? 5000.0 : 500.0;
+  // ホロドリトライアスロン為進行中企劃（開放預測），歷屆企劃皆已結束歸檔並鎖定
+  const defaultLocked = isTriathlon ? false : true;
+  const defaultArchived = isTriathlon ? false : true;
 
   // 1. 若資料庫尚無此企劃紀錄，自動初始化
   if (!specialEvent) {

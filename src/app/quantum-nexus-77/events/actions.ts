@@ -7,19 +7,30 @@ import {
   HOLO_KOUSHIEN_EVENT_ID,
   JUMP_KING_EVENT_ID,
   YUBI_SUMO_EVENT_ID,
+  HOLO_TRIATHLON_EVENT_ID,
+  HOLO_TRIATHLON_TITLE,
   getValidChoicesForEvent,
   calculateDynamicEventPool,
-  calculateJumpKingPool,
   calculatePrizePerWinner,
   normalizeEventChoice,
+  parseTriathlonTrifecta,
+  formatTriathlonTrifecta,
+  evaluateTriathlonPayout,
 } from '@/utils/eventDeadline';
 import { revalidatePath } from 'next/cache';
 import { patchSpecialEventSchemaIfNeeded } from '@/lib/specialEvent';
 
+function getDefaultEventTitle(eventId: string): string {
+  if (eventId === HOLO_TRIATHLON_EVENT_ID) return HOLO_TRIATHLON_TITLE;
+  if (eventId === YUBI_SUMO_EVENT_ID) return 'ゆび相撲大会 預測';
+  if (eventId === JUMP_KING_EVENT_ID) return 'JUMP KING HOLORACE 優勝者到達地點預測';
+  return 'ホロライブ甲子園2026 冠軍預測';
+}
+
 /**
- * 管理員確認冠軍並發放獎金
+ * 管理員確認結果並發放獎金
  */
-export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID, champion: string) {
+export async function settleChampionAction(eventId: string = HOLO_TRIATHLON_EVENT_ID, champion: string) {
   // 1. 驗證管理員身份
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -27,11 +38,22 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
     return { success: false, error: '未授權的管理員操作。' };
   }
 
-  // 2. 驗證選項（相容前綴或別名）
-  const normalizedChampion = normalizeEventChoice(champion);
-  const validChoices = getValidChoicesForEvent(eventId);
-  if (!validChoices.includes(normalizedChampion)) {
-    return { success: false, error: `無效的優勝選項：${champion}` };
+  const isTriathlon = eventId === HOLO_TRIATHLON_EVENT_ID;
+
+  // 2. 驗證選項（三連單或一般單選）
+  let normalizedChampion = '';
+  if (isTriathlon) {
+    const parsed = parseTriathlonTrifecta(champion);
+    if (!parsed) {
+      return { success: false, error: '請選擇 3 位不同的參賽者作為 1st、2nd、3rd 最終結果。' };
+    }
+    normalizedChampion = formatTriathlonTrifecta(parsed);
+  } else {
+    normalizedChampion = normalizeEventChoice(champion);
+    const validChoices = getValidChoicesForEvent(eventId);
+    if (!validChoices.includes(normalizedChampion)) {
+      return { success: false, error: `無效的優勝選項：${champion}` };
+    }
   }
 
   // 3. 事務處理：防重複結算、發放獎金、紀錄日誌
@@ -44,6 +66,86 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
 
       if (existing && existing.isSettled) {
         throw new Error(`該企劃已於 ${existing.settledAt?.toLocaleString('zh-TW')} 結算公佈，無法重複結算。`);
+      }
+
+      const defaultTitle = getDefaultEventTitle(eventId);
+
+      if (isTriathlon) {
+        const allPredictions = await tx.eventPrediction.findMany({
+          where: { eventId },
+        });
+
+        let winnerCount = 0;
+        let totalPayout = 0;
+
+        for (const pred of allPredictions) {
+          const payout = evaluateTriathlonPayout(pred.choice, normalizedChampion);
+          if (payout.amount <= 0) continue;
+
+          winnerCount += 1;
+          totalPayout += payout.amount;
+
+          await tx.userAccount.upsert({
+            where: { userId: pred.userId },
+            create: {
+              userId: pred.userId,
+              balance: 10000.0 + payout.amount,
+            },
+            update: {
+              balance: { increment: payout.amount },
+            },
+          });
+
+          await tx.eventRewardLog.upsert({
+            where: {
+              eventId_userId: {
+                eventId,
+                userId: pred.userId,
+              },
+            },
+            create: {
+              eventId,
+              userId: pred.userId,
+              amount: payout.amount,
+              choice: `${pred.choice}（${payout.label}）`,
+            },
+            update: {
+              amount: payout.amount,
+              choice: `${pred.choice}（${payout.label}）`,
+            },
+          });
+        }
+
+        const settledEvent = await tx.specialEvent.upsert({
+          where: { id: eventId },
+          create: {
+            id: eventId,
+            title: existing?.title || defaultTitle,
+            prize: 15000.0,
+            winningChoice: normalizedChampion,
+            isLocked: true,
+            isSettled: true,
+            settledAt: new Date(),
+            winnerCount,
+            totalPayout,
+          },
+          update: {
+            winningChoice: normalizedChampion,
+            prize: 15000.0,
+            isLocked: true,
+            isSettled: true,
+            settledAt: new Date(),
+            winnerCount,
+            totalPayout,
+          },
+        });
+
+        return {
+          winnerCount,
+          totalPayout,
+          winningChoice: normalizedChampion,
+          settledAt: settledEvent.settledAt,
+        };
       }
 
       const isSpecialPriorityChoice =
@@ -120,12 +222,6 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
         }
       }
 
-      const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
-        ? 'ゆび相撲大会 預測'
-        : eventId === JUMP_KING_EVENT_ID
-        ? 'JUMP KING HOLORACE 優勝者到達地點預測'
-        : 'ホロライブ甲子園2026 冠軍預測';
-
       // 更新 SpecialEvent 狀態
       const settledEvent = await tx.specialEvent.upsert({
         where: { id: eventId },
@@ -134,6 +230,7 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
           title: existing?.title || defaultTitle,
           prize: prizePerUser,
           winningChoice: normalizedChampion,
+          isLocked: true,
           isSettled: true,
           settledAt: new Date(),
           winnerCount,
@@ -142,6 +239,7 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
         update: {
           winningChoice: normalizedChampion,
           prize: prizePerUser,
+          isLocked: true,
           isSettled: true,
           settledAt: new Date(),
           winnerCount,
@@ -176,7 +274,7 @@ export async function settleChampionAction(eventId: string = YUBI_SUMO_EVENT_ID,
 /**
  * 管理員手動開關企劃截止鎖定
  */
-export async function toggleEventLockAction(eventId: string = YUBI_SUMO_EVENT_ID, lock: boolean) {
+export async function toggleEventLockAction(eventId: string = HOLO_TRIATHLON_EVENT_ID, lock: boolean) {
   // 1. 驗證管理員身份
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -193,11 +291,7 @@ export async function toggleEventLockAction(eventId: string = YUBI_SUMO_EVENT_ID
       return { success: false, error: '該企劃已結算，無法再變更鎖定狀態。' };
     }
 
-    const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
-      ? 'ゆび相撲大会 預測'
-      : eventId === JUMP_KING_EVENT_ID
-      ? 'JUMP KING HOLORACE 優勝者到達地點預測'
-      : 'ホロライブ甲子園2026 冠軍預測';
+    const defaultTitle = getDefaultEventTitle(eventId);
 
     const updated = await prisma.specialEvent.upsert({
       where: { id: eventId },
@@ -215,6 +309,7 @@ export async function toggleEventLockAction(eventId: string = YUBI_SUMO_EVENT_ID
 
     revalidatePath('/events');
     revalidatePath('/quantum-nexus-77/events');
+    revalidatePath('/quantum-nexus-77/review');
 
     return {
       success: true,
@@ -233,7 +328,7 @@ export async function toggleEventLockAction(eventId: string = YUBI_SUMO_EVENT_ID
 /**
  * 管理員切換特別企劃歸檔狀態
  */
-export async function toggleEventArchiveAction(eventId: string = YUBI_SUMO_EVENT_ID, archive: boolean) {
+export async function toggleEventArchiveAction(eventId: string = HOLO_TRIATHLON_EVENT_ID, archive: boolean) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (sessionToken !== getExpectedAuthToken()) {
@@ -247,11 +342,7 @@ export async function toggleEventArchiveAction(eventId: string = YUBI_SUMO_EVENT
       where: { id: eventId },
     });
 
-    const defaultTitle = eventId === YUBI_SUMO_EVENT_ID
-      ? 'ゆび相撲大会 預測'
-      : eventId === JUMP_KING_EVENT_ID
-      ? 'JUMP KING HOLORACE 優勝者到達地點預測'
-      : 'ホロライブ甲子園2026 冠軍預測';
+    const defaultTitle = getDefaultEventTitle(eventId);
 
     const updated = await prisma.specialEvent.upsert({
       where: { id: eventId },
